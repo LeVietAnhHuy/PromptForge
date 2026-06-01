@@ -186,6 +186,11 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         actions: [
           if (isEditing) ...[
             IconButton(
+              icon: const Icon(Icons.play_arrow),
+              tooltip: 'Use Prompt (Compile)',
+              onPressed: () => context.go('/library/compile/${_existingPrompt!.id}'),
+            ),
+            IconButton(
               icon: const Icon(Icons.copy),
               tooltip: 'Duplicate',
               onPressed: _duplicatePrompt,

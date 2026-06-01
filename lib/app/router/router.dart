@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/prompt_inbox/presentation/prompt_inbox_screen.dart';
 import '../../features/prompt_library/presentation/prompt_library_screen.dart';
 import '../../features/prompt_library/presentation/prompt_editor_screen.dart';
+import '../../features/prompt_compiler/presentation/prompt_compiler_screen.dart';
 import '../../features/context_packs/presentation/context_packs_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -40,6 +41,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'editor/:id',
                     builder: (context, state) => PromptEditorScreen(
                       promptId: state.pathParameters['id'],
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'compile/:id',
+                    builder: (context, state) => PromptCompilerScreen(
+                      promptId: state.pathParameters['id']!,
                     ),
                   ),
                 ],
