@@ -3644,6 +3644,11 @@ class $InboxItemsTable extends InboxItems
   late final GeneratedColumn<String> id = GeneratedColumn<String>(
       'id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _rawTextMeta =
       const VerificationMeta('rawText');
   @override
@@ -3689,6 +3694,7 @@ class $InboxItemsTable extends InboxItems
   @override
   List<GeneratedColumn> get $columns => [
         id,
+        title,
         rawText,
         source,
         status,
@@ -3711,6 +3717,10 @@ class $InboxItemsTable extends InboxItems
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     }
     if (data.containsKey('raw_text')) {
       context.handle(_rawTextMeta,
@@ -3759,6 +3769,8 @@ class $InboxItemsTable extends InboxItems
     return InboxItem(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title']),
       rawText: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}raw_text'])!,
       source: attachedDatabase.typeMapping
@@ -3784,6 +3796,7 @@ class $InboxItemsTable extends InboxItems
 
 class InboxItem extends DataClass implements Insertable<InboxItem> {
   final String id;
+  final String? title;
   final String rawText;
   final String? source;
   final String status;
@@ -3793,6 +3806,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   final DateTime? deletedAt;
   const InboxItem(
       {required this.id,
+      this.title,
       required this.rawText,
       this.source,
       required this.status,
@@ -3804,6 +3818,9 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
+    }
     map['raw_text'] = Variable<String>(rawText);
     if (!nullToAbsent || source != null) {
       map['source'] = Variable<String>(source);
@@ -3823,6 +3840,8 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   InboxItemsCompanion toCompanion(bool nullToAbsent) {
     return InboxItemsCompanion(
       id: Value(id),
+      title:
+          title == null && nullToAbsent ? const Value.absent() : Value(title),
       rawText: Value(rawText),
       source:
           source == null && nullToAbsent ? const Value.absent() : Value(source),
@@ -3843,6 +3862,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return InboxItem(
       id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String?>(json['title']),
       rawText: serializer.fromJson<String>(json['rawText']),
       source: serializer.fromJson<String?>(json['source']),
       status: serializer.fromJson<String>(json['status']),
@@ -3858,6 +3878,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String?>(title),
       'rawText': serializer.toJson<String>(rawText),
       'source': serializer.toJson<String?>(source),
       'status': serializer.toJson<String>(status),
@@ -3870,6 +3891,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
 
   InboxItem copyWith(
           {String? id,
+          Value<String?> title = const Value.absent(),
           String? rawText,
           Value<String?> source = const Value.absent(),
           String? status,
@@ -3879,6 +3901,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
           Value<DateTime?> deletedAt = const Value.absent()}) =>
       InboxItem(
         id: id ?? this.id,
+        title: title.present ? title.value : this.title,
         rawText: rawText ?? this.rawText,
         source: source.present ? source.value : this.source,
         status: status ?? this.status,
@@ -3892,6 +3915,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   InboxItem copyWithCompanion(InboxItemsCompanion data) {
     return InboxItem(
       id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
       rawText: data.rawText.present ? data.rawText.value : this.rawText,
       source: data.source.present ? data.source.value : this.source,
       status: data.status.present ? data.status.value : this.status,
@@ -3908,6 +3932,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   String toString() {
     return (StringBuffer('InboxItem(')
           ..write('id: $id, ')
+          ..write('title: $title, ')
           ..write('rawText: $rawText, ')
           ..write('source: $source, ')
           ..write('status: $status, ')
@@ -3920,13 +3945,14 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
   }
 
   @override
-  int get hashCode => Object.hash(id, rawText, source, status,
+  int get hashCode => Object.hash(id, title, rawText, source, status,
       convertedPromptId, createdAt, updatedAt, deletedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is InboxItem &&
           other.id == this.id &&
+          other.title == this.title &&
           other.rawText == this.rawText &&
           other.source == this.source &&
           other.status == this.status &&
@@ -3938,6 +3964,7 @@ class InboxItem extends DataClass implements Insertable<InboxItem> {
 
 class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
   final Value<String> id;
+  final Value<String?> title;
   final Value<String> rawText;
   final Value<String?> source;
   final Value<String> status;
@@ -3948,6 +3975,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
   final Value<int> rowid;
   const InboxItemsCompanion({
     this.id = const Value.absent(),
+    this.title = const Value.absent(),
     this.rawText = const Value.absent(),
     this.source = const Value.absent(),
     this.status = const Value.absent(),
@@ -3959,6 +3987,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
   });
   InboxItemsCompanion.insert({
     required String id,
+    this.title = const Value.absent(),
     required String rawText,
     this.source = const Value.absent(),
     this.status = const Value.absent(),
@@ -3973,6 +4002,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
         updatedAt = Value(updatedAt);
   static Insertable<InboxItem> custom({
     Expression<String>? id,
+    Expression<String>? title,
     Expression<String>? rawText,
     Expression<String>? source,
     Expression<String>? status,
@@ -3984,6 +4014,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
+      if (title != null) 'title': title,
       if (rawText != null) 'raw_text': rawText,
       if (source != null) 'source': source,
       if (status != null) 'status': status,
@@ -3997,6 +4028,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
 
   InboxItemsCompanion copyWith(
       {Value<String>? id,
+      Value<String?>? title,
       Value<String>? rawText,
       Value<String?>? source,
       Value<String>? status,
@@ -4007,6 +4039,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
       Value<int>? rowid}) {
     return InboxItemsCompanion(
       id: id ?? this.id,
+      title: title ?? this.title,
       rawText: rawText ?? this.rawText,
       source: source ?? this.source,
       status: status ?? this.status,
@@ -4023,6 +4056,9 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
     if (rawText.present) {
       map['raw_text'] = Variable<String>(rawText.value);
@@ -4055,6 +4091,7 @@ class InboxItemsCompanion extends UpdateCompanion<InboxItem> {
   String toString() {
     return (StringBuffer('InboxItemsCompanion(')
           ..write('id: $id, ')
+          ..write('title: $title, ')
           ..write('rawText: $rawText, ')
           ..write('source: $source, ')
           ..write('status: $status, ')
@@ -6170,6 +6207,7 @@ typedef $$PromptCollectionLinksTableProcessedTableManager
         PrefetchHooks Function()>;
 typedef $$InboxItemsTableCreateCompanionBuilder = InboxItemsCompanion Function({
   required String id,
+  Value<String?> title,
   required String rawText,
   Value<String?> source,
   Value<String> status,
@@ -6181,6 +6219,7 @@ typedef $$InboxItemsTableCreateCompanionBuilder = InboxItemsCompanion Function({
 });
 typedef $$InboxItemsTableUpdateCompanionBuilder = InboxItemsCompanion Function({
   Value<String> id,
+  Value<String?> title,
   Value<String> rawText,
   Value<String?> source,
   Value<String> status,
@@ -6202,6 +6241,9 @@ class $$InboxItemsTableFilterComposer
   });
   ColumnFilters<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get rawText => $composableBuilder(
       column: $table.rawText, builder: (column) => ColumnFilters(column));
@@ -6238,6 +6280,9 @@ class $$InboxItemsTableOrderingComposer
   ColumnOrderings<String> get id => $composableBuilder(
       column: $table.id, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get rawText => $composableBuilder(
       column: $table.rawText, builder: (column) => ColumnOrderings(column));
 
@@ -6272,6 +6317,9 @@ class $$InboxItemsTableAnnotationComposer
   });
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 
   GeneratedColumn<String> get rawText =>
       $composableBuilder(column: $table.rawText, builder: (column) => column);
@@ -6319,6 +6367,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
               $$InboxItemsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
+            Value<String?> title = const Value.absent(),
             Value<String> rawText = const Value.absent(),
             Value<String?> source = const Value.absent(),
             Value<String> status = const Value.absent(),
@@ -6330,6 +6379,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           }) =>
               InboxItemsCompanion(
             id: id,
+            title: title,
             rawText: rawText,
             source: source,
             status: status,
@@ -6341,6 +6391,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           ),
           createCompanionCallback: ({
             required String id,
+            Value<String?> title = const Value.absent(),
             required String rawText,
             Value<String?> source = const Value.absent(),
             Value<String> status = const Value.absent(),
@@ -6352,6 +6403,7 @@ class $$InboxItemsTableTableManager extends RootTableManager<
           }) =>
               InboxItemsCompanion.insert(
             id: id,
+            title: title,
             rawText: rawText,
             source: source,
             status: status,

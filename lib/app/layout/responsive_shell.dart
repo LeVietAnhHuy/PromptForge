@@ -36,6 +36,7 @@ class ResponsiveShell extends StatelessWidget {
                   icon: Icon(Icons.library_books),
                   label: 'Library',
                 ),
+
                 NavigationDestination(
                   icon: Icon(Icons.extension),
                   label: 'Context',

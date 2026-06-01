@@ -36,7 +36,9 @@ class InboxItemDao extends DatabaseAccessor<AppDatabase> with _$InboxItemDaoMixi
   InboxItemDao(super.db);
 
   Future<void> createInboxItem(InboxItemsCompanion entry) => into(inboxItems).insert(entry);
+  Future<bool> updateInboxItem(InboxItemsCompanion entry) => update(inboxItems).replace(entry);
   Stream<List<InboxItem>> watchOpenInboxItems() => (select(inboxItems)..where((t) => t.status.equals('open'))).watch();
+  Future<InboxItem> getInboxItemById(String id) => (select(inboxItems)..where((t) => t.id.equals(id))).getSingle();
   Future<int> markInboxItemConverted(String id, String promptId) => (update(inboxItems)..where((t) => t.id.equals(id))).write(InboxItemsCompanion(status: const Value('converted'), convertedPromptId: Value(promptId)));
   Future<int> archiveInboxItem(String id) => (update(inboxItems)..where((t) => t.id.equals(id))).write(const InboxItemsCompanion(status: Value('archived')));
   Future<int> deleteInboxItem(String id) => (delete(inboxItems)..where((t) => t.id.equals(id))).go();

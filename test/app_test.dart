@@ -33,8 +33,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify initial route is Inbox
-    expect(find.text('Inbox'), findsWidgets);
-    expect(find.text('Quickly capture raw ideas and prompt snippets.'), findsOneWidget);
+    expect(find.text('Prompt Inbox'), findsWidgets);
+    expect(find.text('Your inbox is empty. Capture a new idea!'), findsOneWidget);
+    
+    // Unmount and flush Drift's stream cancel timer
+    await tester.pumpWidget(Container());
+    await tester.pump(const Duration(seconds: 1));
   });
 
   testWidgets('Mobile navigation test', (WidgetTester tester) async {
@@ -83,5 +87,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Settings'), findsWidgets);
     expect(find.text('Export Data'), findsOneWidget);
+
+    // Unmount and flush Drift's stream cancel timer
+    await tester.pumpWidget(Container());
+    await tester.pump(const Duration(seconds: 1));
   });
 }

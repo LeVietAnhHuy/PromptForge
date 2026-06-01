@@ -120,6 +120,7 @@ class PromptCollectionLinks extends Table {
 
 class InboxItems extends Table {
   TextColumn get id => text()(); // UUID
+  TextColumn get title => text().nullable()();
   TextColumn get rawText => text()();
   TextColumn get source => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('open'))();
