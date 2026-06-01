@@ -9,6 +9,8 @@ import '../../features/context_packs/presentation/context_packs_screen.dart';
 import '../../features/context_packs/presentation/context_pack_editor_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../../features/import_export/presentation/export_preview_screen.dart';
+import '../../features/import_export/presentation/import_screen.dart';
 import '../layout/responsive_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -87,6 +89,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/settings',
                 builder: (context, state) => const SettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'export',
+                    builder: (context, state) => const ExportPreviewScreen(),
+                  ),
+                  GoRoute(
+                    path: 'import',
+                    builder: (context, state) => const ImportScreen(),
+                  ),
+                ],
               ),
             ],
           ),

@@ -79,9 +79,9 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
 
     // Navigate to Settings
-    await tester.tap(find.text('Settings').last);
+    await tester.tap(find.byIcon(Icons.settings));
     await tester.pumpAndSettle();
-
-    expect(find.text('Configure your app preferences, theme, and API keys.'), findsOneWidget);
+    expect(find.text('Settings'), findsWidgets);
+    expect(find.text('Export Data'), findsOneWidget);
   });
 }
