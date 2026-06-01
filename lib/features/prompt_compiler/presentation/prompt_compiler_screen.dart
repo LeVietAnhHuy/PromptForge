@@ -22,6 +22,8 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
 
   List<String> _variables = [];
   final Map<String, TextEditingController> _controllers = {};
+  List<ContextPack> _contextPacks = [];
+  String? _selectedContextPackId;
 
   @override
   void initState() {
@@ -43,9 +45,13 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
         });
       }
 
+      final contextPackDao = ref.read(contextPackDaoProvider);
+      final packs = await contextPackDao.getAllContextPacks();
+
       setState(() {
         _prompt = prompt;
         _variables = variables;
+        _contextPacks = packs;
         _isLoading = false;
       });
     } catch (e) {
@@ -67,7 +73,14 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
   String get _compiledPrompt {
     if (_prompt == null) return '';
     final values = _controllers.map((key, controller) => MapEntry(key, controller.text));
-    return PromptCompiler.compilePrompt(_prompt!.body, values);
+    final compiled = PromptCompiler.compilePrompt(_prompt!.body, values);
+    
+    if (_selectedContextPackId != null) {
+      final pack = _contextPacks.firstWhere((p) => p.id == _selectedContextPackId, orElse: () => _contextPacks.first);
+      return '[Context]\n${pack.content}\n\n[Prompt]\n$compiled';
+    }
+    
+    return compiled;
   }
 
   bool get _isMissingVariables {
@@ -124,6 +137,39 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Context Pack',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: DropdownButton<String?>(
+                      value: _selectedContextPackId,
+                      isExpanded: true,
+                      underline: const SizedBox(),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('No context pack'),
+                      ),
+                      ..._contextPacks.map((pack) => DropdownMenuItem(
+                            value: pack.id,
+                            child: Text(pack.name),
+                          )),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedContextPackId = value;
+                      });
+                    },
+                  ),
+                  ), // Closing Container
+                  const SizedBox(height: 24),
                   Text(
                     'Variables',
                     style: Theme.of(context).textTheme.titleLarge,

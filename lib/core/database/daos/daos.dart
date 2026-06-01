@@ -26,6 +26,7 @@ class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDao
 
   Future<void> createContextPack(ContextPacksCompanion entry) => into(contextPacks).insert(entry);
   Stream<List<ContextPack>> watchAllContextPacks() => (select(contextPacks)..where((t) => t.isArchived.not())).watch();
+  Future<List<ContextPack>> getAllContextPacks() => (select(contextPacks)..where((t) => t.isArchived.not())).get();
   Future<bool> updateContextPack(ContextPacksCompanion entry) => update(contextPacks).replace(entry);
   Future<int> archiveContextPack(String id) => (update(contextPacks)..where((t) => t.id.equals(id))).write(const ContextPacksCompanion(isArchived: Value(true)));
 }

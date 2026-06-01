@@ -6,6 +6,7 @@ import '../../features/prompt_library/presentation/prompt_library_screen.dart';
 import '../../features/prompt_library/presentation/prompt_editor_screen.dart';
 import '../../features/prompt_compiler/presentation/prompt_compiler_screen.dart';
 import '../../features/context_packs/presentation/context_packs_screen.dart';
+import '../../features/context_packs/presentation/context_pack_editor_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../layout/responsive_shell.dart';
@@ -58,6 +59,18 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/context-packs',
                 builder: (context, state) => const ContextPacksScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'editor',
+                    builder: (context, state) => const ContextPackEditorScreen(),
+                  ),
+                  GoRoute(
+                    path: 'editor/:id',
+                    builder: (context, state) => ContextPackEditorScreen(
+                      packId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
