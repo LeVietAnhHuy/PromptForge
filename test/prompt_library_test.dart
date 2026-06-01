@@ -48,6 +48,7 @@ void main() {
       overrides: [
         databaseProvider.overrideWithValue(database),
         promptDaoProvider.overrideWithValue(PromptDao(database)),
+        tagDaoProvider.overrideWithValue(TagDao(database)),
       ],
       child: MaterialApp.router(
         routerConfig: router,

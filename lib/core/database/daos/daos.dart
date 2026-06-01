@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 import '../database.dart';
 import '../tables/tables.dart';
 
@@ -15,6 +16,7 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
   Future<int> archivePrompt(String id) => (update(prompts)..where((t) => t.id.equals(id))).write(const PromptsCompanion(isArchived: Value(true)));
   Future<int> deletePromptSoft(String id) => (update(prompts)..where((t) => t.id.equals(id))).write(PromptsCompanion(deletedAt: Value(DateTime.now())));
   Future<int> hardDeletePrompt(String id) => (delete(prompts)..where((t) => t.id.equals(id))).go();
+  Future<int> toggleFavorite(String id, bool isFavorite) => (update(prompts)..where((t) => t.id.equals(id))).write(PromptsCompanion(isFavorite: Value(isFavorite)));
   
   // Versions
   Future<void> createPromptVersion(PromptVersionsCompanion entry) => into(promptVersions).insert(entry);
@@ -50,8 +52,54 @@ class TagDao extends DatabaseAccessor<AppDatabase> with _$TagDaoMixin {
 
   Future<void> createTag(TagsCompanion entry) => into(tags).insert(entry);
   Stream<List<Tag>> watchAllTags() => select(tags).watch();
+  Stream<List<PromptTag>> watchAllPromptTags() => select(promptTags).watch();
   Future<void> linkTagToPrompt(PromptTagsCompanion entry) => into(promptTags).insert(entry);
   Future<int> unlinkTagFromPrompt(String promptId, String tagId) => (delete(promptTags)..where((t) => t.promptId.equals(promptId) & t.tagId.equals(tagId))).go();
+
+  Future<List<Tag>> getTagsForPrompt(String promptId) async {
+    final query = select(promptTags).join([
+      innerJoin(tags, tags.id.equalsExp(promptTags.tagId))
+    ])..where(promptTags.promptId.equals(promptId));
+    final rows = await query.get();
+    return rows.map((row) => row.readTable(tags)).toList();
+  }
+
+  Future<void> replaceTagsForPrompt(String promptId, List<String> tagNames) async {
+    await transaction(() async {
+      // 1. Delete existing links
+      await (delete(promptTags)..where((t) => t.promptId.equals(promptId))).go();
+
+      // 2. Normalize tags
+      final normalizedNames = tagNames
+          .map((n) => n.trim().toLowerCase())
+          .where((n) => n.isNotEmpty)
+          .toSet();
+
+      for (final name in normalizedNames) {
+        // 3. Find or create tag
+        final existingTag = await (select(tags)..where((t) => t.name.equals(name))).getSingleOrNull();
+        String tagId;
+        if (existingTag != null) {
+          tagId = existingTag.id;
+        } else {
+          tagId = const Uuid().v4();
+          await into(tags).insert(TagsCompanion.insert(
+            id: tagId,
+            name: name,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ));
+        }
+
+        // 4. Link to prompt
+        await into(promptTags).insert(PromptTagsCompanion.insert(
+          promptId: promptId,
+          tagId: tagId,
+          createdAt: DateTime.now(),
+        ));
+      }
+    });
+  }
 }
 
 @DriftAccessor(tables: [Collections, PromptCollectionLinks])

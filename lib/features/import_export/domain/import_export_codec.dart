@@ -1,11 +1,17 @@
 import 'dart:convert';
 import '../../../core/database/database.dart';
 
+class ImportedPrompt {
+  final Prompt prompt;
+  final List<String> tags;
+  ImportedPrompt(this.prompt, this.tags);
+}
+
 class ImportPreview {
   final int promptCount;
   final int contextPackCount;
   final int invalidRecordsCount;
-  final List<Prompt> validPrompts;
+  final List<ImportedPrompt> validPrompts;
   final List<ContextPack> validContextPacks;
 
   ImportPreview({
@@ -21,7 +27,7 @@ class ImportExportCodec {
   static const int currentSchemaVersion = 1;
   static const String expectedAppId = 'PromptForge';
 
-  static String encodeExport(List<Prompt> prompts, List<ContextPack> contextPacks) {
+  static String encodeExport(List<Prompt> prompts, Map<String, List<String>> promptTags, List<ContextPack> contextPacks) {
     final Map<String, dynamic> payload = {
       'schemaVersion': currentSchemaVersion,
       'app': expectedAppId,
@@ -36,6 +42,7 @@ class ImportExportCodec {
         'isArchived': p.isArchived,
         'isFavorite': p.isFavorite,
         'usageCount': p.usageCount,
+        'tags': promptTags[p.id] ?? [],
       }).toList(),
       'contextPacks': contextPacks.map((c) => {
         'id': c.id,
@@ -72,7 +79,7 @@ class ImportExportCodec {
     }
 
     int invalidRecordsCount = 0;
-    final List<Prompt> validPrompts = [];
+    final List<ImportedPrompt> validPrompts = [];
     final List<ContextPack> validContextPacks = [];
 
     final promptsRaw = payload['prompts'] as List<dynamic>? ?? [];
@@ -91,17 +98,22 @@ class ImportExportCodec {
         final isArchived = raw['isArchived'] as bool? ?? false;
         final isFavorite = raw['isFavorite'] as bool? ?? false;
         final usageCount = raw['usageCount'] as int? ?? 0;
+        final tagsRaw = raw['tags'] as List<dynamic>? ?? [];
+        final tags = tagsRaw.map((e) => e.toString()).toList();
 
-        validPrompts.add(Prompt(
-          id: id,
-          title: title,
-          body: body,
-          purpose: purpose,
-          createdAt: DateTime.parse(createdAtStr),
-          updatedAt: DateTime.parse(updatedAtStr),
-          isArchived: isArchived,
-          isFavorite: isFavorite,
-          usageCount: usageCount,
+        validPrompts.add(ImportedPrompt(
+          Prompt(
+            id: id,
+            title: title,
+            body: body,
+            purpose: purpose,
+            createdAt: DateTime.parse(createdAtStr),
+            updatedAt: DateTime.parse(updatedAtStr),
+            isArchived: isArchived,
+            isFavorite: isFavorite,
+            usageCount: usageCount,
+          ),
+          tags,
         ));
       } catch (e) {
         invalidRecordsCount++;

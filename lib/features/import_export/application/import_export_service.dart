@@ -12,6 +12,7 @@ final importExportServiceProvider = Provider<ImportExportService>((ref) {
     db: ref.watch(databaseProvider),
     promptDao: ref.watch(promptDaoProvider),
     contextPackDao: ref.watch(contextPackDaoProvider),
+    tagDao: ref.watch(tagDaoProvider),
   );
 });
 
@@ -19,24 +20,36 @@ class ImportExportService {
   final AppDatabase db;
   final PromptDao promptDao;
   final ContextPackDao contextPackDao;
+  final TagDao tagDao;
 
   ImportExportService({
     required this.db,
     required this.promptDao,
     required this.contextPackDao,
+    required this.tagDao,
   });
 
   Future<String> exportActiveData() async {
     final activePrompts = await (promptDao.select(promptDao.prompts)..where((t) => t.isArchived.not())).get();
     final activeContextPacks = await contextPackDao.getAllContextPacks();
-    return ImportExportCodec.encodeExport(activePrompts, activeContextPacks);
+    
+    // Fetch tags for active prompts
+    final promptTags = <String, List<String>>{};
+    for (final prompt in activePrompts) {
+      final tags = await tagDao.getTagsForPrompt(prompt.id);
+      promptTags[prompt.id] = tags.map((t) => t.name).toList();
+    }
+
+    return ImportExportCodec.encodeExport(activePrompts, promptTags, activeContextPacks);
   }
 
   Future<void> importData(ImportPreview preview) async {
     await db.transaction(() async {
-      for (final prompt in preview.validPrompts) {
+      for (final imported in preview.validPrompts) {
+        final prompt = imported.prompt;
+        final newPromptId = const Uuid().v4();
         await promptDao.createPrompt(PromptsCompanion.insert(
-          id: const Uuid().v4(), // Always create new ID
+          id: newPromptId,
           title: prompt.title,
           body: prompt.body,
           purpose: prompt.purpose != null ? drift.Value(prompt.purpose) : const drift.Value.absent(),
@@ -46,6 +59,11 @@ class ImportExportService {
           isFavorite: drift.Value(prompt.isFavorite),
           usageCount: drift.Value(prompt.usageCount),
         ));
+
+        // Import tags
+        if (imported.tags.isNotEmpty) {
+          await tagDao.replaceTagsForPrompt(newPromptId, imported.tags);
+        }
       }
 
       for (final pack in preview.validContextPacks) {

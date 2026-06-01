@@ -21,6 +21,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   final _purposeController = TextEditingController();
+  final _tagsController = TextEditingController();
   
   Prompt? _existingPrompt;
   bool _isLoading = true;
@@ -39,13 +40,17 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
     try {
       final promptDao = ref.read(promptDaoProvider);
+      final tagDao = ref.read(tagDaoProvider);
+      
       final prompt = await promptDao.getPromptById(widget.promptId!);
+      final tags = await tagDao.getTagsForPrompt(widget.promptId!);
       
       setState(() {
         _existingPrompt = prompt;
         _titleController.text = prompt.title;
         _bodyController.text = prompt.body;
         _purposeController.text = prompt.purpose ?? '';
+        _tagsController.text = tags.map((t) => t.name).join(', ');
         _isLoading = false;
       });
     } catch (e) {
@@ -63,6 +68,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     _titleController.dispose();
     _bodyController.dispose();
     _purposeController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -70,13 +76,16 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final promptDao = ref.read(promptDaoProvider);
+    final tagDao = ref.read(tagDaoProvider);
     final now = DateTime.now();
 
     try {
+      String currentPromptId;
       if (_existingPrompt == null) {
         // Create new
+        currentPromptId = const Uuid().v4();
         await promptDao.createPrompt(PromptsCompanion.insert(
-          id: const Uuid().v4(),
+          id: currentPromptId,
           title: _titleController.text,
           body: _bodyController.text,
           purpose: _purposeController.text.isNotEmpty ? drift.Value(_purposeController.text) : const drift.Value.absent(),
@@ -85,8 +94,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         ));
       } else {
         // Update existing
+        currentPromptId = _existingPrompt!.id;
         await promptDao.updatePrompt(PromptsCompanion.insert(
-          id: _existingPrompt!.id,
+          id: currentPromptId,
           title: _titleController.text,
           body: _bodyController.text,
           purpose: _purposeController.text.isNotEmpty ? drift.Value(_purposeController.text) : const drift.Value.absent(),
@@ -94,6 +104,10 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           updatedAt: now,
         ));
       }
+
+      // Save tags
+      final tagNames = _tagsController.text.split(',');
+      await tagDao.replaceTagsForPrompt(currentPromptId, tagNames);
 
       if (mounted) {
         context.pop();
@@ -111,17 +125,24 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     if (_existingPrompt == null) return;
 
     final promptDao = ref.read(promptDaoProvider);
+    final tagDao = ref.read(tagDaoProvider);
     final now = DateTime.now();
 
     try {
+      final newPromptId = const Uuid().v4();
       await promptDao.createPrompt(PromptsCompanion.insert(
-        id: const Uuid().v4(),
+        id: newPromptId,
         title: '${_existingPrompt!.title} (Copy)',
         body: _existingPrompt!.body,
         purpose: _existingPrompt!.purpose != null ? drift.Value(_existingPrompt!.purpose!) : const drift.Value.absent(),
         createdAt: now,
         updatedAt: now,
       ));
+
+      // Duplicate tags
+      final existingTags = await tagDao.getTagsForPrompt(_existingPrompt!.id);
+      final tagNames = existingTags.map((t) => t.name).toList();
+      await tagDao.replaceTagsForPrompt(newPromptId, tagNames);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -234,6 +255,15 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _tagsController,
+              decoration: const InputDecoration(
+                labelText: 'Tags (comma-separated)',
+                hintText: 'e.g. coding, article, translation',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 16),
             TextFormField(

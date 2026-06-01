@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/features/import_export/domain/import_export_codec.dart';
@@ -31,57 +32,65 @@ void main() {
       )
     ];
 
-    test('encodeExport returns valid JSON with correct structure', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, testContextPacks);
-      expect(jsonStr, contains('"schemaVersion": 1'));
-      expect(jsonStr, contains('"app": "PromptForge"'));
-      expect(jsonStr, contains('"title": "Test Prompt"'));
-      expect(jsonStr, contains('"name": "Test Pack"'));
+    test('encodeExport returns correctly structured JSON', () {
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, testContextPacks);
+      final decoded = jsonDecode(jsonStr);
+
+      expect(decoded['schemaVersion'], 1);
+      expect(decoded['app'], 'PromptForge');
+      expect((decoded['prompts'] as List).length, 1);
+      expect((decoded['contextPacks'] as List).length, 1);
     });
 
-    test('decodeImport parses valid JSON correctly', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, testContextPacks);
+    test('decodeImport parses valid JSON', () {
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, testContextPacks);
       final preview = ImportExportCodec.decodeImport(jsonStr);
 
       expect(preview.invalidRecordsCount, 0);
-      expect(preview.promptCount, 1);
-      expect(preview.contextPackCount, 1);
-      expect(preview.validPrompts.first.title, 'Test Prompt');
+      expect(preview.validPrompts.length, 1);
+      expect(preview.validContextPacks.length, 1);
+      expect(preview.validPrompts.first.prompt.title, 'Test Prompt');
       expect(preview.validContextPacks.first.name, 'Test Pack');
     });
 
-    test('decodeImport throws on invalid JSON string', () {
+    test('decodeImport throws on invalid JSON', () {
       expect(
-        () => ImportExportCodec.decodeImport('not json'),
+        () => ImportExportCodec.decodeImport('invalid json'),
         throwsA(isA<FormatException>()),
       );
     });
 
-    test('decodeImport throws if app is incorrect', () {
-      const jsonStr = '{"app": "WrongApp", "schemaVersion": 1}';
+    test('decodeImport throws on wrong app id', () {
+      final invalidJson = jsonEncode({'app': 'OtherApp', 'schemaVersion': 1});
       expect(
-        () => ImportExportCodec.decodeImport(jsonStr),
+        () => ImportExportCodec.decodeImport(invalidJson),
         throwsA(isA<FormatException>()),
       );
     });
 
-    test('decodeImport handles malformed records by skipping them', () {
-      const jsonStr = '''
-      {
-        "app": "PromptForge",
-        "schemaVersion": 1,
-        "prompts": [
-          { "id": "valid", "title": "A", "body": "B", "createdAt": "2026-06-01T00:00:00Z", "updatedAt": "2026-06-01T00:00:00Z" },
-          { "id": "invalid_missing_title" }
+    test('decodeImport throws on unsupported schema', () {
+      final invalidJson = jsonEncode({'app': 'PromptForge', 'schemaVersion': 999});
+      expect(
+        () => ImportExportCodec.decodeImport(invalidJson),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
+    test('decodeImport counts invalid records', () {
+      final jsonStr = jsonEncode({
+        'app': 'PromptForge',
+        'schemaVersion': 1,
+        'prompts': [
+          {'id': 'valid', 'title': 'Valid', 'body': 'body', 'createdAt': DateTime.now().toIso8601String(), 'updatedAt': DateTime.now().toIso8601String()},
+          {'invalid': 'record'},
         ],
-        "contextPacks": []
-      }
-      ''';
+        'contextPacks': [],
+      });
 
       final preview = ImportExportCodec.decodeImport(jsonStr);
-      expect(preview.promptCount, 1);
       expect(preview.invalidRecordsCount, 1);
-      expect(preview.validPrompts.first.id, 'valid');
+      expect(preview.validPrompts.length, 1);
+      expect(preview.validPrompts.first.prompt.id, 'valid');
     });
   });
 }
