@@ -1132,6 +1132,11 @@ class $PromptVariablesTable extends PromptVariables
   late final GeneratedColumn<String> name = GeneratedColumn<String>(
       'name', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+      'label', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _descriptionMeta =
       const VerificationMeta('description');
   @override
@@ -1185,6 +1190,7 @@ class $PromptVariablesTable extends PromptVariables
         id,
         promptId,
         name,
+        label,
         description,
         defaultValue,
         exampleValue,
@@ -1219,6 +1225,10 @@ class $PromptVariablesTable extends PromptVariables
           _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+          _labelMeta, label.isAcceptableOrUnknown(data['label']!, _labelMeta));
     }
     if (data.containsKey('description')) {
       context.handle(
@@ -1275,6 +1285,8 @@ class $PromptVariablesTable extends PromptVariables
           .read(DriftSqlType.string, data['${effectivePrefix}prompt_id'])!,
       name: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      label: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}label']),
       description: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}description']),
       defaultValue: attachedDatabase.typeMapping
@@ -1302,6 +1314,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
   final String id;
   final String promptId;
   final String name;
+  final String? label;
   final String? description;
   final String? defaultValue;
   final String? exampleValue;
@@ -1313,6 +1326,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
       {required this.id,
       required this.promptId,
       required this.name,
+      this.label,
       this.description,
       this.defaultValue,
       this.exampleValue,
@@ -1326,6 +1340,9 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
     map['id'] = Variable<String>(id);
     map['prompt_id'] = Variable<String>(promptId);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
@@ -1347,6 +1364,8 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
       id: Value(id),
       promptId: Value(promptId),
       name: Value(name),
+      label:
+          label == null && nullToAbsent ? const Value.absent() : Value(label),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
@@ -1370,6 +1389,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
       id: serializer.fromJson<String>(json['id']),
       promptId: serializer.fromJson<String>(json['promptId']),
       name: serializer.fromJson<String>(json['name']),
+      label: serializer.fromJson<String?>(json['label']),
       description: serializer.fromJson<String?>(json['description']),
       defaultValue: serializer.fromJson<String?>(json['defaultValue']),
       exampleValue: serializer.fromJson<String?>(json['exampleValue']),
@@ -1386,6 +1406,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
       'id': serializer.toJson<String>(id),
       'promptId': serializer.toJson<String>(promptId),
       'name': serializer.toJson<String>(name),
+      'label': serializer.toJson<String?>(label),
       'description': serializer.toJson<String?>(description),
       'defaultValue': serializer.toJson<String?>(defaultValue),
       'exampleValue': serializer.toJson<String?>(exampleValue),
@@ -1400,6 +1421,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
           {String? id,
           String? promptId,
           String? name,
+          Value<String?> label = const Value.absent(),
           Value<String?> description = const Value.absent(),
           Value<String?> defaultValue = const Value.absent(),
           Value<String?> exampleValue = const Value.absent(),
@@ -1411,6 +1433,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
         id: id ?? this.id,
         promptId: promptId ?? this.promptId,
         name: name ?? this.name,
+        label: label.present ? label.value : this.label,
         description: description.present ? description.value : this.description,
         defaultValue:
             defaultValue.present ? defaultValue.value : this.defaultValue,
@@ -1426,6 +1449,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
       id: data.id.present ? data.id.value : this.id,
       promptId: data.promptId.present ? data.promptId.value : this.promptId,
       name: data.name.present ? data.name.value : this.name,
+      label: data.label.present ? data.label.value : this.label,
       description:
           data.description.present ? data.description.value : this.description,
       defaultValue: data.defaultValue.present
@@ -1448,6 +1472,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
           ..write('id: $id, ')
           ..write('promptId: $promptId, ')
           ..write('name: $name, ')
+          ..write('label: $label, ')
           ..write('description: $description, ')
           ..write('defaultValue: $defaultValue, ')
           ..write('exampleValue: $exampleValue, ')
@@ -1460,8 +1485,8 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
   }
 
   @override
-  int get hashCode => Object.hash(id, promptId, name, description, defaultValue,
-      exampleValue, isRequired, sortOrder, createdAt, updatedAt);
+  int get hashCode => Object.hash(id, promptId, name, label, description,
+      defaultValue, exampleValue, isRequired, sortOrder, createdAt, updatedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1469,6 +1494,7 @@ class PromptVariable extends DataClass implements Insertable<PromptVariable> {
           other.id == this.id &&
           other.promptId == this.promptId &&
           other.name == this.name &&
+          other.label == this.label &&
           other.description == this.description &&
           other.defaultValue == this.defaultValue &&
           other.exampleValue == this.exampleValue &&
@@ -1482,6 +1508,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
   final Value<String> id;
   final Value<String> promptId;
   final Value<String> name;
+  final Value<String?> label;
   final Value<String?> description;
   final Value<String?> defaultValue;
   final Value<String?> exampleValue;
@@ -1494,6 +1521,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
     this.id = const Value.absent(),
     this.promptId = const Value.absent(),
     this.name = const Value.absent(),
+    this.label = const Value.absent(),
     this.description = const Value.absent(),
     this.defaultValue = const Value.absent(),
     this.exampleValue = const Value.absent(),
@@ -1507,6 +1535,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
     required String id,
     required String promptId,
     required String name,
+    this.label = const Value.absent(),
     this.description = const Value.absent(),
     this.defaultValue = const Value.absent(),
     this.exampleValue = const Value.absent(),
@@ -1524,6 +1553,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
     Expression<String>? id,
     Expression<String>? promptId,
     Expression<String>? name,
+    Expression<String>? label,
     Expression<String>? description,
     Expression<String>? defaultValue,
     Expression<String>? exampleValue,
@@ -1537,6 +1567,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
       if (id != null) 'id': id,
       if (promptId != null) 'prompt_id': promptId,
       if (name != null) 'name': name,
+      if (label != null) 'label': label,
       if (description != null) 'description': description,
       if (defaultValue != null) 'default_value': defaultValue,
       if (exampleValue != null) 'example_value': exampleValue,
@@ -1552,6 +1583,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
       {Value<String>? id,
       Value<String>? promptId,
       Value<String>? name,
+      Value<String?>? label,
       Value<String?>? description,
       Value<String?>? defaultValue,
       Value<String?>? exampleValue,
@@ -1564,6 +1596,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
       id: id ?? this.id,
       promptId: promptId ?? this.promptId,
       name: name ?? this.name,
+      label: label ?? this.label,
       description: description ?? this.description,
       defaultValue: defaultValue ?? this.defaultValue,
       exampleValue: exampleValue ?? this.exampleValue,
@@ -1586,6 +1619,9 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
     }
     if (name.present) {
       map['name'] = Variable<String>(name.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
     }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
@@ -1620,6 +1656,7 @@ class PromptVariablesCompanion extends UpdateCompanion<PromptVariable> {
           ..write('id: $id, ')
           ..write('promptId: $promptId, ')
           ..write('name: $name, ')
+          ..write('label: $label, ')
           ..write('description: $description, ')
           ..write('defaultValue: $defaultValue, ')
           ..write('exampleValue: $exampleValue, ')
@@ -4884,6 +4921,7 @@ typedef $$PromptVariablesTableCreateCompanionBuilder = PromptVariablesCompanion
   required String id,
   required String promptId,
   required String name,
+  Value<String?> label,
   Value<String?> description,
   Value<String?> defaultValue,
   Value<String?> exampleValue,
@@ -4898,6 +4936,7 @@ typedef $$PromptVariablesTableUpdateCompanionBuilder = PromptVariablesCompanion
   Value<String> id,
   Value<String> promptId,
   Value<String> name,
+  Value<String?> label,
   Value<String?> description,
   Value<String?> defaultValue,
   Value<String?> exampleValue,
@@ -4925,6 +4964,9 @@ class $$PromptVariablesTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get label => $composableBuilder(
+      column: $table.label, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnFilters(column));
@@ -4965,6 +5007,9 @@ class $$PromptVariablesTableOrderingComposer
 
   ColumnOrderings<String> get name => $composableBuilder(
       column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get label => $composableBuilder(
+      column: $table.label, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => ColumnOrderings(column));
@@ -5007,6 +5052,9 @@ class $$PromptVariablesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
 
   GeneratedColumn<String> get description => $composableBuilder(
       column: $table.description, builder: (column) => column);
@@ -5060,6 +5108,7 @@ class $$PromptVariablesTableTableManager extends RootTableManager<
             Value<String> id = const Value.absent(),
             Value<String> promptId = const Value.absent(),
             Value<String> name = const Value.absent(),
+            Value<String?> label = const Value.absent(),
             Value<String?> description = const Value.absent(),
             Value<String?> defaultValue = const Value.absent(),
             Value<String?> exampleValue = const Value.absent(),
@@ -5073,6 +5122,7 @@ class $$PromptVariablesTableTableManager extends RootTableManager<
             id: id,
             promptId: promptId,
             name: name,
+            label: label,
             description: description,
             defaultValue: defaultValue,
             exampleValue: exampleValue,
@@ -5086,6 +5136,7 @@ class $$PromptVariablesTableTableManager extends RootTableManager<
             required String id,
             required String promptId,
             required String name,
+            Value<String?> label = const Value.absent(),
             Value<String?> description = const Value.absent(),
             Value<String?> defaultValue = const Value.absent(),
             Value<String?> exampleValue = const Value.absent(),
@@ -5099,6 +5150,7 @@ class $$PromptVariablesTableTableManager extends RootTableManager<
             id: id,
             promptId: promptId,
             name: name,
+            label: label,
             description: description,
             defaultValue: defaultValue,
             exampleValue: exampleValue,

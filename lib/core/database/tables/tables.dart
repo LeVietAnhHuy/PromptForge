@@ -37,6 +37,7 @@ class PromptVariables extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get promptId => text()(); // FK
   TextColumn get name => text()();
+  TextColumn get label => text().nullable()();
   TextColumn get description => text().nullable()();
   TextColumn get defaultValue => text().nullable()();
   TextColumn get exampleValue => text().nullable()();

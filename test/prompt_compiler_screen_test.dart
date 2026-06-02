@@ -53,8 +53,8 @@ void main() {
     // Verify initial state
     expect(find.text('Compile: Email Template'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2)); // tone, recipient
-    expect(find.text('tone'), findsOneWidget); // label
-    expect(find.text('recipient'), findsOneWidget); // label
+    expect(find.text('Replace {{ tone }}'), findsOneWidget);
+    expect(find.text('Replace {{ recipient }}'), findsOneWidget);
     expect(find.text('Context Pack'), findsOneWidget); // Context pack section
     
     // Preview initially shows raw body since nothing is typed
@@ -66,8 +66,8 @@ void main() {
     expect(find.text('Fill all variables to enable copying.'), findsOneWidget);
 
     // 4. Enter values
-    await tester.enterText(find.widgetWithText(TextField, 'tone'), 'friendly');
-    await tester.enterText(find.widgetWithText(TextField, 'recipient'), 'Bob');
+    await tester.enterText(find.byType(TextField).first, 'friendly');
+    await tester.enterText(find.byType(TextField).last, 'Bob');
     await tester.pumpAndSettle();
 
     // 5. Verify compiled preview updates and copy is enabled

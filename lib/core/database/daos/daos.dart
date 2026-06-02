@@ -119,3 +119,23 @@ class UserSettingsDao extends DatabaseAccessor<AppDatabase> with _$UserSettingsD
   Future<UserSetting?> getSetting(String key) => (select(userSettings)..where((t) => t.key.equals(key))).getSingleOrNull();
   Future<void> setSetting(UserSettingsCompanion entry) => into(userSettings).insert(entry, mode: InsertMode.insertOrReplace);
 }
+
+@DriftAccessor(tables: [PromptVariables])
+class PromptVariableDao extends DatabaseAccessor<AppDatabase> with _$PromptVariableDaoMixin {
+  PromptVariableDao(super.db);
+
+  Future<List<PromptVariable>> getVariablesForPrompt(String promptId) => 
+      (select(promptVariables)..where((t) => t.promptId.equals(promptId))).get();
+
+  Future<void> syncVariablesForPrompt(String promptId, List<PromptVariablesCompanion> variables) async {
+    await transaction(() async {
+      // 1. Delete existing variables for this prompt
+      await (delete(promptVariables)..where((t) => t.promptId.equals(promptId))).go();
+
+      // 2. Insert the updated list of variables
+      for (final variable in variables) {
+        await into(promptVariables).insert(variable);
+      }
+    });
+  }
+}

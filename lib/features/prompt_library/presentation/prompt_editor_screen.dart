@@ -7,6 +7,39 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 
+import '../../prompt_compiler/domain/prompt_compiler.dart';
+import 'package:flutter/foundation.dart';
+
+
+
+class _VariableMetadataForm {
+  final String name;
+  final TextEditingController labelController;
+  final TextEditingController descriptionController;
+  final TextEditingController defaultController;
+  final TextEditingController exampleController;
+  bool isRequired;
+
+  _VariableMetadataForm({
+    required this.name,
+    String? label,
+    String? description,
+    String? defaultValue,
+    String? exampleValue,
+    required this.isRequired,
+  })  : labelController = TextEditingController(text: label),
+        descriptionController = TextEditingController(text: description),
+        defaultController = TextEditingController(text: defaultValue),
+        exampleController = TextEditingController(text: exampleValue);
+
+  void dispose() {
+    labelController.dispose();
+    descriptionController.dispose();
+    defaultController.dispose();
+    exampleController.dispose();
+  }
+}
+
 class PromptEditorScreen extends ConsumerStatefulWidget {
   final String? promptId;
 
@@ -26,10 +59,37 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   Prompt? _existingPrompt;
   bool _isLoading = true;
 
-  @override
+  Map<String, _VariableMetadataForm> _variableForms = {};
+  List<String> _detectedVariables = [];
+
+
+@override
   void initState() {
     super.initState();
+    _bodyController.addListener(_onBodyChanged);
     _loadPrompt();
+  }
+
+  void _onBodyChanged() {
+    final variables = PromptCompiler.extractVariables(_bodyController.text);
+    if (listEquals(_detectedVariables, variables)) return;
+    
+      setState(() {
+      _detectedVariables = variables;
+      final newForms = <String, _VariableMetadataForm>{};
+      for (final v in variables) {
+        newForms[v] = _variableForms[v] ?? _VariableMetadataForm(name: v, isRequired: true);
+      }
+      
+      // Dispose old forms that are no longer present
+      for (final v in _variableForms.keys) {
+        if (!variables.contains(v)) {
+          _variableForms[v]?.dispose();
+        }
+      }
+      
+      _variableForms = newForms;
+    });
   }
 
   Future<void> _loadPrompt() async {
@@ -63,12 +123,16 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     }
   }
 
-  @override
+@override
   void dispose() {
+    _bodyController.removeListener(_onBodyChanged);
     _titleController.dispose();
     _bodyController.dispose();
     _purposeController.dispose();
     _tagsController.dispose();
+    for (final form in _variableForms.values) {
+      form.dispose();
+    }
     super.dispose();
   }
 
@@ -139,10 +203,28 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         updatedAt: now,
       ));
 
-      // Duplicate tags
+// Duplicate tags
       final existingTags = await tagDao.getTagsForPrompt(_existingPrompt!.id);
       final tagNames = existingTags.map((t) => t.name).toList();
       await tagDao.replaceTagsForPrompt(newPromptId, tagNames);
+
+      // Duplicate variable metadata
+      final pvDao = ref.read(promptVariableDaoProvider);
+      final existingVars = await pvDao.getVariablesForPrompt(_existingPrompt!.id);
+      final newVarCompanions = existingVars.map((v) => PromptVariablesCompanion.insert(
+        id: const Uuid().v4(),
+        promptId: newPromptId,
+        name: v.name,
+        label: v.label != null ? drift.Value(v.label!) : const drift.Value.absent(),
+        description: v.description != null ? drift.Value(v.description!) : const drift.Value.absent(),
+        defaultValue: v.defaultValue != null ? drift.Value(v.defaultValue!) : const drift.Value.absent(),
+        exampleValue: v.exampleValue != null ? drift.Value(v.exampleValue!) : const drift.Value.absent(),
+        isRequired: drift.Value(v.isRequired),
+        sortOrder: drift.Value(v.sortOrder),
+        createdAt: now,
+        updatedAt: now,
+      )).toList();
+      await pvDao.syncVariablesForPrompt(newPromptId, newVarCompanions);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

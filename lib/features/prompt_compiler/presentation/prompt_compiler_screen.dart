@@ -22,6 +22,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
 
   List<String> _variables = [];
   final Map<String, TextEditingController> _controllers = {};
+  Map<String, PromptVariable> _variableMetadata = {};
   List<ContextPack> _contextPacks = [];
   String? _selectedContextPackId;
 
@@ -34,12 +35,17 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
   Future<void> _loadPrompt() async {
     try {
       final promptDao = ref.read(promptDaoProvider);
+      final pvDao = ref.read(promptVariableDaoProvider);
+      
       final prompt = await promptDao.getPromptById(widget.promptId);
+      final metadataList = await pvDao.getVariablesForPrompt(widget.promptId);
+      final metadataMap = {for (final v in metadataList) v.name: v};
       
       final variables = PromptCompiler.extractVariables(prompt.body);
       
       for (final variable in variables) {
-        _controllers[variable] = TextEditingController();
+        final meta = metadataMap[variable];
+        _controllers[variable] = TextEditingController(text: meta?.defaultValue ?? '');
         _controllers[variable]!.addListener(() {
           setState(() {}); // Trigger rebuild to update preview
         });
@@ -51,6 +57,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
       setState(() {
         _prompt = prompt;
         _variables = variables;
+        _variableMetadata = metadataMap;
         _contextPacks = packs;
         _isLoading = false;
       });
@@ -84,8 +91,11 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
   }
 
   bool get _isMissingVariables {
-    for (final controller in _controllers.values) {
-      if (controller.text.trim().isEmpty) {
+    for (final variable in _variables) {
+      final controller = _controllers[variable]!;
+      final meta = _variableMetadata[variable];
+      final isRequired = meta?.isRequired ?? true;
+      if (isRequired && controller.text.trim().isEmpty) {
         return true;
       }
     }
@@ -183,14 +193,31 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                         itemCount: _variables.length,
                         itemBuilder: (context, index) {
                           final variable = _variables[index];
+                          final meta = _variableMetadata[variable];
+                          final isRequired = meta?.isRequired ?? true;
+                          final label = meta?.label ?? variable;
+                          final description = meta?.description;
+                          final example = meta?.exampleValue;
+                          
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16.0),
                             child: TextField(
                               controller: _controllers[variable],
                               decoration: InputDecoration(
-                                labelText: variable,
+                                label: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(text: label),
+                                      if (isRequired)
+                                        const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+                                      if (!isRequired)
+                                        const TextSpan(text: ' (Optional)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
                                 border: const OutlineInputBorder(),
-                                helperText: 'Replace {{ $variable }}',
+                                helperText: description ?? 'Replace {{ $variable }}',
+                                hintText: example,
                               ),
                             ),
                           );

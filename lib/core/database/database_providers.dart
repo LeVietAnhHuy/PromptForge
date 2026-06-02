@@ -36,3 +36,7 @@ final collectionDaoProvider = Provider<CollectionDao>((ref) {
 final userSettingsDaoProvider = Provider<UserSettingsDao>((ref) {
   return UserSettingsDao(ref.watch(databaseProvider));
 });
+
+final promptVariableDaoProvider = Provider<PromptVariableDao>((ref) {
+  return PromptVariableDao(ref.watch(databaseProvider));
+});

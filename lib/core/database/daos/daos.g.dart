@@ -86,3 +86,16 @@ class UserSettingsDaoManager {
   $$UserSettingsTableTableManager get userSettings =>
       $$UserSettingsTableTableManager(_db.attachedDatabase, _db.userSettings);
 }
+
+mixin _$PromptVariableDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PromptVariablesTable get promptVariables => attachedDatabase.promptVariables;
+  PromptVariableDaoManager get managers => PromptVariableDaoManager(this);
+}
+
+class PromptVariableDaoManager {
+  final _$PromptVariableDaoMixin _db;
+  PromptVariableDaoManager(this._db);
+  $$PromptVariablesTableTableManager get promptVariables =>
+      $$PromptVariablesTableTableManager(
+          _db.attachedDatabase, _db.promptVariables);
+}
