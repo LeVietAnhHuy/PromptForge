@@ -149,7 +149,7 @@ class _PromptRunEditorScreenState extends ConsumerState<PromptRunEditorScreen> {
       exampleId: _run!.id,
       providerId: drift.Value(provider.id),
       providerName: provider.name,
-      modelName: drift.Value('Mock Model'),
+      modelName: const drift.Value('Mock Model'),
       outputText: 'Mock output generated at ${now.toIso8601String()}',
       createdAt: now,
       updatedAt: now,

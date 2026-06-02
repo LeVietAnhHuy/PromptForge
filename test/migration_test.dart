@@ -3,7 +3,7 @@ import 'package:drift/native.dart';
 import 'package:drift/drift.dart';
 
 import 'package:promptforge/core/database/database.dart';
-import 'package:promptforge/core/database/tables/tables.dart';
+
 
 void main() {
   test('v3 to v4 migration works and preserves data', () async {
