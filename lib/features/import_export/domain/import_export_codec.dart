@@ -4,7 +4,8 @@ import '../../../core/database/database.dart';
 class ImportedPrompt {
   final Prompt prompt;
   final List<String> tags;
-  ImportedPrompt(this.prompt, this.tags);
+  final List<PromptVariable> variables;
+  ImportedPrompt(this.prompt, this.tags, [this.variables = const []]);
 }
 
 class ImportPreview {
@@ -24,10 +25,10 @@ class ImportPreview {
 }
 
 class ImportExportCodec {
-  static const int currentSchemaVersion = 1;
+  static const int currentSchemaVersion = 2;
   static const String expectedAppId = 'PromptForge';
 
-  static String encodeExport(List<Prompt> prompts, Map<String, List<String>> promptTags, List<ContextPack> contextPacks) {
+  static String encodeExport(List<Prompt> prompts, Map<String, List<String>> promptTags, Map<String, List<PromptVariable>> promptVariables, List<ContextPack> contextPacks) {
     final Map<String, dynamic> payload = {
       'schemaVersion': currentSchemaVersion,
       'app': expectedAppId,
@@ -43,6 +44,14 @@ class ImportExportCodec {
         'isFavorite': p.isFavorite,
         'usageCount': p.usageCount,
         'tags': promptTags[p.id] ?? [],
+        'variables': (promptVariables[p.id] ?? []).map((v) => {
+          'name': v.name,
+          'label': v.label,
+          'description': v.description,
+          'defaultValue': v.defaultValue,
+          'exampleValue': v.exampleValue,
+          'isRequired': v.isRequired,
+        }).toList(),
       }).toList(),
       'contextPacks': contextPacks.map((c) => {
         'id': c.id,
@@ -101,6 +110,26 @@ class ImportExportCodec {
         final tagsRaw = raw['tags'] as List<dynamic>? ?? [];
         final tags = tagsRaw.map((e) => e.toString()).toList();
 
+        final varsRaw = raw['variables'] as List<dynamic>? ?? [];
+        final variables = <PromptVariable>[];
+        for (final v in varsRaw) {
+          if (v is Map<String, dynamic>) {
+            variables.add(PromptVariable(
+              id: '', // Will be assigned during import service insertion
+              promptId: id,
+              name: v['name'] as String,
+              label: v['label'] as String?,
+              description: v['description'] as String?,
+              defaultValue: v['defaultValue'] as String?,
+              exampleValue: v['exampleValue'] as String?,
+              isRequired: v['isRequired'] as bool? ?? true,
+              sortOrder: 0,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ));
+          }
+        }
+
         validPrompts.add(ImportedPrompt(
           Prompt(
             id: id,
@@ -114,6 +143,7 @@ class ImportExportCodec {
             usageCount: usageCount,
           ),
           tags,
+          variables,
         ));
       } catch (e) {
         invalidRecordsCount++;

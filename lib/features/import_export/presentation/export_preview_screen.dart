@@ -1,6 +1,8 @@
+import 'dart:convert' as dart_convert;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:file_selector/file_selector.dart';
 import '../application/import_export_service.dart';
 
 class ExportPreviewScreen extends ConsumerStatefulWidget {
@@ -48,18 +50,56 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     }
   }
 
+  Future<void> _saveToFile() async {
+    if (_jsonOutput == null) return;
+    try {
+      final FileSaveLocation? result = await getSaveLocation(
+        suggestedName: 'promptforge_export_${DateTime.now().millisecondsSinceEpoch}.json',
+        acceptedTypeGroups: [
+          const XTypeGroup(label: 'JSON Files', extensions: ['json']),
+        ],
+      );
+
+      if (result != null) {
+        final file = XFile.fromData(
+          dart_convert.utf8.encode(_jsonOutput!),
+          mimeType: 'application/json',
+        );
+        await file.saveTo(result.path);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Saved to ${result.path}')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save file: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Export Preview'),
         actions: [
-          if (_jsonOutput != null)
+          if (_jsonOutput != null) ...[
             IconButton(
               icon: const Icon(Icons.copy),
               tooltip: 'Copy JSON',
               onPressed: _copyToClipboard,
             ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: 'Save to File',
+              onPressed: _saveToFile,
+            ),
+          ],
         ],
       ),
       body: _isLoading

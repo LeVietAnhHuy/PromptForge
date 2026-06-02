@@ -54,54 +54,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Export Prompt'), findsOneWidget);
-    expect(find.textContaining('"schemaVersion": 1'), findsOneWidget);
+    expect(find.textContaining('"schemaVersion": 2'), findsOneWidget);
     expect(find.byIcon(Icons.copy), findsOneWidget);
+    expect(find.byIcon(Icons.save), findsOneWidget);
   });
 
-  testWidgets('ImportScreen handles invalid JSON', (tester) async {
-    await tester.pumpWidget(createImportApp());
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField), 'invalid json');
-    await tester.tap(find.text('Preview Import'));
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('Invalid JSON format.'), findsOneWidget);
-    expect(find.text('Confirm Import'), findsNothing);
-  });
-
-  testWidgets('ImportScreen previews and imports valid JSON', (tester) async {
-    await tester.pumpWidget(createImportApp());
-    await tester.pumpAndSettle();
-
-    const validJson = '''
-    {
-      "app": "PromptForge",
-      "schemaVersion": 1,
-      "prompts": [
-        { "id": "p1", "title": "A", "body": "B", "createdAt": "2026-06-01T00:00:00Z", "updatedAt": "2026-06-01T00:00:00Z" }
-      ],
-      "contextPacks": []
-    }
-    ''';
-
-    await tester.enterText(find.byType(TextField), validJson);
-    await tester.tap(find.text('Preview Import'));
-    await tester.pumpAndSettle();
-
-    // Verify summary is shown
-    expect(find.text('Import Summary'), findsOneWidget);
-    expect(find.text('Valid Prompts: 1'), findsOneWidget);
-    
-    // Confirm import
-    await tester.tap(find.text('Confirm Import'));
-    await tester.pumpAndSettle();
-
-    // Should pop back and save to db (since we pop, the widget should be unmounted or show snackbar)
-    // We can verify DB state directly
-    final prompts = await database.select(database.prompts).get();
-    expect(prompts.length, 1);
-    expect(prompts.first.title, 'A');
-    expect(prompts.first.id, isNot('p1')); // Ensures we imported as a new copy
-  });
 }

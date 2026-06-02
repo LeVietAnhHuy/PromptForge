@@ -33,17 +33,17 @@ void main() {
     ];
 
     test('encodeExport returns correctly structured JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, testContextPacks);
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, testContextPacks);
       final decoded = jsonDecode(jsonStr);
 
-      expect(decoded['schemaVersion'], 1);
+      expect(decoded['schemaVersion'], 2);
       expect(decoded['app'], 'PromptForge');
       expect((decoded['prompts'] as List).length, 1);
       expect((decoded['contextPacks'] as List).length, 1);
     });
 
     test('decodeImport parses valid JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, testContextPacks);
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, testContextPacks);
       final preview = ImportExportCodec.decodeImport(jsonStr);
 
       expect(preview.invalidRecordsCount, 0);
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('decodeImport throws on wrong app id', () {
-      final invalidJson = jsonEncode({'app': 'OtherApp', 'schemaVersion': 1});
+      final invalidJson = jsonEncode({'app': 'OtherApp', 'schemaVersion': 2});
       expect(
         () => ImportExportCodec.decodeImport(invalidJson),
         throwsA(isA<FormatException>()),
@@ -79,7 +79,7 @@ void main() {
     test('decodeImport counts invalid records', () {
       final jsonStr = jsonEncode({
         'app': 'PromptForge',
-        'schemaVersion': 1,
+        'schemaVersion': 2,
         'prompts': [
           {'id': 'valid', 'title': 'Valid', 'body': 'body', 'createdAt': DateTime.now().toIso8601String(), 'updatedAt': DateTime.now().toIso8601String()},
           {'invalid': 'record'},
