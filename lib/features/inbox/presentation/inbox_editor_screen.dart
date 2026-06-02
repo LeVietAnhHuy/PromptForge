@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../application/inbox_providers.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class InboxEditorScreen extends ConsumerStatefulWidget {
   final String? itemId; // null means creating a new item
@@ -17,6 +18,8 @@ class InboxEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<InboxEditorScreen> createState() => _InboxEditorScreenState();
 }
 
+enum _ViewMode { edit, preview, split }
+
 class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
@@ -24,6 +27,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
 
   InboxItem? _existingItem;
   bool _isLoading = true;
+  _ViewMode _viewMode = _ViewMode.edit;
 
   @override
   void initState() {
@@ -181,16 +185,38 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: TextField(
-                controller: _contentController,
-                decoration: const InputDecoration(
-                  labelText: 'Raw Content',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Raw Content', style: Theme.of(context).textTheme.titleSmall),
+                SegmentedButton<_ViewMode>(
+                  segments: [
+                    const ButtonSegment(value: _ViewMode.edit, label: Text('Edit')),
+                    const ButtonSegment(value: _ViewMode.preview, label: Text('Preview')),
+                    if (MediaQuery.of(context).size.width >= 600)
+                      const ButtonSegment(value: _ViewMode.split, label: Text('Split')),
+                  ],
+                  selected: {_viewMode},
+                  onSelectionChanged: (newSelection) {
+                    setState(() {
+                      _viewMode = newSelection.first;
+                      // Keep state in sync if content was edited in split or edit modes
+                      if (_viewMode == _ViewMode.preview) {
+                        FocusScope.of(context).unfocus();
+                      }
+                    });
+                  },
                 ),
-                maxLines: null,
-                expands: true,
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
+                  borderRadius: BorderRadius.circular(4.0),
+                ),
+                child: _buildContentView(MediaQuery.of(context).size.width >= 600),
               ),
             ),
             const SizedBox(height: 16),
@@ -214,6 +240,70 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildContentView(bool isDesktop) {
+    // If mobile and somehow ended up in split view, force edit mode.
+    if (!isDesktop && _viewMode == _ViewMode.split) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _viewMode = _ViewMode.edit);
+      });
+    }
+    
+    final mode = (!isDesktop && _viewMode == _ViewMode.split) ? _ViewMode.edit : _viewMode;
+
+    switch (mode) {
+      case _ViewMode.edit:
+        return _buildEditor();
+      case _ViewMode.preview:
+        return _buildPreview();
+      case _ViewMode.split:
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _buildEditor()),
+            VerticalDivider(width: 1, color: Theme.of(context).colorScheme.outline),
+            Expanded(child: _buildPreview()),
+          ],
+        );
+    }
+  }
+
+  Widget _buildEditor() {
+    return TextField(
+      controller: _contentController,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.all(12),
+        hintText: 'Enter raw markdown content...',
+      ),
+      maxLines: null,
+      expands: true,
+      textAlignVertical: TextAlignVertical.top,
+      onChanged: (_) {
+        if (_viewMode == _ViewMode.split) {
+          setState(() {}); // Rebuild to update preview
+        }
+      },
+    );
+  }
+
+  Widget _buildPreview() {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      child: _contentController.text.trim().isEmpty
+          ? const Center(
+              child: Text(
+                'Nothing to preview yet.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          : Markdown(
+              data: _contentController.text,
+              selectable: true,
+              padding: const EdgeInsets.all(16),
+            ),
     );
   }
 }
