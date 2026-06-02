@@ -67,28 +67,36 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
       return;
     }
 
-    if (_existingItem == null) {
-      await dao.createInboxItem(InboxItemsCompanion.insert(
-        id: const Uuid().v4(),
-        title: titleStr.isNotEmpty ? drift.Value(titleStr) : const drift.Value.absent(),
-        rawText: contentStr,
-        source: sourceStr.isNotEmpty ? drift.Value(sourceStr) : const drift.Value.absent(),
-        createdAt: now,
-        updatedAt: now,
-      ));
-    } else {
-      await dao.updateInboxItem(InboxItemsCompanion(
-        id: drift.Value(_existingItem!.id),
-        title: drift.Value(titleStr.isNotEmpty ? titleStr : null),
-        rawText: drift.Value(contentStr),
-        source: drift.Value(sourceStr.isNotEmpty ? sourceStr : null),
-        updatedAt: drift.Value(now),
-        status: drift.Value(_existingItem!.status),
-        createdAt: drift.Value(_existingItem!.createdAt),
-      ));
-    }
+    try {
+      if (_existingItem == null) {
+        await dao.createInboxItem(InboxItemsCompanion.insert(
+          id: const Uuid().v4(),
+          title: titleStr.isNotEmpty ? drift.Value(titleStr) : const drift.Value.absent(),
+          rawText: contentStr,
+          source: sourceStr.isNotEmpty ? drift.Value(sourceStr) : const drift.Value.absent(),
+          createdAt: now,
+          updatedAt: now,
+        ));
+      } else {
+        await dao.updateInboxItem(InboxItemsCompanion(
+          id: drift.Value(_existingItem!.id),
+          title: drift.Value(titleStr.isNotEmpty ? titleStr : null),
+          rawText: drift.Value(contentStr),
+          source: drift.Value(sourceStr.isNotEmpty ? sourceStr : null),
+          updatedAt: drift.Value(now),
+          status: drift.Value(_existingItem!.status),
+          createdAt: drift.Value(_existingItem!.createdAt),
+        ));
+      }
 
-    if (mounted) context.pop();
+      if (mounted) context.pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _archive() async {

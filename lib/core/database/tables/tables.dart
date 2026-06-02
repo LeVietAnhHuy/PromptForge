@@ -142,3 +142,35 @@ class UserSettings extends Table {
   @override
   Set<Column> get primaryKey => {key};
 }
+
+class PromptExamples extends Table {
+  TextColumn get id => text()();
+  TextColumn get promptId => text()();
+  TextColumn get title => text()();
+  TextColumn get compiledPrompt => text()();
+  TextColumn get contextPackId => text().nullable()();
+  TextColumn get variableValuesJson => text().nullable()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class PromptExampleOutputs extends Table {
+  TextColumn get id => text()();
+  TextColumn get exampleId => text()();
+  TextColumn get providerName => text()();
+  TextColumn get modelName => text().nullable()();
+  TextColumn get outputText => text()();
+  IntColumn get score => integer().nullable()();
+  TextColumn get notes => text().nullable()();
+  BoolColumn get isBest => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

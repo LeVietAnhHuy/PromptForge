@@ -20,12 +20,14 @@ part 'database.g.dart';
   PromptCollectionLinks,
   InboxItems,
   UserSettings,
+  PromptExamples,
+  PromptExampleOutputs,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -34,7 +36,22 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
-        // Handle database migrations here
+        if (from < 2) {
+          // Stage 7: added title to InboxItems
+          try { await m.addColumn(inboxItems, inboxItems.title); } catch (_) {}
+          
+          // Stage 9: added fields to PromptVariables
+          try { await m.addColumn(promptVariables, promptVariables.label); } catch (_) {}
+          try { await m.addColumn(promptVariables, promptVariables.description); } catch (_) {}
+          try { await m.addColumn(promptVariables, promptVariables.defaultValue); } catch (_) {}
+          try { await m.addColumn(promptVariables, promptVariables.exampleValue); } catch (_) {}
+          try { await m.addColumn(promptVariables, promptVariables.isRequired); } catch (_) {}
+          try { await m.addColumn(promptVariables, promptVariables.sortOrder); } catch (_) {}
+
+          // Stage 10: added PromptExamples and Outputs
+          try { await m.createTable(promptExamples); } catch (_) {}
+          try { await m.createTable(promptExampleOutputs); } catch (_) {}
+        }
       },
     );
   }

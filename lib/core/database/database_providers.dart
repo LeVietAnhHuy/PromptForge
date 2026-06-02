@@ -40,3 +40,11 @@ final userSettingsDaoProvider = Provider<UserSettingsDao>((ref) {
 final promptVariableDaoProvider = Provider<PromptVariableDao>((ref) {
   return PromptVariableDao(ref.watch(databaseProvider));
 });
+
+final promptExampleDaoProvider = Provider<PromptExampleDao>((ref) {
+  return PromptExampleDao(ref.watch(databaseProvider));
+});
+
+final promptExampleOutputDaoProvider = Provider<PromptExampleOutputDao>((ref) {
+  return PromptExampleOutputDao(ref.watch(databaseProvider));
+});

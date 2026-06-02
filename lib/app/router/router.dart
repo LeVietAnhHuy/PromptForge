@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/prompt_library/presentation/prompt_library_screen.dart';
 import '../../features/prompt_library/presentation/prompt_editor_screen.dart';
 import '../../features/prompt_compiler/presentation/prompt_compiler_screen.dart';
+import '../../features/prompt_examples/presentation/prompt_examples_screen.dart';
+import '../../features/prompt_examples/presentation/example_comparison_screen.dart';
 import '../../features/context_packs/presentation/context_packs_screen.dart';
 import '../../features/context_packs/presentation/context_pack_editor_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
@@ -65,6 +67,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => PromptCompilerScreen(
                       promptId: state.pathParameters['id']!,
                     ),
+                  ),
+                  GoRoute(
+                    path: 'examples/:id',
+                    builder: (context, state) => PromptExamplesScreen(
+                      promptId: state.pathParameters['id']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'compare/:exampleId',
+                        builder: (context, state) => ExampleComparisonScreen(
+                          exampleId: state.pathParameters['exampleId']!,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

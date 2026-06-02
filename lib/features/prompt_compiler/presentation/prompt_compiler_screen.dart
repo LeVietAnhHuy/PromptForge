@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
+import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
@@ -244,10 +249,68 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                         'Preview',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      ElevatedButton.icon(
-                        onPressed: _isMissingVariables ? null : _copyToClipboard,
-                        icon: const Icon(Icons.copy),
-                        label: const Text('Copy Output'),
+                      Expanded(
+                        child: Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _isMissingVariables ? null : _copyToClipboard,
+                              icon: const Icon(Icons.copy),
+                              label: const Text('Copy Output'),
+                            ),
+                            ElevatedButton.icon(
+                        onPressed: _isMissingVariables ? null : () async {
+                          final title = await showDialog<String>(
+                            context: context,
+                            builder: (context) {
+                              final controller = TextEditingController(text: 'Example for ${_prompt!.title}');
+                              return AlertDialog(
+                                title: const Text('Save Example'),
+                                content: TextField(
+                                  controller: controller,
+                                  decoration: const InputDecoration(labelText: 'Title'),
+                                  autofocus: true,
+                                ),
+                                actions: [
+                                  TextButton(onPressed: () => context.pop(), child: const Text('Cancel')),
+                                  ElevatedButton(onPressed: () => context.pop(controller.text), child: const Text('Save')),
+                                ],
+                              );
+                            }
+                          );
+                          
+                          if (title != null && title.isNotEmpty && context.mounted) {
+                            final dao = ref.read(promptExampleDaoProvider);
+                            final exampleId = const Uuid().v4();
+                            final now = DateTime.now();
+                            
+                            // Get current variable values as JSON
+                            final varsMap = _controllers.map((k, v) => MapEntry(k, v.text));
+                            final jsonStr = jsonEncode(varsMap);
+
+                            await dao.createExample(PromptExamplesCompanion.insert(
+                              id: exampleId,
+                              promptId: _prompt!.id,
+                              title: title,
+                              compiledPrompt: _compiledPrompt,
+                              contextPackId: _selectedContextPackId != null ? drift.Value(_selectedContextPackId!) : const drift.Value.absent(),
+                              variableValuesJson: drift.Value(jsonStr),
+                              createdAt: now,
+                              updatedAt: now,
+                            ));
+                            
+                            if (context.mounted) {
+                              context.go('/library/examples/${_prompt!.id}/compare/$exampleId');
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.compare_arrows),
+                        label: const Text('Compare Outputs'),
+                      ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

@@ -289,6 +289,11 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         actions: [
           if (isEditing) ...[
             IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'Examples & Comparisons',
+              onPressed: () => context.go('/library/examples/${_existingPrompt!.id}'),
+            ),
+            IconButton(
               icon: const Icon(Icons.play_arrow),
               tooltip: 'Use Prompt (Compile)',
               onPressed: () => context.go('/library/compile/${_existingPrompt!.id}'),

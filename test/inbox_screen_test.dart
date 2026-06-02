@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:go_router/go_router.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/database/database_providers.dart';
 import 'package:promptforge/features/inbox/presentation/inbox_screen.dart';
@@ -31,12 +32,22 @@ void main() {
   }
 
   Widget createInboxEditorApp({String? itemId}) {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => InboxEditorScreen(itemId: itemId),
+        ),
+      ],
+    );
+
     return ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(database),
       ],
-      child: MaterialApp(
-        home: InboxEditorScreen(itemId: itemId),
+      child: MaterialApp.router(
+        routerConfig: router,
       ),
     );
   }
@@ -82,6 +93,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Content cannot be empty'), findsOneWidget);
+
+    await tester.pumpWidget(Container());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('InboxEditorScreen saves new item', (tester) async {
+    await tester.pumpWidget(createInboxEditorApp());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'Test Title');
+    await tester.enterText(find.byType(TextField).at(1), 'Test Content');
+    await tester.enterText(find.byType(TextField).at(2), 'Test Source');
+    
+    await tester.tap(find.byIcon(Icons.check));
+    await tester.pumpAndSettle();
+
+    final items = await database.select(database.inboxItems).get();
+    expect(items.length, 1);
+    expect(items.first.title, 'Test Title');
+    expect(items.first.rawText, 'Test Content');
+    expect(items.first.source, 'Test Source');
 
     await tester.pumpWidget(Container());
     await tester.pump(const Duration(seconds: 1));

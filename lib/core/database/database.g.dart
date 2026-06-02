@@ -4371,6 +4371,1055 @@ class UserSettingsCompanion extends UpdateCompanion<UserSetting> {
   }
 }
 
+class $PromptExamplesTable extends PromptExamples
+    with TableInfo<$PromptExamplesTable, PromptExample> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromptExamplesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _promptIdMeta =
+      const VerificationMeta('promptId');
+  @override
+  late final GeneratedColumn<String> promptId = GeneratedColumn<String>(
+      'prompt_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _compiledPromptMeta =
+      const VerificationMeta('compiledPrompt');
+  @override
+  late final GeneratedColumn<String> compiledPrompt = GeneratedColumn<String>(
+      'compiled_prompt', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contextPackIdMeta =
+      const VerificationMeta('contextPackId');
+  @override
+  late final GeneratedColumn<String> contextPackId = GeneratedColumn<String>(
+      'context_pack_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _variableValuesJsonMeta =
+      const VerificationMeta('variableValuesJson');
+  @override
+  late final GeneratedColumn<String> variableValuesJson =
+      GeneratedColumn<String>('variable_values_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _isArchivedMeta =
+      const VerificationMeta('isArchived');
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+      'is_archived', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_archived" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        promptId,
+        title,
+        compiledPrompt,
+        contextPackId,
+        variableValuesJson,
+        notes,
+        createdAt,
+        updatedAt,
+        isArchived
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prompt_examples';
+  @override
+  VerificationContext validateIntegrity(Insertable<PromptExample> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('prompt_id')) {
+      context.handle(_promptIdMeta,
+          promptId.isAcceptableOrUnknown(data['prompt_id']!, _promptIdMeta));
+    } else if (isInserting) {
+      context.missing(_promptIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('compiled_prompt')) {
+      context.handle(
+          _compiledPromptMeta,
+          compiledPrompt.isAcceptableOrUnknown(
+              data['compiled_prompt']!, _compiledPromptMeta));
+    } else if (isInserting) {
+      context.missing(_compiledPromptMeta);
+    }
+    if (data.containsKey('context_pack_id')) {
+      context.handle(
+          _contextPackIdMeta,
+          contextPackId.isAcceptableOrUnknown(
+              data['context_pack_id']!, _contextPackIdMeta));
+    }
+    if (data.containsKey('variable_values_json')) {
+      context.handle(
+          _variableValuesJsonMeta,
+          variableValuesJson.isAcceptableOrUnknown(
+              data['variable_values_json']!, _variableValuesJsonMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+          _isArchivedMeta,
+          isArchived.isAcceptableOrUnknown(
+              data['is_archived']!, _isArchivedMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromptExample map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromptExample(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      promptId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}prompt_id'])!,
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      compiledPrompt: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}compiled_prompt'])!,
+      contextPackId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}context_pack_id']),
+      variableValuesJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}variable_values_json']),
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      isArchived: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_archived'])!,
+    );
+  }
+
+  @override
+  $PromptExamplesTable createAlias(String alias) {
+    return $PromptExamplesTable(attachedDatabase, alias);
+  }
+}
+
+class PromptExample extends DataClass implements Insertable<PromptExample> {
+  final String id;
+  final String promptId;
+  final String title;
+  final String compiledPrompt;
+  final String? contextPackId;
+  final String? variableValuesJson;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final bool isArchived;
+  const PromptExample(
+      {required this.id,
+      required this.promptId,
+      required this.title,
+      required this.compiledPrompt,
+      this.contextPackId,
+      this.variableValuesJson,
+      this.notes,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.isArchived});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['prompt_id'] = Variable<String>(promptId);
+    map['title'] = Variable<String>(title);
+    map['compiled_prompt'] = Variable<String>(compiledPrompt);
+    if (!nullToAbsent || contextPackId != null) {
+      map['context_pack_id'] = Variable<String>(contextPackId);
+    }
+    if (!nullToAbsent || variableValuesJson != null) {
+      map['variable_values_json'] = Variable<String>(variableValuesJson);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['is_archived'] = Variable<bool>(isArchived);
+    return map;
+  }
+
+  PromptExamplesCompanion toCompanion(bool nullToAbsent) {
+    return PromptExamplesCompanion(
+      id: Value(id),
+      promptId: Value(promptId),
+      title: Value(title),
+      compiledPrompt: Value(compiledPrompt),
+      contextPackId: contextPackId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(contextPackId),
+      variableValuesJson: variableValuesJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(variableValuesJson),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      isArchived: Value(isArchived),
+    );
+  }
+
+  factory PromptExample.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromptExample(
+      id: serializer.fromJson<String>(json['id']),
+      promptId: serializer.fromJson<String>(json['promptId']),
+      title: serializer.fromJson<String>(json['title']),
+      compiledPrompt: serializer.fromJson<String>(json['compiledPrompt']),
+      contextPackId: serializer.fromJson<String?>(json['contextPackId']),
+      variableValuesJson:
+          serializer.fromJson<String?>(json['variableValuesJson']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'promptId': serializer.toJson<String>(promptId),
+      'title': serializer.toJson<String>(title),
+      'compiledPrompt': serializer.toJson<String>(compiledPrompt),
+      'contextPackId': serializer.toJson<String?>(contextPackId),
+      'variableValuesJson': serializer.toJson<String?>(variableValuesJson),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'isArchived': serializer.toJson<bool>(isArchived),
+    };
+  }
+
+  PromptExample copyWith(
+          {String? id,
+          String? promptId,
+          String? title,
+          String? compiledPrompt,
+          Value<String?> contextPackId = const Value.absent(),
+          Value<String?> variableValuesJson = const Value.absent(),
+          Value<String?> notes = const Value.absent(),
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          bool? isArchived}) =>
+      PromptExample(
+        id: id ?? this.id,
+        promptId: promptId ?? this.promptId,
+        title: title ?? this.title,
+        compiledPrompt: compiledPrompt ?? this.compiledPrompt,
+        contextPackId:
+            contextPackId.present ? contextPackId.value : this.contextPackId,
+        variableValuesJson: variableValuesJson.present
+            ? variableValuesJson.value
+            : this.variableValuesJson,
+        notes: notes.present ? notes.value : this.notes,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        isArchived: isArchived ?? this.isArchived,
+      );
+  PromptExample copyWithCompanion(PromptExamplesCompanion data) {
+    return PromptExample(
+      id: data.id.present ? data.id.value : this.id,
+      promptId: data.promptId.present ? data.promptId.value : this.promptId,
+      title: data.title.present ? data.title.value : this.title,
+      compiledPrompt: data.compiledPrompt.present
+          ? data.compiledPrompt.value
+          : this.compiledPrompt,
+      contextPackId: data.contextPackId.present
+          ? data.contextPackId.value
+          : this.contextPackId,
+      variableValuesJson: data.variableValuesJson.present
+          ? data.variableValuesJson.value
+          : this.variableValuesJson,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      isArchived:
+          data.isArchived.present ? data.isArchived.value : this.isArchived,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptExample(')
+          ..write('id: $id, ')
+          ..write('promptId: $promptId, ')
+          ..write('title: $title, ')
+          ..write('compiledPrompt: $compiledPrompt, ')
+          ..write('contextPackId: $contextPackId, ')
+          ..write('variableValuesJson: $variableValuesJson, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isArchived: $isArchived')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      promptId,
+      title,
+      compiledPrompt,
+      contextPackId,
+      variableValuesJson,
+      notes,
+      createdAt,
+      updatedAt,
+      isArchived);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromptExample &&
+          other.id == this.id &&
+          other.promptId == this.promptId &&
+          other.title == this.title &&
+          other.compiledPrompt == this.compiledPrompt &&
+          other.contextPackId == this.contextPackId &&
+          other.variableValuesJson == this.variableValuesJson &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.isArchived == this.isArchived);
+}
+
+class PromptExamplesCompanion extends UpdateCompanion<PromptExample> {
+  final Value<String> id;
+  final Value<String> promptId;
+  final Value<String> title;
+  final Value<String> compiledPrompt;
+  final Value<String?> contextPackId;
+  final Value<String?> variableValuesJson;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<bool> isArchived;
+  final Value<int> rowid;
+  const PromptExamplesCompanion({
+    this.id = const Value.absent(),
+    this.promptId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.compiledPrompt = const Value.absent(),
+    this.contextPackId = const Value.absent(),
+    this.variableValuesJson = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PromptExamplesCompanion.insert({
+    required String id,
+    required String promptId,
+    required String title,
+    required String compiledPrompt,
+    this.contextPackId = const Value.absent(),
+    this.variableValuesJson = const Value.absent(),
+    this.notes = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.isArchived = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        promptId = Value(promptId),
+        title = Value(title),
+        compiledPrompt = Value(compiledPrompt),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<PromptExample> custom({
+    Expression<String>? id,
+    Expression<String>? promptId,
+    Expression<String>? title,
+    Expression<String>? compiledPrompt,
+    Expression<String>? contextPackId,
+    Expression<String>? variableValuesJson,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<bool>? isArchived,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (promptId != null) 'prompt_id': promptId,
+      if (title != null) 'title': title,
+      if (compiledPrompt != null) 'compiled_prompt': compiledPrompt,
+      if (contextPackId != null) 'context_pack_id': contextPackId,
+      if (variableValuesJson != null)
+        'variable_values_json': variableValuesJson,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (isArchived != null) 'is_archived': isArchived,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PromptExamplesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? promptId,
+      Value<String>? title,
+      Value<String>? compiledPrompt,
+      Value<String?>? contextPackId,
+      Value<String?>? variableValuesJson,
+      Value<String?>? notes,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<bool>? isArchived,
+      Value<int>? rowid}) {
+    return PromptExamplesCompanion(
+      id: id ?? this.id,
+      promptId: promptId ?? this.promptId,
+      title: title ?? this.title,
+      compiledPrompt: compiledPrompt ?? this.compiledPrompt,
+      contextPackId: contextPackId ?? this.contextPackId,
+      variableValuesJson: variableValuesJson ?? this.variableValuesJson,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isArchived: isArchived ?? this.isArchived,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (promptId.present) {
+      map['prompt_id'] = Variable<String>(promptId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (compiledPrompt.present) {
+      map['compiled_prompt'] = Variable<String>(compiledPrompt.value);
+    }
+    if (contextPackId.present) {
+      map['context_pack_id'] = Variable<String>(contextPackId.value);
+    }
+    if (variableValuesJson.present) {
+      map['variable_values_json'] = Variable<String>(variableValuesJson.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptExamplesCompanion(')
+          ..write('id: $id, ')
+          ..write('promptId: $promptId, ')
+          ..write('title: $title, ')
+          ..write('compiledPrompt: $compiledPrompt, ')
+          ..write('contextPackId: $contextPackId, ')
+          ..write('variableValuesJson: $variableValuesJson, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PromptExampleOutputsTable extends PromptExampleOutputs
+    with TableInfo<$PromptExampleOutputsTable, PromptExampleOutput> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PromptExampleOutputsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _exampleIdMeta =
+      const VerificationMeta('exampleId');
+  @override
+  late final GeneratedColumn<String> exampleId = GeneratedColumn<String>(
+      'example_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _providerNameMeta =
+      const VerificationMeta('providerName');
+  @override
+  late final GeneratedColumn<String> providerName = GeneratedColumn<String>(
+      'provider_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _modelNameMeta =
+      const VerificationMeta('modelName');
+  @override
+  late final GeneratedColumn<String> modelName = GeneratedColumn<String>(
+      'model_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _outputTextMeta =
+      const VerificationMeta('outputText');
+  @override
+  late final GeneratedColumn<String> outputText = GeneratedColumn<String>(
+      'output_text', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _scoreMeta = const VerificationMeta('score');
+  @override
+  late final GeneratedColumn<int> score = GeneratedColumn<int>(
+      'score', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _isBestMeta = const VerificationMeta('isBest');
+  @override
+  late final GeneratedColumn<bool> isBest = GeneratedColumn<bool>(
+      'is_best', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_best" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        exampleId,
+        providerName,
+        modelName,
+        outputText,
+        score,
+        notes,
+        isBest,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'prompt_example_outputs';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<PromptExampleOutput> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('example_id')) {
+      context.handle(_exampleIdMeta,
+          exampleId.isAcceptableOrUnknown(data['example_id']!, _exampleIdMeta));
+    } else if (isInserting) {
+      context.missing(_exampleIdMeta);
+    }
+    if (data.containsKey('provider_name')) {
+      context.handle(
+          _providerNameMeta,
+          providerName.isAcceptableOrUnknown(
+              data['provider_name']!, _providerNameMeta));
+    } else if (isInserting) {
+      context.missing(_providerNameMeta);
+    }
+    if (data.containsKey('model_name')) {
+      context.handle(_modelNameMeta,
+          modelName.isAcceptableOrUnknown(data['model_name']!, _modelNameMeta));
+    }
+    if (data.containsKey('output_text')) {
+      context.handle(
+          _outputTextMeta,
+          outputText.isAcceptableOrUnknown(
+              data['output_text']!, _outputTextMeta));
+    } else if (isInserting) {
+      context.missing(_outputTextMeta);
+    }
+    if (data.containsKey('score')) {
+      context.handle(
+          _scoreMeta, score.isAcceptableOrUnknown(data['score']!, _scoreMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('is_best')) {
+      context.handle(_isBestMeta,
+          isBest.isAcceptableOrUnknown(data['is_best']!, _isBestMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PromptExampleOutput map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PromptExampleOutput(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      exampleId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}example_id'])!,
+      providerName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}provider_name'])!,
+      modelName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}model_name']),
+      outputText: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}output_text'])!,
+      score: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}score']),
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      isBest: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_best'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $PromptExampleOutputsTable createAlias(String alias) {
+    return $PromptExampleOutputsTable(attachedDatabase, alias);
+  }
+}
+
+class PromptExampleOutput extends DataClass
+    implements Insertable<PromptExampleOutput> {
+  final String id;
+  final String exampleId;
+  final String providerName;
+  final String? modelName;
+  final String outputText;
+  final int? score;
+  final String? notes;
+  final bool isBest;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const PromptExampleOutput(
+      {required this.id,
+      required this.exampleId,
+      required this.providerName,
+      this.modelName,
+      required this.outputText,
+      this.score,
+      this.notes,
+      required this.isBest,
+      required this.createdAt,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['example_id'] = Variable<String>(exampleId);
+    map['provider_name'] = Variable<String>(providerName);
+    if (!nullToAbsent || modelName != null) {
+      map['model_name'] = Variable<String>(modelName);
+    }
+    map['output_text'] = Variable<String>(outputText);
+    if (!nullToAbsent || score != null) {
+      map['score'] = Variable<int>(score);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['is_best'] = Variable<bool>(isBest);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  PromptExampleOutputsCompanion toCompanion(bool nullToAbsent) {
+    return PromptExampleOutputsCompanion(
+      id: Value(id),
+      exampleId: Value(exampleId),
+      providerName: Value(providerName),
+      modelName: modelName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(modelName),
+      outputText: Value(outputText),
+      score:
+          score == null && nullToAbsent ? const Value.absent() : Value(score),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      isBest: Value(isBest),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory PromptExampleOutput.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PromptExampleOutput(
+      id: serializer.fromJson<String>(json['id']),
+      exampleId: serializer.fromJson<String>(json['exampleId']),
+      providerName: serializer.fromJson<String>(json['providerName']),
+      modelName: serializer.fromJson<String?>(json['modelName']),
+      outputText: serializer.fromJson<String>(json['outputText']),
+      score: serializer.fromJson<int?>(json['score']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      isBest: serializer.fromJson<bool>(json['isBest']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'exampleId': serializer.toJson<String>(exampleId),
+      'providerName': serializer.toJson<String>(providerName),
+      'modelName': serializer.toJson<String?>(modelName),
+      'outputText': serializer.toJson<String>(outputText),
+      'score': serializer.toJson<int?>(score),
+      'notes': serializer.toJson<String?>(notes),
+      'isBest': serializer.toJson<bool>(isBest),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  PromptExampleOutput copyWith(
+          {String? id,
+          String? exampleId,
+          String? providerName,
+          Value<String?> modelName = const Value.absent(),
+          String? outputText,
+          Value<int?> score = const Value.absent(),
+          Value<String?> notes = const Value.absent(),
+          bool? isBest,
+          DateTime? createdAt,
+          DateTime? updatedAt}) =>
+      PromptExampleOutput(
+        id: id ?? this.id,
+        exampleId: exampleId ?? this.exampleId,
+        providerName: providerName ?? this.providerName,
+        modelName: modelName.present ? modelName.value : this.modelName,
+        outputText: outputText ?? this.outputText,
+        score: score.present ? score.value : this.score,
+        notes: notes.present ? notes.value : this.notes,
+        isBest: isBest ?? this.isBest,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  PromptExampleOutput copyWithCompanion(PromptExampleOutputsCompanion data) {
+    return PromptExampleOutput(
+      id: data.id.present ? data.id.value : this.id,
+      exampleId: data.exampleId.present ? data.exampleId.value : this.exampleId,
+      providerName: data.providerName.present
+          ? data.providerName.value
+          : this.providerName,
+      modelName: data.modelName.present ? data.modelName.value : this.modelName,
+      outputText:
+          data.outputText.present ? data.outputText.value : this.outputText,
+      score: data.score.present ? data.score.value : this.score,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      isBest: data.isBest.present ? data.isBest.value : this.isBest,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptExampleOutput(')
+          ..write('id: $id, ')
+          ..write('exampleId: $exampleId, ')
+          ..write('providerName: $providerName, ')
+          ..write('modelName: $modelName, ')
+          ..write('outputText: $outputText, ')
+          ..write('score: $score, ')
+          ..write('notes: $notes, ')
+          ..write('isBest: $isBest, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, exampleId, providerName, modelName,
+      outputText, score, notes, isBest, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PromptExampleOutput &&
+          other.id == this.id &&
+          other.exampleId == this.exampleId &&
+          other.providerName == this.providerName &&
+          other.modelName == this.modelName &&
+          other.outputText == this.outputText &&
+          other.score == this.score &&
+          other.notes == this.notes &&
+          other.isBest == this.isBest &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class PromptExampleOutputsCompanion
+    extends UpdateCompanion<PromptExampleOutput> {
+  final Value<String> id;
+  final Value<String> exampleId;
+  final Value<String> providerName;
+  final Value<String?> modelName;
+  final Value<String> outputText;
+  final Value<int?> score;
+  final Value<String?> notes;
+  final Value<bool> isBest;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const PromptExampleOutputsCompanion({
+    this.id = const Value.absent(),
+    this.exampleId = const Value.absent(),
+    this.providerName = const Value.absent(),
+    this.modelName = const Value.absent(),
+    this.outputText = const Value.absent(),
+    this.score = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isBest = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PromptExampleOutputsCompanion.insert({
+    required String id,
+    required String exampleId,
+    required String providerName,
+    this.modelName = const Value.absent(),
+    required String outputText,
+    this.score = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.isBest = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        exampleId = Value(exampleId),
+        providerName = Value(providerName),
+        outputText = Value(outputText),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<PromptExampleOutput> custom({
+    Expression<String>? id,
+    Expression<String>? exampleId,
+    Expression<String>? providerName,
+    Expression<String>? modelName,
+    Expression<String>? outputText,
+    Expression<int>? score,
+    Expression<String>? notes,
+    Expression<bool>? isBest,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (exampleId != null) 'example_id': exampleId,
+      if (providerName != null) 'provider_name': providerName,
+      if (modelName != null) 'model_name': modelName,
+      if (outputText != null) 'output_text': outputText,
+      if (score != null) 'score': score,
+      if (notes != null) 'notes': notes,
+      if (isBest != null) 'is_best': isBest,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PromptExampleOutputsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? exampleId,
+      Value<String>? providerName,
+      Value<String?>? modelName,
+      Value<String>? outputText,
+      Value<int?>? score,
+      Value<String?>? notes,
+      Value<bool>? isBest,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return PromptExampleOutputsCompanion(
+      id: id ?? this.id,
+      exampleId: exampleId ?? this.exampleId,
+      providerName: providerName ?? this.providerName,
+      modelName: modelName ?? this.modelName,
+      outputText: outputText ?? this.outputText,
+      score: score ?? this.score,
+      notes: notes ?? this.notes,
+      isBest: isBest ?? this.isBest,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (exampleId.present) {
+      map['example_id'] = Variable<String>(exampleId.value);
+    }
+    if (providerName.present) {
+      map['provider_name'] = Variable<String>(providerName.value);
+    }
+    if (modelName.present) {
+      map['model_name'] = Variable<String>(modelName.value);
+    }
+    if (outputText.present) {
+      map['output_text'] = Variable<String>(outputText.value);
+    }
+    if (score.present) {
+      map['score'] = Variable<int>(score.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (isBest.present) {
+      map['is_best'] = Variable<bool>(isBest.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PromptExampleOutputsCompanion(')
+          ..write('id: $id, ')
+          ..write('exampleId: $exampleId, ')
+          ..write('providerName: $providerName, ')
+          ..write('modelName: $modelName, ')
+          ..write('outputText: $outputText, ')
+          ..write('score: $score, ')
+          ..write('notes: $notes, ')
+          ..write('isBest: $isBest, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4388,6 +5437,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $PromptCollectionLinksTable(this);
   late final $InboxItemsTable inboxItems = $InboxItemsTable(this);
   late final $UserSettingsTable userSettings = $UserSettingsTable(this);
+  late final $PromptExamplesTable promptExamples = $PromptExamplesTable(this);
+  late final $PromptExampleOutputsTable promptExampleOutputs =
+      $PromptExampleOutputsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4403,7 +5455,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         collections,
         promptCollectionLinks,
         inboxItems,
-        userSettings
+        userSettings,
+        promptExamples,
+        promptExampleOutputs
       ];
 }
 
@@ -6627,6 +7681,515 @@ typedef $$UserSettingsTableProcessedTableManager = ProcessedTableManager<
     ),
     UserSetting,
     PrefetchHooks Function()>;
+typedef $$PromptExamplesTableCreateCompanionBuilder = PromptExamplesCompanion
+    Function({
+  required String id,
+  required String promptId,
+  required String title,
+  required String compiledPrompt,
+  Value<String?> contextPackId,
+  Value<String?> variableValuesJson,
+  Value<String?> notes,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<bool> isArchived,
+  Value<int> rowid,
+});
+typedef $$PromptExamplesTableUpdateCompanionBuilder = PromptExamplesCompanion
+    Function({
+  Value<String> id,
+  Value<String> promptId,
+  Value<String> title,
+  Value<String> compiledPrompt,
+  Value<String?> contextPackId,
+  Value<String?> variableValuesJson,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<bool> isArchived,
+  Value<int> rowid,
+});
+
+class $$PromptExamplesTableFilterComposer
+    extends Composer<_$AppDatabase, $PromptExamplesTable> {
+  $$PromptExamplesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get promptId => $composableBuilder(
+      column: $table.promptId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get compiledPrompt => $composableBuilder(
+      column: $table.compiledPrompt,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get variableValuesJson => $composableBuilder(
+      column: $table.variableValuesJson,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnFilters(column));
+}
+
+class $$PromptExamplesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromptExamplesTable> {
+  $$PromptExamplesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get promptId => $composableBuilder(
+      column: $table.promptId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get compiledPrompt => $composableBuilder(
+      column: $table.compiledPrompt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get variableValuesJson => $composableBuilder(
+      column: $table.variableValuesJson,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PromptExamplesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromptExamplesTable> {
+  $$PromptExamplesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get promptId =>
+      $composableBuilder(column: $table.promptId, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get compiledPrompt => $composableBuilder(
+      column: $table.compiledPrompt, builder: (column) => column);
+
+  GeneratedColumn<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId, builder: (column) => column);
+
+  GeneratedColumn<String> get variableValuesJson => $composableBuilder(
+      column: $table.variableValuesJson, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+      column: $table.isArchived, builder: (column) => column);
+}
+
+class $$PromptExamplesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PromptExamplesTable,
+    PromptExample,
+    $$PromptExamplesTableFilterComposer,
+    $$PromptExamplesTableOrderingComposer,
+    $$PromptExamplesTableAnnotationComposer,
+    $$PromptExamplesTableCreateCompanionBuilder,
+    $$PromptExamplesTableUpdateCompanionBuilder,
+    (
+      PromptExample,
+      BaseReferences<_$AppDatabase, $PromptExamplesTable, PromptExample>
+    ),
+    PromptExample,
+    PrefetchHooks Function()> {
+  $$PromptExamplesTableTableManager(
+      _$AppDatabase db, $PromptExamplesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromptExamplesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PromptExamplesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PromptExamplesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> promptId = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> compiledPrompt = const Value.absent(),
+            Value<String?> contextPackId = const Value.absent(),
+            Value<String?> variableValuesJson = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<bool> isArchived = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PromptExamplesCompanion(
+            id: id,
+            promptId: promptId,
+            title: title,
+            compiledPrompt: compiledPrompt,
+            contextPackId: contextPackId,
+            variableValuesJson: variableValuesJson,
+            notes: notes,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            isArchived: isArchived,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String promptId,
+            required String title,
+            required String compiledPrompt,
+            Value<String?> contextPackId = const Value.absent(),
+            Value<String?> variableValuesJson = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<bool> isArchived = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PromptExamplesCompanion.insert(
+            id: id,
+            promptId: promptId,
+            title: title,
+            compiledPrompt: compiledPrompt,
+            contextPackId: contextPackId,
+            variableValuesJson: variableValuesJson,
+            notes: notes,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            isArchived: isArchived,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$PromptExamplesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PromptExamplesTable,
+    PromptExample,
+    $$PromptExamplesTableFilterComposer,
+    $$PromptExamplesTableOrderingComposer,
+    $$PromptExamplesTableAnnotationComposer,
+    $$PromptExamplesTableCreateCompanionBuilder,
+    $$PromptExamplesTableUpdateCompanionBuilder,
+    (
+      PromptExample,
+      BaseReferences<_$AppDatabase, $PromptExamplesTable, PromptExample>
+    ),
+    PromptExample,
+    PrefetchHooks Function()>;
+typedef $$PromptExampleOutputsTableCreateCompanionBuilder
+    = PromptExampleOutputsCompanion Function({
+  required String id,
+  required String exampleId,
+  required String providerName,
+  Value<String?> modelName,
+  required String outputText,
+  Value<int?> score,
+  Value<String?> notes,
+  Value<bool> isBest,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$PromptExampleOutputsTableUpdateCompanionBuilder
+    = PromptExampleOutputsCompanion Function({
+  Value<String> id,
+  Value<String> exampleId,
+  Value<String> providerName,
+  Value<String?> modelName,
+  Value<String> outputText,
+  Value<int?> score,
+  Value<String?> notes,
+  Value<bool> isBest,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$PromptExampleOutputsTableFilterComposer
+    extends Composer<_$AppDatabase, $PromptExampleOutputsTable> {
+  $$PromptExampleOutputsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get exampleId => $composableBuilder(
+      column: $table.exampleId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get providerName => $composableBuilder(
+      column: $table.providerName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get modelName => $composableBuilder(
+      column: $table.modelName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get outputText => $composableBuilder(
+      column: $table.outputText, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get score => $composableBuilder(
+      column: $table.score, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isBest => $composableBuilder(
+      column: $table.isBest, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$PromptExampleOutputsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PromptExampleOutputsTable> {
+  $$PromptExampleOutputsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get exampleId => $composableBuilder(
+      column: $table.exampleId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get providerName => $composableBuilder(
+      column: $table.providerName,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get modelName => $composableBuilder(
+      column: $table.modelName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get outputText => $composableBuilder(
+      column: $table.outputText, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get score => $composableBuilder(
+      column: $table.score, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isBest => $composableBuilder(
+      column: $table.isBest, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PromptExampleOutputsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PromptExampleOutputsTable> {
+  $$PromptExampleOutputsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get exampleId =>
+      $composableBuilder(column: $table.exampleId, builder: (column) => column);
+
+  GeneratedColumn<String> get providerName => $composableBuilder(
+      column: $table.providerName, builder: (column) => column);
+
+  GeneratedColumn<String> get modelName =>
+      $composableBuilder(column: $table.modelName, builder: (column) => column);
+
+  GeneratedColumn<String> get outputText => $composableBuilder(
+      column: $table.outputText, builder: (column) => column);
+
+  GeneratedColumn<int> get score =>
+      $composableBuilder(column: $table.score, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<bool> get isBest =>
+      $composableBuilder(column: $table.isBest, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$PromptExampleOutputsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PromptExampleOutputsTable,
+    PromptExampleOutput,
+    $$PromptExampleOutputsTableFilterComposer,
+    $$PromptExampleOutputsTableOrderingComposer,
+    $$PromptExampleOutputsTableAnnotationComposer,
+    $$PromptExampleOutputsTableCreateCompanionBuilder,
+    $$PromptExampleOutputsTableUpdateCompanionBuilder,
+    (
+      PromptExampleOutput,
+      BaseReferences<_$AppDatabase, $PromptExampleOutputsTable,
+          PromptExampleOutput>
+    ),
+    PromptExampleOutput,
+    PrefetchHooks Function()> {
+  $$PromptExampleOutputsTableTableManager(
+      _$AppDatabase db, $PromptExampleOutputsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PromptExampleOutputsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PromptExampleOutputsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PromptExampleOutputsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> exampleId = const Value.absent(),
+            Value<String> providerName = const Value.absent(),
+            Value<String?> modelName = const Value.absent(),
+            Value<String> outputText = const Value.absent(),
+            Value<int?> score = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<bool> isBest = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PromptExampleOutputsCompanion(
+            id: id,
+            exampleId: exampleId,
+            providerName: providerName,
+            modelName: modelName,
+            outputText: outputText,
+            score: score,
+            notes: notes,
+            isBest: isBest,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String exampleId,
+            required String providerName,
+            Value<String?> modelName = const Value.absent(),
+            required String outputText,
+            Value<int?> score = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<bool> isBest = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PromptExampleOutputsCompanion.insert(
+            id: id,
+            exampleId: exampleId,
+            providerName: providerName,
+            modelName: modelName,
+            outputText: outputText,
+            score: score,
+            notes: notes,
+            isBest: isBest,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$PromptExampleOutputsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $PromptExampleOutputsTable,
+        PromptExampleOutput,
+        $$PromptExampleOutputsTableFilterComposer,
+        $$PromptExampleOutputsTableOrderingComposer,
+        $$PromptExampleOutputsTableAnnotationComposer,
+        $$PromptExampleOutputsTableCreateCompanionBuilder,
+        $$PromptExampleOutputsTableUpdateCompanionBuilder,
+        (
+          PromptExampleOutput,
+          BaseReferences<_$AppDatabase, $PromptExampleOutputsTable,
+              PromptExampleOutput>
+        ),
+        PromptExampleOutput,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6653,4 +8216,8 @@ class $AppDatabaseManager {
       $$InboxItemsTableTableManager(_db, _db.inboxItems);
   $$UserSettingsTableTableManager get userSettings =>
       $$UserSettingsTableTableManager(_db, _db.userSettings);
+  $$PromptExamplesTableTableManager get promptExamples =>
+      $$PromptExamplesTableTableManager(_db, _db.promptExamples);
+  $$PromptExampleOutputsTableTableManager get promptExampleOutputs =>
+      $$PromptExampleOutputsTableTableManager(_db, _db.promptExampleOutputs);
 }

@@ -139,3 +139,33 @@ class PromptVariableDao extends DatabaseAccessor<AppDatabase> with _$PromptVaria
     });
   }
 }
+
+@DriftAccessor(tables: [PromptExamples])
+class PromptExampleDao extends DatabaseAccessor<AppDatabase> with _$PromptExampleDaoMixin {
+  PromptExampleDao(super.db);
+
+  Future<void> createExample(PromptExamplesCompanion entry) => into(promptExamples).insert(entry);
+  Future<bool> updateExample(PromptExamplesCompanion entry) => update(promptExamples).replace(entry);
+  Future<int> archiveExample(String id) => (update(promptExamples)..where((t) => t.id.equals(id))).write(const PromptExamplesCompanion(isArchived: Value(true)));
+  Stream<List<PromptExample>> watchExamplesForPrompt(String promptId) => (select(promptExamples)..where((t) => t.promptId.equals(promptId) & t.isArchived.not())).watch();
+  Future<PromptExample> getExampleById(String id) => (select(promptExamples)..where((t) => t.id.equals(id))).getSingle();
+}
+
+@DriftAccessor(tables: [PromptExampleOutputs])
+class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase> with _$PromptExampleOutputDaoMixin {
+  PromptExampleOutputDao(super.db);
+
+  Future<void> addOutput(PromptExampleOutputsCompanion entry) => into(promptExampleOutputs).insert(entry);
+  Future<bool> updateOutput(PromptExampleOutputsCompanion entry) => update(promptExampleOutputs).replace(entry);
+  Future<int> deleteOutput(String id) => (delete(promptExampleOutputs)..where((t) => t.id.equals(id))).go();
+  Stream<List<PromptExampleOutput>> watchOutputsForExample(String exampleId) => (select(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).watch();
+
+  Future<void> markOutputAsBest(String exampleId, String outputId) async {
+    await transaction(() async {
+      // Clear best flag from all outputs in this example
+      await (update(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).write(const PromptExampleOutputsCompanion(isBest: Value(false)));
+      // Set best flag on the chosen output
+      await (update(promptExampleOutputs)..where((t) => t.id.equals(outputId))).write(const PromptExampleOutputsCompanion(isBest: Value(true)));
+    });
+  }
+}

@@ -99,3 +99,31 @@ class PromptVariableDaoManager {
       $$PromptVariablesTableTableManager(
           _db.attachedDatabase, _db.promptVariables);
 }
+
+mixin _$PromptExampleDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PromptExamplesTable get promptExamples => attachedDatabase.promptExamples;
+  PromptExampleDaoManager get managers => PromptExampleDaoManager(this);
+}
+
+class PromptExampleDaoManager {
+  final _$PromptExampleDaoMixin _db;
+  PromptExampleDaoManager(this._db);
+  $$PromptExamplesTableTableManager get promptExamples =>
+      $$PromptExamplesTableTableManager(
+          _db.attachedDatabase, _db.promptExamples);
+}
+
+mixin _$PromptExampleOutputDaoMixin on DatabaseAccessor<AppDatabase> {
+  $PromptExampleOutputsTable get promptExampleOutputs =>
+      attachedDatabase.promptExampleOutputs;
+  PromptExampleOutputDaoManager get managers =>
+      PromptExampleOutputDaoManager(this);
+}
+
+class PromptExampleOutputDaoManager {
+  final _$PromptExampleOutputDaoMixin _db;
+  PromptExampleOutputDaoManager(this._db);
+  $$PromptExampleOutputsTableTableManager get promptExampleOutputs =>
+      $$PromptExampleOutputsTableTableManager(
+          _db.attachedDatabase, _db.promptExampleOutputs);
+}
