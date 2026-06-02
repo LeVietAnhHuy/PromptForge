@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/features/prompt_compiler/domain/prompt_compiler_service.dart';
+import 'package:promptforge/features/prompt_compiler/domain/target_tool_profile.dart';
+
 void main() {
   group('PromptCompilerService - extractVariables', () {
     test('1. Detects a single variable', () {
@@ -186,6 +188,87 @@ void main() {
         outputFormat: 'fmt',
       );
       expect(res1.compiledText, res2.compiledText);
+    });
+    test('16. ChatGPT Profile uses # Task', () {
+      final result = PromptCompilerService.compile(
+        promptBody: 'Do this.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [],
+        profile: const ChatGPTProfile(),
+      );
+      expect(result.compiledText, contains('# Task\n\nDo this.'));
+    });
+
+    test('17. Claude Profile uses XML tags', () {
+      final pack = ContextPack(id: '1', name: 'P1', content: 'C1', isBuiltin: false, sortOrder: 0, isArchived: false, createdAt: DateTime.now(), updatedAt: DateTime.now());
+      final result = PromptCompilerService.compile(
+        promptBody: 'Do this.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [pack],
+        profile: const ClaudeProfile(),
+      );
+      expect(result.compiledText, contains('<context>\nC1\n\n</context>'));
+      expect(result.compiledText, contains('<task>\nDo this.\n</task>'));
+    });
+
+    test('18. Codex Profile uses implementation wrapper', () {
+      final result = PromptCompilerService.compile(
+        promptBody: 'Add button.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [],
+        profile: const CodexProfile(),
+      );
+      expect(result.compiledText, contains('Please implement the following changes.'));
+      expect(result.compiledText, contains('# Implementation Request\n\nAdd button.'));
+    });
+
+    test('19. Cursor Profile uses IDE wrapper', () {
+      final result = PromptCompilerService.compile(
+        promptBody: 'Add dropdown.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [],
+        profile: const CursorProfile(),
+      );
+      expect(result.compiledText, contains('Inspect the current code and preserve existing architecture.'));
+    });
+
+    test('20. NotebookLM Profile warns about sources', () {
+      final result = PromptCompilerService.compile(
+        promptBody: 'Summarize.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [],
+        profile: const NotebookLMProfile(),
+      );
+      expect(result.compiledText, contains('Use only the uploaded/source material when answering.'));
+    });
+
+    test('21. Flow Image Profile uses minimal visual structure', () {
+      final pack = ContextPack(id: '1', name: 'Lighting', content: 'Cinematic lighting', isBuiltin: false, sortOrder: 0, isArchived: false, createdAt: DateTime.now(), updatedAt: DateTime.now());
+      final result = PromptCompilerService.compile(
+        promptBody: 'A futuristic city.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [pack],
+        profile: const FlowImageProfile(),
+        outputFormat: '--ar 16:9',
+      );
+      expect(result.compiledText, 'A futuristic city.\n\nCinematic lighting\n\n--ar 16:9');
+    });
+
+    test('22. Local Model uses shorter wrapper', () {
+      final result = PromptCompilerService.compile(
+        promptBody: 'Hello.',
+        runtimeValues: {},
+        variableMetadata: {},
+        contextPacks: [],
+        profile: const LocalModelProfile(),
+      );
+      expect(result.compiledText, 'Hello.');
     });
   });
 }

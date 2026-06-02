@@ -1,14 +1,19 @@
 import '../../../core/database/database.dart';
+import 'target_tool_profile.dart';
 
 class PromptCompilerResult {
   final String compiledText;
   final List<String> missingRequiredVariables;
   final int characterCount;
+  final String targetProfileId;
+  final String targetProfileName;
 
   PromptCompilerResult({
     required this.compiledText,
     required this.missingRequiredVariables,
     required this.characterCount,
+    required this.targetProfileId,
+    required this.targetProfileName,
   });
 }
 
@@ -35,12 +40,12 @@ class PromptCompilerService {
     return variables.toList();
   }
 
-  /// Compiles the prompt by replacing variables, injecting context packs, and output requirements.
   static PromptCompilerResult compile({
     required String promptBody,
     required Map<String, String> runtimeValues,
     required Map<String, PromptVariable> variableMetadata,
     required List<ContextPack> contextPacks,
+    TargetToolProfile? profile,
     String? outputFormat,
     String? targetNotes,
   }) {
@@ -73,47 +78,22 @@ class PromptCompilerService {
       return finalValue;
     });
 
-    // 2. Assemble sections
-    final buffer = StringBuffer();
+    final targetProfile = profile ?? const GenericProfile();
+    final compilerContext = CompilerContext(
+      compiledPromptBody: compiledPromptBody,
+      contextPacks: contextPacks,
+      outputFormat: outputFormat,
+      targetNotes: targetNotes,
+    );
 
-    // Context Packs Section
-    if (contextPacks.isNotEmpty) {
-      buffer.writeln('# Context Packs\n');
-      for (final pack in contextPacks) {
-        buffer.writeln('## ${pack.name}\n');
-        buffer.writeln('${pack.content}\n');
-      }
-      buffer.writeln('---');
-      buffer.writeln();
-    }
-
-    // Prompt Section
-    if (contextPacks.isNotEmpty || (outputFormat != null && outputFormat.isNotEmpty) || (targetNotes != null && targetNotes.isNotEmpty)) {
-      buffer.writeln('# Prompt\n');
-    }
-    buffer.writeln(compiledPromptBody);
-
-    // Output Requirements Section
-    final hasOutputFormat = outputFormat != null && outputFormat.trim().isNotEmpty;
-    final hasTargetNotes = targetNotes != null && targetNotes.trim().isNotEmpty;
-    
-    if (hasOutputFormat || hasTargetNotes) {
-      buffer.writeln('\n\n# Output Requirements\n');
-      if (hasOutputFormat) {
-        buffer.writeln(outputFormat);
-      }
-      if (hasTargetNotes) {
-        if (hasOutputFormat) buffer.writeln();
-        buffer.writeln(targetNotes);
-      }
-    }
-
-    final compiledText = buffer.toString().trim();
+    final compiledText = targetProfile.format(compilerContext);
 
     return PromptCompilerResult(
       compiledText: compiledText,
       missingRequiredVariables: missingRequiredVariables.toSet().toList(), // deduplicate missing list
       characterCount: compiledText.length,
+      targetProfileId: targetProfile.id,
+      targetProfileName: targetProfile.name,
     );
   }
 }

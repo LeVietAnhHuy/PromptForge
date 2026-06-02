@@ -10,6 +10,7 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../domain/prompt_compiler_service.dart';
+import '../domain/target_tool_profile.dart';
 
 class PromptCompilerScreen extends ConsumerStatefulWidget {
   final String promptId;
@@ -29,6 +30,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
   final Map<String, TextEditingController> _controllers = {};
   Map<String, PromptVariable> _variableMetadata = {};
   List<ContextPack> _contextPacks = [];
+  TargetToolProfile _selectedProfile = const GenericProfile();
 
   PromptCompilerResult? _compileResult;
 
@@ -58,11 +60,27 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
 
       final packs = await contextPackDao.getContextPacksForPrompt(widget.promptId);
 
+      // Simple heuristic to auto-select a profile based on targetNotes
+      TargetToolProfile initialProfile = const GenericProfile();
+      final notes = prompt.targetNotes?.toLowerCase() ?? '';
+      if (notes.contains('image')) {
+        initialProfile = const FlowImageProfile();
+      } else if (notes.contains('video')) {
+        initialProfile = const FlowVideoProfile();
+      } else if (notes.contains('claude')) {
+        initialProfile = const ClaudeProfile();
+      } else if (notes.contains('chatgpt') || notes.contains('gpt')) {
+        initialProfile = const ChatGPTProfile();
+      } else if (notes.contains('gemini')) {
+        initialProfile = const GeminiProfile();
+      }
+
       setState(() {
         _prompt = prompt;
         _variables = variables;
         _variableMetadata = metadataMap;
         _contextPacks = packs;
+        _selectedProfile = initialProfile;
         _isLoading = false;
       });
       
@@ -85,6 +103,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
       runtimeValues: values,
       variableMetadata: _variableMetadata,
       contextPacks: _contextPacks,
+      profile: _selectedProfile,
       outputFormat: _prompt!.outputFormat,
       targetNotes: _prompt!.targetNotes,
     );
@@ -162,6 +181,39 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
           )),
           const SizedBox(height: 24),
         ],
+        
+        Text(
+          'Target Tool Profile',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).dividerColor),
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: DropdownButton<TargetToolProfile>(
+            value: _selectedProfile,
+            isExpanded: true,
+            underline: const SizedBox(),
+            items: TargetToolProfile.builtIns.map((profile) {
+              return DropdownMenuItem<TargetToolProfile>(
+                value: profile,
+                child: Text(profile.name),
+              );
+            }).toList(),
+            onChanged: (profile) {
+              if (profile != null) {
+                setState(() {
+                  _selectedProfile = profile;
+                });
+                _updateCompile();
+              }
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
         
         Text(
           'Variables',
