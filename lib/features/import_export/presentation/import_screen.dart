@@ -23,18 +23,18 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     try {
       final XFile? file = await openFile(
         acceptedTypeGroups: [
-          const XTypeGroup(label: 'JSON Files', extensions: ['json']),
+          const XTypeGroup(label: 'PromptForge Backups', extensions: ['promptforge', 'zip', 'json']),
         ],
       );
       
       if (file != null) {
-        final content = await file.readAsString();
+        final bytes = await file.readAsBytes();
         setState(() {
           _selectedFilePath = file.path;
           _error = null;
           _preview = null;
         });
-        _previewImport(content);
+        _previewImport(bytes);
       }
     } catch (e) {
       setState(() {
@@ -43,8 +43,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
   }
 
-  void _previewImport(String jsonText) {
-    if (jsonText.isEmpty) {
+  void _previewImport(List<int> bytes) {
+    if (bytes.isEmpty) {
       setState(() {
         _error = 'File is empty.';
       });
@@ -52,6 +52,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
 
     try {
+      final jsonText = ImportExportCodec.decodeBackupBundle(bytes);
       final preview = ImportExportCodec.decodeImport(jsonText);
       setState(() {
         _preview = preview;
@@ -127,6 +128,9 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       const SizedBox(height: 8),
                       Text('Valid Prompts: ${_preview!.promptCount}'),
                       Text('Valid Context Packs: ${_preview!.contextPackCount}'),
+                      Text('Versions: ${_preview!.versionCount}'),
+                      Text('Examples: ${_preview!.exampleCount}'),
+                      Text('Comparisons: ${_preview!.comparisonCount}'),
                       Text(
                         'Invalid Records Skipped: ${_preview!.invalidRecordsCount}',
                         style: TextStyle(

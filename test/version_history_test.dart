@@ -3,7 +3,6 @@ import 'package:drift/native.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/database/daos/daos.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
 
 void main() {
   late AppDatabase database;

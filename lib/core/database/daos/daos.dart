@@ -22,6 +22,8 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
   Future<void> createPromptVersion(PromptVersionsCompanion entry) => into(promptVersions).insert(entry);
   Stream<List<PromptVersion>> watchPromptVersions(String promptId) => 
       (select(promptVersions)..where((t) => t.promptId.equals(promptId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
+  Future<List<PromptVersion>> getPromptVersions(String promptId) => 
+      (select(promptVersions)..where((t) => t.promptId.equals(promptId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).get();
 }
 
 @DriftAccessor(tables: [ContextPacks, ContextPackVersions])
@@ -38,6 +40,8 @@ class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDao
   Future<void> createContextPackVersion(ContextPackVersionsCompanion entry) => into(contextPackVersions).insert(entry);
   Stream<List<ContextPackVersion>> watchContextPackVersions(String packId) => 
       (select(contextPackVersions)..where((t) => t.contextPackId.equals(packId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
+  Future<List<ContextPackVersion>> getContextPackVersions(String packId) => 
+      (select(contextPackVersions)..where((t) => t.contextPackId.equals(packId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).get();
 }
 
 @DriftAccessor(tables: [InboxItems])
@@ -155,6 +159,7 @@ class PromptExampleDao extends DatabaseAccessor<AppDatabase> with _$PromptExampl
   Future<bool> updateExample(PromptExamplesCompanion entry) => update(promptExamples).replace(entry);
   Future<int> archiveExample(String id) => (update(promptExamples)..where((t) => t.id.equals(id))).write(const PromptExamplesCompanion(isArchived: Value(true)));
   Stream<List<PromptExample>> watchExamplesForPrompt(String promptId) => (select(promptExamples)..where((t) => t.promptId.equals(promptId) & t.isArchived.not())).watch();
+  Future<List<PromptExample>> getExamplesForPrompt(String promptId) => (select(promptExamples)..where((t) => t.promptId.equals(promptId) & t.isArchived.not())).get();
   Future<PromptExample> getExampleById(String id) => (select(promptExamples)..where((t) => t.id.equals(id))).getSingle();
 }
 
@@ -166,6 +171,7 @@ class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase> with _$Prompt
   Future<bool> updateOutput(PromptExampleOutputsCompanion entry) => update(promptExampleOutputs).replace(entry);
   Future<int> deleteOutput(String id) => (delete(promptExampleOutputs)..where((t) => t.id.equals(id))).go();
   Stream<List<PromptExampleOutput>> watchOutputsForExample(String exampleId) => (select(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).watch();
+  Future<List<PromptExampleOutput>> getOutputsForExample(String exampleId) => (select(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).get();
 
   Future<void> markOutputAsBest(String exampleId, String outputId) async {
     await transaction(() async {

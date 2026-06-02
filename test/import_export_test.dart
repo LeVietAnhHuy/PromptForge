@@ -33,24 +33,24 @@ void main() {
     ];
 
     test('encodeExport returns correctly structured JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, testContextPacks);
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
       final decoded = jsonDecode(jsonStr);
 
-      expect(decoded['schemaVersion'], 2);
+      expect(decoded['schemaVersion'], 3);
       expect(decoded['app'], 'PromptForge');
       expect((decoded['prompts'] as List).length, 1);
       expect((decoded['contextPacks'] as List).length, 1);
     });
 
     test('decodeImport parses valid JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, testContextPacks);
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
       final preview = ImportExportCodec.decodeImport(jsonStr);
 
       expect(preview.invalidRecordsCount, 0);
       expect(preview.validPrompts.length, 1);
       expect(preview.validContextPacks.length, 1);
       expect(preview.validPrompts.first.prompt.title, 'Test Prompt');
-      expect(preview.validContextPacks.first.name, 'Test Pack');
+      expect(preview.validContextPacks.first.pack.name, 'Test Pack');
     });
 
     test('decodeImport throws on invalid JSON', () {
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('decodeImport throws on wrong app id', () {
-      final invalidJson = jsonEncode({'app': 'OtherApp', 'schemaVersion': 2});
+      final invalidJson = jsonEncode({'app': 'OtherApp', 'schemaVersion': 3});
       expect(
         () => ImportExportCodec.decodeImport(invalidJson),
         throwsA(isA<FormatException>()),
@@ -79,7 +79,7 @@ void main() {
     test('decodeImport counts invalid records', () {
       final jsonStr = jsonEncode({
         'app': 'PromptForge',
-        'schemaVersion': 2,
+        'schemaVersion': 3,
         'prompts': [
           {'id': 'valid', 'title': 'Valid', 'body': 'body', 'createdAt': DateTime.now().toIso8601String(), 'updatedAt': DateTime.now().toIso8601String()},
           {'invalid': 'record'},
@@ -91,6 +91,16 @@ void main() {
       expect(preview.invalidRecordsCount, 1);
       expect(preview.validPrompts.length, 1);
       expect(preview.validPrompts.first.prompt.id, 'valid');
+    });
+
+    test('Backup Bundle zip and unzip works', () {
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
+      
+      final zipBytes = ImportExportCodec.encodeBackupBundle(jsonStr);
+      expect(zipBytes, isNotEmpty);
+      
+      final extractedJsonStr = ImportExportCodec.decodeBackupBundle(zipBytes);
+      expect(extractedJsonStr, equals(jsonStr));
     });
   });
 }

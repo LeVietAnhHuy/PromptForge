@@ -1,9 +1,9 @@
-import 'dart:convert' as dart_convert;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import '../application/import_export_service.dart';
+import '../domain/import_export_codec.dart';
 
 class ExportPreviewScreen extends ConsumerStatefulWidget {
   const ExportPreviewScreen({super.key});
@@ -13,7 +13,7 @@ class ExportPreviewScreen extends ConsumerStatefulWidget {
 }
 
 class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
-  String? _jsonOutput;
+  List<int>? _zipBytes;
   bool _isLoading = true;
   String? _error;
 
@@ -27,8 +27,9 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     try {
       final service = ref.read(importExportServiceProvider);
       final json = await service.exportActiveData();
+      final zip = ImportExportCodec.encodeBackupBundle(json);
       setState(() {
-        _jsonOutput = json;
+        _zipBytes = zip;
         _isLoading = false;
       });
     } catch (e) {
@@ -39,31 +40,20 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
     }
   }
 
-  Future<void> _copyToClipboard() async {
-    if (_jsonOutput != null) {
-      await Clipboard.setData(ClipboardData(text: _jsonOutput!));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Export JSON copied to clipboard!')),
-        );
-      }
-    }
-  }
-
   Future<void> _saveToFile() async {
-    if (_jsonOutput == null) return;
+    if (_zipBytes == null) return;
     try {
       final FileSaveLocation? result = await getSaveLocation(
-        suggestedName: 'promptforge_export_${DateTime.now().millisecondsSinceEpoch}.json',
+        suggestedName: 'promptforge_backup_${DateTime.now().millisecondsSinceEpoch}.promptforge',
         acceptedTypeGroups: [
-          const XTypeGroup(label: 'JSON Files', extensions: ['json']),
+          const XTypeGroup(label: 'PromptForge Backup', extensions: ['promptforge']),
         ],
       );
 
       if (result != null) {
         final file = XFile.fromData(
-          dart_convert.utf8.encode(_jsonOutput!),
-          mimeType: 'application/json',
+          Uint8List.fromList(_zipBytes!),
+          mimeType: 'application/zip',
         );
         await file.saveTo(result.path);
         
@@ -86,41 +76,36 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Export Preview'),
+        title: const Text('Backup Data'),
         actions: [
-          if (_jsonOutput != null) ...[
-            IconButton(
-              icon: const Icon(Icons.copy),
-              tooltip: 'Copy JSON',
-              onPressed: _copyToClipboard,
-            ),
+          if (_zipBytes != null)
             IconButton(
               icon: const Icon(Icons.save),
-              tooltip: 'Save to File',
+              tooltip: 'Save Backup',
               onPressed: _saveToFile,
             ),
-          ],
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text('Error: $_error'))
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16.0),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        _jsonOutput!,
-                        style: const TextStyle(fontFamily: 'monospace'),
+              : Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.backup, size: 64),
+                      const SizedBox(height: 16),
+                      const Text('Backup bundle is ready.', style: TextStyle(fontSize: 18)),
+                      const SizedBox(height: 8),
+                      Text('Size: ${(_zipBytes!.length / 1024).toStringAsFixed(2)} KB', style: const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.save),
+                        label: const Text('Save Backup to Disk'),
+                        onPressed: _saveToFile,
                       ),
-                    ),
+                    ],
                   ),
                 ),
     );

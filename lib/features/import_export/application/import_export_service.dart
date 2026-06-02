@@ -20,6 +20,8 @@ final importExportServiceProvider = Provider<ImportExportService>((ref) {
     contextPackDao: ref.watch(contextPackDaoProvider),
     tagDao: ref.watch(tagDaoProvider),
     pvDao: ref.watch(promptVariableDaoProvider),
+    exampleDao: ref.watch(promptExampleDaoProvider),
+    outputDao: ref.watch(promptExampleOutputDaoProvider),
   );
 });
 
@@ -29,6 +31,8 @@ class ImportExportService {
   final ContextPackDao contextPackDao;
   final TagDao tagDao;
   final PromptVariableDao pvDao;
+  final PromptExampleDao exampleDao;
+  final PromptExampleOutputDao outputDao;
 
   ImportExportService({
     required this.db,
@@ -36,15 +40,20 @@ class ImportExportService {
     required this.contextPackDao,
     required this.tagDao,
     required this.pvDao,
+    required this.exampleDao,
+    required this.outputDao,
   });
 
   Future<String> exportActiveData() async {
     final activePrompts = await (promptDao.select(promptDao.prompts)..where((t) => t.isArchived.not())).get();
     final activeContextPacks = await contextPackDao.getAllContextPacks();
     
-    // Fetch tags and variables for active prompts
+    // Fetch related entities for active prompts
     final promptTags = <String, List<String>>{};
     final promptVariables = <String, List<PromptVariable>>{};
+    final promptVersions = <String, List<PromptVersion>>{};
+    final promptExamples = <String, List<PromptExample>>{};
+    final exampleOutputs = <String, List<PromptExampleOutput>>{};
     
     for (final prompt in activePrompts) {
       final tags = await tagDao.getTagsForPrompt(prompt.id);
@@ -52,9 +61,36 @@ class ImportExportService {
       
       final vars = await pvDao.getVariablesForPrompt(prompt.id);
       promptVariables[prompt.id] = vars;
+      
+      final versions = await promptDao.getPromptVersions(prompt.id);
+      promptVersions[prompt.id] = versions;
+      
+      final examples = await exampleDao.getExamplesForPrompt(prompt.id);
+      promptExamples[prompt.id] = examples;
+      
+      for (final example in examples) {
+        final outputs = await outputDao.getOutputsForExample(example.id);
+        exampleOutputs[example.id] = outputs;
+      }
+    }
+    
+    final packVersions = <String, List<ContextPackVersion>>{};
+    for (final pack in activeContextPacks) {
+      final versions = await contextPackDao.getContextPackVersions(pack.id);
+      packVersions[pack.id] = versions;
     }
 
-    return ImportExportCodec.encodeExport(activePrompts, promptTags, promptVariables, activeContextPacks);
+    final jsonStr = ImportExportCodec.encodeExport(
+      activePrompts, 
+      promptTags, 
+      promptVariables, 
+      promptVersions,
+      promptExamples,
+      exampleOutputs,
+      activeContextPacks,
+      packVersions,
+    );
+    return jsonStr;
   }
 
   Future<void> importData(ImportPreview preview, {MergeStrategy strategy = MergeStrategy.duplicate}) async {
@@ -88,6 +124,15 @@ class ImportExportService {
         
         if (existingPrompt != null && strategy == MergeStrategy.overwrite) {
           await promptDao.updatePrompt(companion);
+          // If overwriting, clear existing child records (variables synced by replaceTagsForPrompt/syncVariablesForPrompt anyway)
+          // But versions and examples need manual cleanup if we want a true replace. 
+          // For safety, let's just delete existing examples and versions for this prompt.
+          await (promptDao.delete(promptDao.promptVersions)..where((t) => t.promptId.equals(targetId))).go();
+          final oldExamples = await exampleDao.getExamplesForPrompt(targetId);
+          for (final ex in oldExamples) {
+            await (outputDao.delete(outputDao.promptExampleOutputs)..where((t) => t.exampleId.equals(ex.id))).go();
+            await (exampleDao.delete(exampleDao.promptExamples)..where((t) => t.id.equals(ex.id))).go();
+          }
         } else {
           await promptDao.createPrompt(companion);
         }
@@ -114,9 +159,58 @@ class ImportExportService {
           )).toList();
           await pvDao.syncVariablesForPrompt(targetId, varCompanions);
         }
+        
+        // Import versions
+        for (final v in imported.versions) {
+          // We want to retain createdAt, let's insert raw row.
+          await promptDao.into(promptDao.promptVersions).insert(PromptVersionsCompanion.insert(
+            id: const Uuid().v4(),
+            promptId: targetId,
+            title: v.title,
+            body: v.body,
+            tagsJson: v.tagsJson != null ? drift.Value(v.tagsJson) : const drift.Value.absent(),
+            variableMetadataJson: v.variableMetadataJson != null ? drift.Value(v.variableMetadataJson) : const drift.Value.absent(),
+            note: v.note != null ? drift.Value(v.note) : const drift.Value.absent(),
+            createdAt: v.createdAt,
+          ));
+        }
+
+        // Import examples
+        for (final ex in imported.examples) {
+          final newExampleId = const Uuid().v4();
+          await exampleDao.into(exampleDao.promptExamples).insert(PromptExamplesCompanion.insert(
+            id: newExampleId,
+            promptId: targetId,
+            title: ex.title,
+            compiledPrompt: ex.compiledPrompt,
+            contextPackId: ex.contextPackId != null ? drift.Value(ex.contextPackId) : const drift.Value.absent(),
+            variableValuesJson: ex.variableValuesJson != null ? drift.Value(ex.variableValuesJson) : const drift.Value.absent(),
+            notes: ex.notes != null ? drift.Value(ex.notes) : const drift.Value.absent(),
+            createdAt: ex.createdAt,
+            updatedAt: ex.updatedAt,
+            isArchived: drift.Value(ex.isArchived),
+          ));
+          
+          final outputs = imported.exampleOutputs[ex.id] ?? [];
+          for (final o in outputs) {
+            await outputDao.into(outputDao.promptExampleOutputs).insert(PromptExampleOutputsCompanion.insert(
+              id: const Uuid().v4(),
+              exampleId: newExampleId,
+              providerName: o.providerName,
+              modelName: o.modelName != null ? drift.Value(o.modelName) : const drift.Value.absent(),
+              outputText: o.outputText,
+              score: o.score != null ? drift.Value(o.score) : const drift.Value.absent(),
+              notes: o.notes != null ? drift.Value(o.notes) : const drift.Value.absent(),
+              isBest: drift.Value(o.isBest),
+              createdAt: o.createdAt,
+              updatedAt: o.updatedAt,
+            ));
+          }
+        }
       }
 
-      for (final pack in preview.validContextPacks) {
+      for (final importedPack in preview.validContextPacks) {
+        final pack = importedPack.pack;
         final existingPack = await (contextPackDao.select(contextPackDao.contextPacks)..where((t) => t.id.equals(pack.id))).getSingleOrNull();
         String targetId = pack.id;
         
@@ -142,8 +236,21 @@ class ImportExportService {
         
         if (existingPack != null && strategy == MergeStrategy.overwrite) {
           await contextPackDao.updateContextPack(companion);
+          await (contextPackDao.delete(contextPackDao.contextPackVersions)..where((t) => t.contextPackId.equals(targetId))).go();
         } else {
           await contextPackDao.createContextPack(companion);
+        }
+        
+        for (final v in importedPack.versions) {
+          await contextPackDao.into(contextPackDao.contextPackVersions).insert(ContextPackVersionsCompanion.insert(
+            id: const Uuid().v4(),
+            contextPackId: targetId,
+            name: v.name,
+            description: v.description != null ? drift.Value(v.description) : const drift.Value.absent(),
+            content: v.content,
+            note: v.note != null ? drift.Value(v.note) : const drift.Value.absent(),
+            createdAt: v.createdAt,
+          ));
         }
       }
     });

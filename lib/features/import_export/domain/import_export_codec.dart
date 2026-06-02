@@ -1,34 +1,71 @@
 import 'dart:convert';
+import 'package:archive/archive.dart';
 import '../../../core/database/database.dart';
 
 class ImportedPrompt {
   final Prompt prompt;
   final List<String> tags;
   final List<PromptVariable> variables;
-  ImportedPrompt(this.prompt, this.tags, [this.variables = const []]);
+  final List<PromptVersion> versions;
+  final List<PromptExample> examples;
+  final Map<String, List<PromptExampleOutput>> exampleOutputs; // exampleId -> outputs
+
+  ImportedPrompt(
+    this.prompt, 
+    this.tags, 
+    [
+      this.variables = const [],
+      this.versions = const [],
+      this.examples = const [],
+      this.exampleOutputs = const {},
+    ]
+  );
+}
+
+class ImportedContextPack {
+  final ContextPack pack;
+  final List<ContextPackVersion> versions;
+  
+  ImportedContextPack(this.pack, [this.versions = const []]);
 }
 
 class ImportPreview {
   final int promptCount;
   final int contextPackCount;
   final int invalidRecordsCount;
+  final int versionCount;
+  final int exampleCount;
+  final int comparisonCount;
+  
   final List<ImportedPrompt> validPrompts;
-  final List<ContextPack> validContextPacks;
+  final List<ImportedContextPack> validContextPacks;
 
   ImportPreview({
     required this.promptCount,
     required this.contextPackCount,
     required this.invalidRecordsCount,
+    this.versionCount = 0,
+    this.exampleCount = 0,
+    this.comparisonCount = 0,
     required this.validPrompts,
     required this.validContextPacks,
   });
 }
 
 class ImportExportCodec {
-  static const int currentSchemaVersion = 2;
+  static const int currentSchemaVersion = 3;
   static const String expectedAppId = 'PromptForge';
 
-  static String encodeExport(List<Prompt> prompts, Map<String, List<String>> promptTags, Map<String, List<PromptVariable>> promptVariables, List<ContextPack> contextPacks) {
+  static String encodeExport(
+    List<Prompt> prompts, 
+    Map<String, List<String>> promptTags, 
+    Map<String, List<PromptVariable>> promptVariables, 
+    Map<String, List<PromptVersion>> promptVersions,
+    Map<String, List<PromptExample>> promptExamples,
+    Map<String, List<PromptExampleOutput>> exampleOutputs,
+    List<ContextPack> contextPacks,
+    Map<String, List<ContextPackVersion>> packVersions,
+  ) {
     final Map<String, dynamic> payload = {
       'schemaVersion': currentSchemaVersion,
       'app': expectedAppId,
@@ -52,6 +89,35 @@ class ImportExportCodec {
           'exampleValue': v.exampleValue,
           'isRequired': v.isRequired,
         }).toList(),
+        'versions': (promptVersions[p.id] ?? []).map((v) => {
+          'title': v.title,
+          'body': v.body,
+          'tagsJson': v.tagsJson,
+          'variableMetadataJson': v.variableMetadataJson,
+          'note': v.note,
+          'createdAt': v.createdAt.toIso8601String(),
+        }).toList(),
+        'examples': (promptExamples[p.id] ?? []).map((e) => {
+          'id': e.id,
+          'title': e.title,
+          'compiledPrompt': e.compiledPrompt,
+          'contextPackId': e.contextPackId,
+          'variableValuesJson': e.variableValuesJson,
+          'notes': e.notes,
+          'createdAt': e.createdAt.toIso8601String(),
+          'updatedAt': e.updatedAt.toIso8601String(),
+          'isArchived': e.isArchived,
+          'outputs': (exampleOutputs[e.id] ?? []).map((o) => {
+            'providerName': o.providerName,
+            'modelName': o.modelName,
+            'outputText': o.outputText,
+            'score': o.score,
+            'notes': o.notes,
+            'isBest': o.isBest,
+            'createdAt': o.createdAt.toIso8601String(),
+            'updatedAt': o.updatedAt.toIso8601String(),
+          }).toList(),
+        }).toList(),
       }).toList(),
       'contextPacks': contextPacks.map((c) => {
         'id': c.id,
@@ -61,6 +127,13 @@ class ImportExportCodec {
         'createdAt': c.createdAt.toIso8601String(),
         'updatedAt': c.updatedAt.toIso8601String(),
         'isArchived': c.isArchived,
+        'versions': (packVersions[c.id] ?? []).map((v) => {
+          'name': v.name,
+          'description': v.description,
+          'content': v.content,
+          'note': v.note,
+          'createdAt': v.createdAt.toIso8601String(),
+        }).toList(),
       }).toList(),
     };
 
@@ -89,7 +162,7 @@ class ImportExportCodec {
 
     int invalidRecordsCount = 0;
     final List<ImportedPrompt> validPrompts = [];
-    final List<ContextPack> validContextPacks = [];
+    final List<ImportedContextPack> validContextPacks = [];
 
     final promptsRaw = payload['prompts'] as List<dynamic>? ?? [];
     for (final raw in promptsRaw) {
@@ -130,6 +203,65 @@ class ImportExportCodec {
           }
         }
 
+        final versionsRaw = raw['versions'] as List<dynamic>? ?? [];
+        final versions = <PromptVersion>[];
+        for (final v in versionsRaw) {
+          if (v is Map<String, dynamic>) {
+            versions.add(PromptVersion(
+              id: '',
+              promptId: id,
+              title: v['title'] as String,
+              body: v['body'] as String,
+              tagsJson: v['tagsJson'] as String?,
+              variableMetadataJson: v['variableMetadataJson'] as String?,
+              note: v['note'] as String?,
+              createdAt: DateTime.parse(v['createdAt'] as String),
+            ));
+          }
+        }
+
+        final examplesRaw = raw['examples'] as List<dynamic>? ?? [];
+        final examples = <PromptExample>[];
+        final exampleOutputs = <String, List<PromptExampleOutput>>{};
+        
+        for (final e in examplesRaw) {
+          if (e is Map<String, dynamic>) {
+            final exampleId = e['id'] as String;
+            examples.add(PromptExample(
+              id: exampleId,
+              promptId: id,
+              title: e['title'] as String,
+              compiledPrompt: e['compiledPrompt'] as String,
+              contextPackId: e['contextPackId'] as String?,
+              variableValuesJson: e['variableValuesJson'] as String?,
+              notes: e['notes'] as String?,
+              createdAt: DateTime.parse(e['createdAt'] as String),
+              updatedAt: DateTime.parse(e['updatedAt'] as String),
+              isArchived: e['isArchived'] as bool? ?? false,
+            ));
+            
+            final outputsRaw = e['outputs'] as List<dynamic>? ?? [];
+            final outputs = <PromptExampleOutput>[];
+            for (final o in outputsRaw) {
+              if (o is Map<String, dynamic>) {
+                outputs.add(PromptExampleOutput(
+                  id: '', // Will be assigned
+                  exampleId: exampleId,
+                  providerName: o['providerName'] as String,
+                  modelName: o['modelName'] as String?,
+                  outputText: o['outputText'] as String,
+                  score: o['score'] as int?,
+                  notes: o['notes'] as String?,
+                  isBest: o['isBest'] as bool? ?? false,
+                  createdAt: DateTime.parse(o['createdAt'] as String),
+                  updatedAt: DateTime.parse(o['updatedAt'] as String),
+                ));
+              }
+            }
+            exampleOutputs[exampleId] = outputs;
+          }
+        }
+
         validPrompts.add(ImportedPrompt(
           Prompt(
             id: id,
@@ -144,6 +276,9 @@ class ImportExportCodec {
           ),
           tags,
           variables,
+          versions,
+          examples,
+          exampleOutputs,
         ));
       } catch (e) {
         invalidRecordsCount++;
@@ -165,28 +300,95 @@ class ImportExportCodec {
         final updatedAtStr = raw['updatedAt'] as String;
         final isArchived = raw['isArchived'] as bool? ?? false;
 
-        validContextPacks.add(ContextPack(
-          id: id,
-          name: name,
-          description: description,
-          content: content,
-          createdAt: DateTime.parse(createdAtStr),
-          updatedAt: DateTime.parse(updatedAtStr),
-          isArchived: isArchived,
-          isBuiltin: false,
-          sortOrder: 0,
+        final versionsRaw = raw['versions'] as List<dynamic>? ?? [];
+        final versions = <ContextPackVersion>[];
+        for (final v in versionsRaw) {
+          if (v is Map<String, dynamic>) {
+            versions.add(ContextPackVersion(
+              id: '', // Will be assigned
+              contextPackId: id,
+              name: v['name'] as String,
+              description: v['description'] as String?,
+              content: v['content'] as String,
+              note: v['note'] as String?,
+              createdAt: DateTime.parse(v['createdAt'] as String),
+            ));
+          }
+        }
+
+        validContextPacks.add(ImportedContextPack(
+          ContextPack(
+            id: id,
+            name: name,
+            description: description,
+            content: content,
+            createdAt: DateTime.parse(createdAtStr),
+            updatedAt: DateTime.parse(updatedAtStr),
+            isArchived: isArchived,
+            isBuiltin: false,
+            sortOrder: 0,
+          ),
+          versions,
         ));
       } catch (e) {
         invalidRecordsCount++;
       }
+    }
+    
+    int totalVersions = 0;
+    int totalExamples = 0;
+    int totalComparisons = 0;
+    
+    for (final p in validPrompts) {
+      totalVersions += p.versions.length;
+      totalExamples += p.examples.length;
+      for (final outputs in p.exampleOutputs.values) {
+        totalComparisons += outputs.length;
+      }
+    }
+    
+    for (final c in validContextPacks) {
+      totalVersions += c.versions.length;
     }
 
     return ImportPreview(
       promptCount: validPrompts.length,
       contextPackCount: validContextPacks.length,
       invalidRecordsCount: invalidRecordsCount,
+      versionCount: totalVersions,
+      exampleCount: totalExamples,
+      comparisonCount: totalComparisons,
       validPrompts: validPrompts,
       validContextPacks: validContextPacks,
     );
+  }
+
+  static List<int> encodeBackupBundle(String jsonString) {
+    final archive = Archive();
+    final bytes = utf8.encode(jsonString);
+    final file = ArchiveFile('backup.json', bytes.length, bytes);
+    archive.addFile(file);
+    return ZipEncoder().encode(archive);
+  }
+
+  static String decodeBackupBundle(List<int> zipBytes) {
+    // try-catch parsing zip
+    try {
+      final archive = ZipDecoder().decodeBytes(zipBytes);
+      for (final file in archive) {
+        if (file.isFile && file.name == 'backup.json') {
+          return utf8.decode(file.content as List<int>);
+        }
+      }
+      throw const FormatException('Missing backup.json inside archive.');
+    } catch (e) {
+      // If it fails to parse as zip, it might be a raw JSON file (legacy export).
+      // Let's try to just return it as UTF-8 string.
+      try {
+        return utf8.decode(zipBytes);
+      } catch (_) {
+        throw const FormatException('Not a valid PromptForge backup bundle.');
+      }
+    }
   }
 }
