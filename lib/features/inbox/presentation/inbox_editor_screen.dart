@@ -8,6 +8,7 @@ import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../application/inbox_providers.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'inline_markdown_editor.dart';
 
 class InboxEditorScreen extends ConsumerStatefulWidget {
   final String? itemId; // null means creating a new item
@@ -18,7 +19,7 @@ class InboxEditorScreen extends ConsumerStatefulWidget {
   ConsumerState<InboxEditorScreen> createState() => _InboxEditorScreenState();
 }
 
-enum _ViewMode { edit, preview, split }
+enum _ViewMode { edit, preview }
 
 class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   final _titleController = TextEditingController();
@@ -29,49 +30,10 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   bool _isLoading = true;
   _ViewMode _viewMode = _ViewMode.edit;
 
-  final _rawScrollController = ScrollController();
-  final _previewScrollController = ScrollController();
-  bool _isSyncingScroll = false;
-
   @override
   void initState() {
     super.initState();
     _loadItem();
-    
-    _rawScrollController.addListener(_syncToPreview);
-    _previewScrollController.addListener(_syncToRaw);
-  }
-
-  void _syncToPreview() {
-    if (_viewMode != _ViewMode.split) return;
-    if (_isSyncingScroll) return;
-    if (!_previewScrollController.hasClients || !_rawScrollController.hasClients) return;
-
-    _isSyncingScroll = true;
-    final sourceMax = _rawScrollController.position.maxScrollExtent;
-    final targetMax = _previewScrollController.position.maxScrollExtent;
-    if (sourceMax > 0 && targetMax > 0) {
-      final ratio = _rawScrollController.offset / sourceMax;
-      final targetOffset = ratio * targetMax;
-      _previewScrollController.jumpTo(targetOffset.clamp(0.0, targetMax));
-    }
-    _isSyncingScroll = false;
-  }
-
-  void _syncToRaw() {
-    if (_viewMode != _ViewMode.split) return;
-    if (_isSyncingScroll) return;
-    if (!_previewScrollController.hasClients || !_rawScrollController.hasClients) return;
-
-    _isSyncingScroll = true;
-    final sourceMax = _previewScrollController.position.maxScrollExtent;
-    final targetMax = _rawScrollController.position.maxScrollExtent;
-    if (sourceMax > 0 && targetMax > 0) {
-      final ratio = _previewScrollController.offset / sourceMax;
-      final targetOffset = ratio * targetMax;
-      _rawScrollController.jumpTo(targetOffset.clamp(0.0, targetMax));
-    }
-    _isSyncingScroll = false;
   }
 
   Future<void> _loadItem() async {
@@ -85,6 +47,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
       final item = await dao.getInboxItemById(widget.itemId!);
       setState(() {
         _existingItem = item;
+        _viewMode = _ViewMode.preview; // Preview by default for existing items
         if (item.title != null) _titleController.text = item.title!;
         _contentController.text = item.rawText;
         if (item.source != null) _sourceController.text = item.source!;
@@ -180,10 +143,6 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
 
   @override
   void dispose() {
-    _rawScrollController.removeListener(_syncToPreview);
-    _previewScrollController.removeListener(_syncToRaw);
-    _rawScrollController.dispose();
-    _previewScrollController.dispose();
     _titleController.dispose();
     _contentController.dispose();
     _sourceController.dispose();
@@ -233,17 +192,14 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
               children: [
                 Text('Raw Content', style: Theme.of(context).textTheme.titleSmall),
                 SegmentedButton<_ViewMode>(
-                  segments: [
-                    const ButtonSegment(value: _ViewMode.edit, label: Text('Edit')),
-                    const ButtonSegment(value: _ViewMode.preview, label: Text('Preview')),
-                    if (MediaQuery.of(context).size.width >= 600)
-                      const ButtonSegment(value: _ViewMode.split, label: Text('Split')),
+                  segments: const [
+                    ButtonSegment(value: _ViewMode.preview, label: Text('Preview')),
+                    ButtonSegment(value: _ViewMode.edit, label: Text('Edit Full Text')),
                   ],
                   selected: {_viewMode},
                   onSelectionChanged: (newSelection) {
                     setState(() {
                       _viewMode = newSelection.first;
-                      // Keep state in sync if content was edited in split or edit modes
                       if (_viewMode == _ViewMode.preview) {
                         FocusScope.of(context).unfocus();
                       }
@@ -287,28 +243,33 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   }
 
   Widget _buildContentView(bool isDesktop) {
-    // If mobile and somehow ended up in split view, force edit mode.
-    if (!isDesktop && _viewMode == _ViewMode.split) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _viewMode = _ViewMode.edit);
-      });
-    }
-    
-    final mode = (!isDesktop && _viewMode == _ViewMode.split) ? _ViewMode.edit : _viewMode;
-
-    switch (mode) {
+    switch (_viewMode) {
       case _ViewMode.edit:
         return _buildEditor();
       case _ViewMode.preview:
-        return _buildPreview();
-      case _ViewMode.split:
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(child: _buildEditor()),
-            VerticalDivider(width: 1, color: Theme.of(context).colorScheme.outline),
-            Expanded(child: _buildPreview()),
-          ],
+        return Container(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Click any section to edit it in place.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: InlineMarkdownEditor(controller: _contentController),
+              ),
+            ],
+          ),
         );
     }
   }
@@ -316,7 +277,6 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   Widget _buildEditor() {
     return TextField(
       controller: _contentController,
-      scrollController: _rawScrollController,
       decoration: const InputDecoration(
         border: InputBorder.none,
         contentPadding: EdgeInsets.all(12),
@@ -325,30 +285,6 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
       maxLines: null,
       expands: true,
       textAlignVertical: TextAlignVertical.top,
-      onChanged: (_) {
-        if (_viewMode == _ViewMode.split) {
-          setState(() {}); // Rebuild to update preview
-        }
-      },
-    );
-  }
-
-  Widget _buildPreview() {
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      child: _contentController.text.trim().isEmpty
-          ? const Center(
-              child: Text(
-                'Nothing to preview yet.',
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          : Markdown(
-              data: _contentController.text,
-              controller: _previewScrollController,
-              selectable: true,
-              padding: const EdgeInsets.all(16),
-            ),
     );
   }
 }
