@@ -156,6 +156,126 @@ class _PromptRunEditorScreenState extends ConsumerState<PromptRunEditorScreen> {
     ));
   }
 
+  Widget _buildEditor() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border(right: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: _isPreviewMode
+                ? Markdown(
+                    data: _inputController.text.isEmpty ? '*No content*' : _inputController.text,
+                    selectable: true,
+                  )
+                : TextField(
+                    controller: _inputController,
+                    maxLines: null,
+                    expands: true,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter your prompt in markdown...',
+                      border: OutlineInputBorder(),
+                    ),
+                    textAlignVertical: TextAlignVertical.top,
+                  ),
+          ),
+          if (_run != null) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Refinement Notes',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutputsLab() {
+    if (_run == null) {
+      return const Center(child: Text('Save the run to see outputs'));
+    }
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Outputs Lab', style: Theme.of(context).textTheme.titleLarge),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Mock Output'),
+                  onPressed: _addMockOutput,
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _outputs.isEmpty
+                ? const Center(child: Text('No outputs yet.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _outputs.length,
+                    itemBuilder: (context, index) {
+                      final output = _outputs[index];
+                      final color = _getProviderColor(output.providerId);
+                      return Card(
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(color: color, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Chip(
+                                    label: Text(output.providerName, style: const TextStyle(color: Colors.white)),
+                                    backgroundColor: color,
+                                  ),
+                                  if (output.isBest)
+                                    const Icon(Icons.star, color: Colors.amber),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              MarkdownBody(data: output.outputText, selectable: true),
+                              const Divider(),
+                              Row(
+                                children: [
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.star_border),
+                                    label: const Text('Mark Best'),
+                                    onPressed: () {
+                                      ref.read(promptExampleOutputDaoProvider).markOutputAsBest(_run!.id, output.id);
+                                    },
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -163,159 +283,73 @@ class _PromptRunEditorScreenState extends ConsumerState<PromptRunEditorScreen> {
     
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _titleController,
-          decoration: const InputDecoration(
-            hintText: 'Untitled Prompt Run',
-            border: InputBorder.none,
-          ),
-          style: Theme.of(context).textTheme.titleLarge,
+    final appBar = AppBar(
+      title: TextField(
+        controller: _titleController,
+        decoration: const InputDecoration(
+          hintText: 'Untitled Prompt Run',
+          border: InputBorder.none,
         ),
-        actions: [
-          IconButton(
-            icon: Icon(_isPreviewMode ? Icons.edit : Icons.preview),
-            tooltip: _isPreviewMode ? 'Edit Mode' : 'Preview Mode',
-            onPressed: () {
-              setState(() {
-                _isPreviewMode = !_isPreviewMode;
-              });
-            },
-          ),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.save),
-            label: const Text('Save'),
-            onPressed: _save,
-          ),
-          const SizedBox(width: 16),
-        ],
+        style: Theme.of(context).textTheme.titleLarge,
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left side: Editor/Preview
-          Expanded(
-            flex: 1,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border(right: BorderSide(color: Theme.of(context).dividerColor)),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: _isPreviewMode
-                        ? Markdown(
-                            data: _inputController.text.isEmpty ? '*No content*' : _inputController.text,
-                            selectable: true,
-                          )
-                        : TextField(
-                            controller: _inputController,
-                            maxLines: null,
-                            expands: true,
-                            decoration: const InputDecoration(
-                              hintText: 'Enter your prompt in markdown...',
-                              border: OutlineInputBorder(),
-                            ),
-                            textAlignVertical: TextAlignVertical.top,
-                          ),
-                  ),
-                  if (_run != null) ...[
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _notesController,
-                      maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Refinement Notes',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ]
-                ],
-              ),
-            ),
-          ),
-          // Right side: Outputs Lab
-          if (isDesktop && _run != null)
-            Expanded(
-              flex: 1,
-              child: Container(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Outputs Lab', style: Theme.of(context).textTheme.titleLarge),
-                          ElevatedButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Mock Output'),
-                            onPressed: _addMockOutput,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: _outputs.isEmpty
-                          ? const Center(child: Text('No outputs yet.'))
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _outputs.length,
-                              itemBuilder: (context, index) {
-                                final output = _outputs[index];
-                                final color = _getProviderColor(output.providerId);
-                                return Card(
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(color: color, width: 2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 16),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Chip(
-                                              label: Text(output.providerName, style: const TextStyle(color: Colors.white)),
-                                              backgroundColor: color,
-                                            ),
-                                            if (output.isBest)
-                                              const Icon(Icons.star, color: Colors.amber),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        MarkdownBody(data: output.outputText, selectable: true),
-                                        const Divider(),
-                                        Row(
-                                          children: [
-                                            TextButton.icon(
-                                              icon: const Icon(Icons.star_border),
-                                              label: const Text('Mark Best'),
-                                              onPressed: () {
-                                                ref.read(promptExampleOutputDaoProvider).markOutputAsBest(_run!.id, output.id);
-                                              },
-                                            ),
-                                          ],
-                                        )
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
+      actions: [
+        IconButton(
+          icon: Icon(_isPreviewMode ? Icons.edit : Icons.preview),
+          tooltip: _isPreviewMode ? 'Edit Mode' : 'Preview Mode',
+          onPressed: () {
+            setState(() {
+              _isPreviewMode = !_isPreviewMode;
+            });
+          },
+        ),
+        ElevatedButton.icon(
+          icon: const Icon(Icons.save),
+          label: const Text('Save'),
+          onPressed: _save,
+        ),
+        const SizedBox(width: 16),
+      ],
+      bottom: (!isDesktop && _run != null)
+          ? const TabBar(
+              tabs: [
+                Tab(text: 'Editor'),
+                Tab(text: 'Outputs Lab'),
+              ],
+            )
+          : null,
     );
+
+    if (isDesktop) {
+      return Scaffold(
+        appBar: appBar,
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 1, child: _buildEditor()),
+            if (_run != null) Expanded(flex: 1, child: _buildOutputsLab()),
+          ],
+        ),
+      );
+    } else {
+      if (_run == null) {
+        return Scaffold(
+          appBar: appBar,
+          body: _buildEditor(),
+        );
+      } else {
+        return DefaultTabController(
+          length: 2,
+          child: Scaffold(
+            appBar: appBar,
+            body: TabBarView(
+              children: [
+                _buildEditor(),
+                _buildOutputsLab(),
+              ],
+            ),
+          ),
+        );
+      }
+    }
   }
 }

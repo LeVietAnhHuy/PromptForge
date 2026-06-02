@@ -7448,6 +7448,24 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $LLMModelsTable lLMModels = $LLMModelsTable(this);
   late final $LLMOutputAttachmentsTable lLMOutputAttachments =
       $LLMOutputAttachmentsTable(this);
+  late final PromptDao promptDao = PromptDao(this as AppDatabase);
+  late final ContextPackDao contextPackDao =
+      ContextPackDao(this as AppDatabase);
+  late final TagDao tagDao = TagDao(this as AppDatabase);
+  late final CollectionDao collectionDao = CollectionDao(this as AppDatabase);
+  late final InboxItemDao inboxItemDao = InboxItemDao(this as AppDatabase);
+  late final UserSettingsDao userSettingsDao =
+      UserSettingsDao(this as AppDatabase);
+  late final PromptExampleDao promptExampleDao =
+      PromptExampleDao(this as AppDatabase);
+  late final PromptExampleOutputDao promptExampleOutputDao =
+      PromptExampleOutputDao(this as AppDatabase);
+  late final ProjectDao projectDao = ProjectDao(this as AppDatabase);
+  late final LLMProviderDao lLMProviderDao =
+      LLMProviderDao(this as AppDatabase);
+  late final LLMModelDao lLMModelDao = LLMModelDao(this as AppDatabase);
+  late final LLMOutputAttachmentDao lLMOutputAttachmentDao =
+      LLMOutputAttachmentDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

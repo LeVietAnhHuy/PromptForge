@@ -102,5 +102,55 @@ void main() {
       final extractedJsonStr = ImportExportCodec.decodeBackupBundle(zipBytes);
       expect(extractedJsonStr, equals(jsonStr));
     });
+
+    test('decodeImport safely handles older v3 schema without Stage 16 fields', () {
+      // Simulate an older v3 export JSON string that lacks projectId, providerId, etc.
+      final jsonStr = jsonEncode({
+        'app': 'PromptForge',
+        'schemaVersion': 3,
+        'prompts': [
+          {
+            'id': 'p1', 
+            'title': 'Test Prompt', 
+            'body': 'body', 
+            'createdAt': DateTime.now().toIso8601String(), 
+            'updatedAt': DateTime.now().toIso8601String(),
+            'examples': [
+              {
+                'id': 'ex1',
+                'title': 'Old Example',
+                'compiledPrompt': 'Test output',
+                'createdAt': DateTime.now().toIso8601String(),
+                'updatedAt': DateTime.now().toIso8601String(),
+                'outputs': [
+                  {
+                    'providerName': 'Legacy Provider',
+                    'outputText': 'Response text',
+                    'createdAt': DateTime.now().toIso8601String(),
+                    'updatedAt': DateTime.now().toIso8601String(),
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        'contextPacks': [],
+      });
+
+      final preview = ImportExportCodec.decodeImport(jsonStr);
+      expect(preview.invalidRecordsCount, 0);
+      expect(preview.validPrompts.length, 1);
+      
+      final ex = preview.validPrompts.first.examples.first;
+      expect(ex.title, 'Old Example');
+      expect(ex.projectId, null); // missing field parsed as null
+      expect(ex.refinementNote, null); // missing field parsed as null
+      
+      final out = preview.validPrompts.first.exampleOutputs[ex.id]?.first;
+      expect(out, isNotNull);
+      expect(out!.providerId, null); // missing field parsed as null
+      expect(out.modelId, null);
+      expect(out.outputType, 'text'); // falls back to default 'text'
+    });
   });
 }
