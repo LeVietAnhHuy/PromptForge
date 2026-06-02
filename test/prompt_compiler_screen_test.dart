@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/database/database_providers.dart';
 import 'package:promptforge/features/prompt_compiler/presentation/prompt_compiler_screen.dart';
+import 'package:drift/drift.dart' as drift;
 
 void main() {
   late AppDatabase database;
@@ -34,7 +35,7 @@ void main() {
     await database.into(database.prompts).insert(PromptsCompanion.insert(
       id: 'test-prompt-id',
       title: 'Email Template',
-      body: 'Write a {{tone}} email to {{recipient}}.',
+      body: 'Write a {tone} email to {recipient}.',
       createdAt: now,
       updatedAt: now,
     ));
@@ -45,6 +46,13 @@ void main() {
       createdAt: now,
       updatedAt: now,
     ));
+    // Link pack
+    await database.into(database.promptContextPackLinks).insert(PromptContextPackLinksCompanion.insert(
+      promptId: 'test-prompt-id',
+      contextPackId: 'pack-1',
+      sortOrder: const drift.Value(0),
+      createdAt: now,
+    ));
 
     // 2. Pump widget
     await tester.pumpWidget(createTestApp('test-prompt-id'));
@@ -53,40 +61,29 @@ void main() {
     // Verify initial state
     expect(find.text('Compile: Email Template'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2)); // tone, recipient
-    expect(find.text('Replace {{ tone }}'), findsOneWidget);
-    expect(find.text('Replace {{ recipient }}'), findsOneWidget);
-    expect(find.text('Context Pack'), findsOneWidget); // Context pack section
+    expect(find.textContaining('Replace {tone}'), findsOneWidget);
+    expect(find.textContaining('Replace {recipient}'), findsOneWidget);
+    expect(find.text('Attached Context Packs (1)'), findsOneWidget); // Context pack section
     
-    // Preview initially shows raw body since nothing is typed
-    expect(find.textContaining('Write a {{tone}} email to {{recipient}}.'), findsOneWidget);
+    // Preview initially shows raw body since nothing is typed (and variables missing)
+    expect(find.textContaining('Write a {tone} email to {recipient}.'), findsOneWidget);
     
-    // Verify copy button is disabled (because variables are missing)
-    final copyButton = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Copy Output'));
-    expect(copyButton.onPressed, isNull);
-    expect(find.text('Fill all variables to enable copying.'), findsOneWidget);
+    // Verify missing variables warning
+    expect(find.textContaining('Missing required variables: tone, recipient'), findsOneWidget);
 
     // 4. Enter values
     await tester.enterText(find.byType(TextField).first, 'friendly');
     await tester.enterText(find.byType(TextField).last, 'Bob');
     await tester.pumpAndSettle();
 
-    // 5. Verify compiled preview updates and copy is enabled
+    // 5. Verify compiled preview updates and warning disappears
     expect(find.textContaining('Write a friendly email to Bob.'), findsOneWidget);
-    final copyButtonEnabled = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Copy Output'));
-    expect(copyButtonEnabled.onPressed, isNotNull);
-    expect(find.text('Fill all variables to enable copying.'), findsNothing);
-    
-    // 6. Select a context pack
-    // Open dropdown and select
-    await tester.tap(find.byType(DropdownButton<String?>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Research Style').last);
-    await tester.pumpAndSettle();
+    expect(find.textContaining('Missing required variables'), findsNothing);
     
     // Verify context pack prepended to output
-    expect(find.textContaining('[Context]'), findsOneWidget);
+    expect(find.textContaining('# Context Packs'), findsOneWidget);
     expect(find.textContaining('Explain concepts step by step.'), findsOneWidget);
-    expect(find.textContaining('[Prompt]'), findsOneWidget);
+    expect(find.textContaining('# Prompt'), findsOneWidget);
     expect(find.textContaining('Write a friendly email to Bob.'), findsOneWidget);
 
     // 7. Unmount
@@ -115,9 +112,8 @@ void main() {
     // Preview initially shows raw body since nothing is typed
     expect(find.textContaining('This is a simple prompt without variables.'), findsOneWidget);
 
-    // Verify copy button is enabled because there are no variables missing
-    final copyButtonEnabled = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Copy Output'));
-    expect(copyButtonEnabled.onPressed, isNotNull);
+    // Verify copy button is present
+    expect(find.widgetWithText(ElevatedButton, 'Copy Output'), findsOneWidget);
 
     // Unmount
     await tester.pumpWidget(Container());

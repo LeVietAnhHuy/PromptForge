@@ -7,7 +7,7 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 
-import '../../prompt_compiler/domain/prompt_compiler.dart';
+import '../../prompt_compiler/domain/prompt_compiler_service.dart';
 import 'dart:convert' as dart_convert;
 import 'package:flutter/foundation.dart';
 
@@ -72,7 +72,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   }
 
   void _onBodyChanged() {
-    final variables = PromptCompiler.extractVariables(_bodyController.text);
+    final variables = PromptCompilerService.extractVariables(_bodyController.text);
     if (listEquals(_detectedVariables, variables)) return;
     
       setState(() {
@@ -115,7 +115,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         _purposeController.text = prompt.purpose ?? '';
         _tagsController.text = tags.map((t) => t.name).join(', ');
         
-        final variables = PromptCompiler.extractVariables(prompt.body);
+        final variables = PromptCompilerService.extractVariables(prompt.body);
         _detectedVariables = variables;
         _variableForms = {};
         for (final v in vars) {

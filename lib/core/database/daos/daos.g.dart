@@ -23,6 +23,8 @@ mixin _$ContextPackDaoMixin on DatabaseAccessor<AppDatabase> {
   $ContextPacksTable get contextPacks => attachedDatabase.contextPacks;
   $ContextPackVersionsTable get contextPackVersions =>
       attachedDatabase.contextPackVersions;
+  $PromptContextPackLinksTable get promptContextPackLinks =>
+      attachedDatabase.promptContextPackLinks;
   ContextPackDaoManager get managers => ContextPackDaoManager(this);
 }
 
@@ -34,6 +36,9 @@ class ContextPackDaoManager {
   $$ContextPackVersionsTableTableManager get contextPackVersions =>
       $$ContextPackVersionsTableTableManager(
           _db.attachedDatabase, _db.contextPackVersions);
+  $$PromptContextPackLinksTableTableManager get promptContextPackLinks =>
+      $$PromptContextPackLinksTableTableManager(
+          _db.attachedDatabase, _db.promptContextPackLinks);
 }
 
 mixin _$InboxItemDaoMixin on DatabaseAccessor<AppDatabase> {

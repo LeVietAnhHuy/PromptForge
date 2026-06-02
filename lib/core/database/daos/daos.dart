@@ -18,6 +18,14 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
   Future<int> hardDeletePrompt(String id) => (delete(prompts)..where((t) => t.id.equals(id))).go();
   Future<int> toggleFavorite(String id, bool isFavorite) => (update(prompts)..where((t) => t.id.equals(id))).write(PromptsCompanion(isFavorite: Value(isFavorite)));
   
+  Future<void> incrementUsage(String id) async {
+    final prompt = await getPromptById(id);
+    await (update(prompts)..where((t) => t.id.equals(id))).write(PromptsCompanion(
+      usageCount: Value(prompt.usageCount + 1),
+      lastUsedAt: Value(DateTime.now()),
+    ));
+  }
+
   // Versions
   Future<void> createPromptVersion(PromptVersionsCompanion entry) => into(promptVersions).insert(entry);
   Stream<List<PromptVersion>> watchPromptVersions(String promptId) => 
@@ -26,7 +34,7 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
       (select(promptVersions)..where((t) => t.promptId.equals(promptId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).get();
 }
 
-@DriftAccessor(tables: [ContextPacks, ContextPackVersions])
+@DriftAccessor(tables: [ContextPacks, ContextPackVersions, PromptContextPackLinks])
 class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDaoMixin {
   ContextPackDao(super.db);
 
@@ -35,6 +43,26 @@ class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDao
   Future<List<ContextPack>> getAllContextPacks() => (select(contextPacks)..where((t) => t.isArchived.not())).get();
   Future<bool> updateContextPack(ContextPacksCompanion entry) => update(contextPacks).replace(entry);
   Future<int> archiveContextPack(String id) => (update(contextPacks)..where((t) => t.id.equals(id))).write(const ContextPacksCompanion(isArchived: Value(true)));
+
+  // Prompt Links
+  Future<void> attachContextPackToPrompt(PromptContextPackLinksCompanion entry) => into(promptContextPackLinks).insert(entry, mode: InsertMode.insertOrReplace);
+  Future<int> detachContextPackFromPrompt(String promptId, String contextPackId) => 
+      (delete(promptContextPackLinks)..where((t) => t.promptId.equals(promptId) & t.contextPackId.equals(contextPackId))).go();
+  
+  Future<List<ContextPack>> getContextPacksForPrompt(String promptId) async {
+    final query = select(contextPacks).join([
+      innerJoin(
+        promptContextPackLinks,
+        promptContextPackLinks.contextPackId.equalsExp(contextPacks.id),
+      ),
+    ])
+      ..where(promptContextPackLinks.promptId.equals(promptId))
+      ..where(contextPacks.isArchived.not())
+      ..orderBy([OrderingTerm(expression: promptContextPackLinks.sortOrder, mode: OrderingMode.asc)]);
+
+    final rows = await query.get();
+    return rows.map((row) => row.readTable(contextPacks)).toList();
+  }
 
   // Versions
   Future<void> createContextPackVersion(ContextPackVersionsCompanion entry) => into(contextPackVersions).insert(entry);
