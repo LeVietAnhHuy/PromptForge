@@ -33,7 +33,7 @@ void main() {
     ];
 
     test('encodeExport returns correctly structured JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {}, []);
       final decoded = jsonDecode(jsonStr);
 
       expect(decoded['schemaVersion'], 3);
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('decodeImport parses valid JSON', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {}, []);
       final preview = ImportExportCodec.decodeImport(jsonStr);
 
       expect(preview.invalidRecordsCount, 0);
@@ -94,7 +94,7 @@ void main() {
     });
 
     test('Backup Bundle zip and unzip works', () {
-      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {});
+      final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, testContextPacks, {}, []);
       
       final zipBytes = ImportExportCodec.encodeBackupBundle(jsonStr);
       expect(zipBytes, isNotEmpty);

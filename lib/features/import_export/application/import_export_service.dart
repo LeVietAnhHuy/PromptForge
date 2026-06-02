@@ -80,6 +80,9 @@ class ImportExportService {
       packVersions[pack.id] = versions;
     }
 
+    final inboxDao = InboxItemDao(db);
+    final inboxItems = await inboxDao.select(inboxDao.inboxItems).get();
+
     final jsonStr = ImportExportCodec.encodeExport(
       activePrompts, 
       promptTags, 
@@ -89,6 +92,7 @@ class ImportExportService {
       exampleOutputs,
       activeContextPacks,
       packVersions,
+      inboxItems,
     );
     return jsonStr;
   }
@@ -251,6 +255,38 @@ class ImportExportService {
             note: v.note != null ? drift.Value(v.note) : const drift.Value.absent(),
             createdAt: v.createdAt,
           ));
+        }
+      }
+
+      final inboxDao = InboxItemDao(db);
+      for (final inboxItem in preview.validInboxItems) {
+        final existingItem = await (inboxDao.select(inboxDao.inboxItems)..where((t) => t.id.equals(inboxItem.id))).getSingleOrNull();
+        
+        String targetId = inboxItem.id;
+        
+        if (existingItem != null) {
+          if (strategy == MergeStrategy.skip) {
+            continue;
+          } else if (strategy == MergeStrategy.duplicate) {
+            targetId = const Uuid().v4();
+          }
+        }
+        
+        final companion = InboxItemsCompanion.insert(
+          id: targetId,
+          title: inboxItem.title != null ? drift.Value(inboxItem.title) : const drift.Value.absent(),
+          rawText: inboxItem.rawText,
+          source: inboxItem.source != null ? drift.Value(inboxItem.source) : const drift.Value.absent(),
+          status: drift.Value(inboxItem.status),
+          convertedPromptId: inboxItem.convertedPromptId != null ? drift.Value(inboxItem.convertedPromptId) : const drift.Value.absent(),
+          createdAt: inboxItem.createdAt,
+          updatedAt: inboxItem.updatedAt,
+        );
+        
+        if (existingItem != null && strategy == MergeStrategy.overwrite) {
+          await inboxDao.updateInboxItem(companion);
+        } else {
+          await inboxDao.createInboxItem(companion);
         }
       }
     });

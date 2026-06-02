@@ -36,9 +36,11 @@ class ImportPreview {
   final int versionCount;
   final int exampleCount;
   final int comparisonCount;
+  final int inboxCount;
   
   final List<ImportedPrompt> validPrompts;
   final List<ImportedContextPack> validContextPacks;
+  final List<InboxItem> validInboxItems;
 
   ImportPreview({
     required this.promptCount,
@@ -47,8 +49,10 @@ class ImportPreview {
     this.versionCount = 0,
     this.exampleCount = 0,
     this.comparisonCount = 0,
+    this.inboxCount = 0,
     required this.validPrompts,
     required this.validContextPacks,
+    this.validInboxItems = const [],
   });
 }
 
@@ -65,11 +69,22 @@ class ImportExportCodec {
     Map<String, List<PromptExampleOutput>> exampleOutputs,
     List<ContextPack> contextPacks,
     Map<String, List<ContextPackVersion>> packVersions,
+    List<InboxItem> inboxItems,
   ) {
     final Map<String, dynamic> payload = {
       'schemaVersion': currentSchemaVersion,
       'app': expectedAppId,
       'exportedAt': DateTime.now().toIso8601String(),
+      'inboxItems': inboxItems.map((i) => {
+        'id': i.id,
+        'title': i.title,
+        'rawText': i.rawText,
+        'source': i.source,
+        'status': i.status,
+        'convertedPromptId': i.convertedPromptId,
+        'createdAt': i.createdAt.toIso8601String(),
+        'updatedAt': i.updatedAt.toIso8601String(),
+      }).toList(),
       'prompts': prompts.map((p) => {
         'id': p.id,
         'title': p.title,
@@ -361,6 +376,33 @@ class ImportExportCodec {
       totalVersions += c.versions.length;
     }
 
+    final validInboxItems = <InboxItem>[];
+    final inboxRaw = payload['inboxItems'] as List<dynamic>? ?? [];
+    for (final raw in inboxRaw) {
+      if (raw is! Map<String, dynamic>) {
+        invalidRecordsCount++;
+        continue;
+      }
+      try {
+        final id = raw['id'] as String;
+        final rawText = raw['rawText'] as String;
+        final createdAtStr = raw['createdAt'] as String;
+        final updatedAtStr = raw['updatedAt'] as String;
+        validInboxItems.add(InboxItem(
+          id: id,
+          title: raw['title'] as String?,
+          rawText: rawText,
+          source: raw['source'] as String?,
+          status: raw['status'] as String? ?? 'open',
+          convertedPromptId: raw['convertedPromptId'] as String?,
+          createdAt: DateTime.parse(createdAtStr),
+          updatedAt: DateTime.parse(updatedAtStr),
+        ));
+      } catch (e) {
+        invalidRecordsCount++;
+      }
+    }
+
     return ImportPreview(
       promptCount: validPrompts.length,
       contextPackCount: validContextPacks.length,
@@ -368,8 +410,10 @@ class ImportExportCodec {
       versionCount: totalVersions,
       exampleCount: totalExamples,
       comparisonCount: totalComparisons,
+      inboxCount: validInboxItems.length,
       validPrompts: validPrompts,
       validContextPacks: validContextPacks,
+      validInboxItems: validInboxItems,
     );
   }
 

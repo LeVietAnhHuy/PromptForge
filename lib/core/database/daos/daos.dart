@@ -53,6 +53,7 @@ class InboxItemDao extends DatabaseAccessor<AppDatabase> with _$InboxItemDaoMixi
   Stream<List<InboxItem>> watchOpenInboxItems() => (select(inboxItems)..where((t) => t.status.equals('open'))).watch();
   Future<InboxItem> getInboxItemById(String id) => (select(inboxItems)..where((t) => t.id.equals(id))).getSingle();
   Future<int> markInboxItemConverted(String id, String promptId) => (update(inboxItems)..where((t) => t.id.equals(id))).write(InboxItemsCompanion(status: const Value('converted'), convertedPromptId: Value(promptId)));
+  Future<int> markInboxItemConvertedToRun(String id) => (update(inboxItems)..where((t) => t.id.equals(id))).write(const InboxItemsCompanion(status: Value('converted')));
   Future<int> archiveInboxItem(String id) => (update(inboxItems)..where((t) => t.id.equals(id))).write(const InboxItemsCompanion(status: Value('archived')));
   Future<int> deleteInboxItem(String id) => (delete(inboxItems)..where((t) => t.id.equals(id))).go();
 }
@@ -199,6 +200,7 @@ class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
   Future<bool> updateProject(ProjectsCompanion entry) => update(projects).replace(entry);
   Future<int> archiveProject(String id) => (update(projects)..where((t) => t.id.equals(id))).write(const ProjectsCompanion(isArchived: Value(true)));
   Stream<List<Project>> watchActiveProjects() => (select(projects)..where((t) => t.isArchived.not())..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])).watch();
+  Future<List<Project>> getActiveProjects() => (select(projects)..where((t) => t.isArchived.not())..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])).get();
   Future<Project> getProjectById(String id) => (select(projects)..where((t) => t.id.equals(id))).getSingle();
 }
 
