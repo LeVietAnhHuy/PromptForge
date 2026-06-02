@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/database/daos/daos.dart';
@@ -36,7 +37,7 @@ void main() {
     final exampleId = const Uuid().v4();
     await exampleDao.createExample(PromptExamplesCompanion.insert(
       id: exampleId,
-      promptId: promptId,
+      promptId: Value(promptId),
       title: 'Test Example',
       compiledPrompt: 'Compiled text',
       createdAt: now,
@@ -69,7 +70,7 @@ void main() {
     ));
     await exampleDao.createExample(PromptExamplesCompanion.insert(
       id: exampleId,
-      promptId: promptId,
+      promptId: Value(promptId),
       title: 'Test Example',
       compiledPrompt: 'Compiled text',
       createdAt: now,

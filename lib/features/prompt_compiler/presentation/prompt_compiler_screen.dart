@@ -292,7 +292,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
 
                             await dao.createExample(PromptExamplesCompanion.insert(
                               id: exampleId,
-                              promptId: _prompt!.id,
+                              promptId: drift.Value(_prompt!.id),
                               title: title,
                               compiledPrompt: _compiledPrompt,
                               contextPackId: _selectedContextPackId != null ? drift.Value(_selectedContextPackId!) : const drift.Value.absent(),

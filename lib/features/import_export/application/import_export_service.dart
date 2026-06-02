@@ -180,7 +180,7 @@ class ImportExportService {
           final newExampleId = const Uuid().v4();
           await exampleDao.into(exampleDao.promptExamples).insert(PromptExamplesCompanion.insert(
             id: newExampleId,
-            promptId: targetId,
+            promptId: drift.Value(targetId),
             title: ex.title,
             compiledPrompt: ex.compiledPrompt,
             contextPackId: ex.contextPackId != null ? drift.Value(ex.contextPackId) : const drift.Value.absent(),

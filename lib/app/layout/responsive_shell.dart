@@ -33,6 +33,10 @@ class ResponsiveShell extends StatelessWidget {
                   label: 'Inbox',
                 ),
                 NavigationDestination(
+                  icon: Icon(Icons.workspaces),
+                  label: 'Workspace',
+                ),
+                NavigationDestination(
                   icon: Icon(Icons.library_books),
                   label: 'Library',
                 ),
@@ -65,6 +69,10 @@ class ResponsiveShell extends StatelessWidget {
                     NavigationRailDestination(
                       icon: Icon(Icons.inbox),
                       label: Text('Inbox'),
+                    ),
+                    NavigationRailDestination(
+                      icon: Icon(Icons.workspaces),
+                      label: Text('Workspace'),
                     ),
                     NavigationRailDestination(
                       icon: Icon(Icons.library_books),

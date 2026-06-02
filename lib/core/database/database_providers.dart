@@ -48,3 +48,19 @@ final promptExampleDaoProvider = Provider<PromptExampleDao>((ref) {
 final promptExampleOutputDaoProvider = Provider<PromptExampleOutputDao>((ref) {
   return PromptExampleOutputDao(ref.watch(databaseProvider));
 });
+
+final projectDaoProvider = Provider<ProjectDao>((ref) {
+  return ProjectDao(ref.watch(databaseProvider));
+});
+
+final lLMProviderDaoProvider = Provider<LLMProviderDao>((ref) {
+  return LLMProviderDao(ref.watch(databaseProvider));
+});
+
+final lLMModelDaoProvider = Provider<LLMModelDao>((ref) {
+  return LLMModelDao(ref.watch(databaseProvider));
+});
+
+final lLMOutputAttachmentDaoProvider = Provider<LLMOutputAttachmentDao>((ref) {
+  return LLMOutputAttachmentDao(ref.watch(databaseProvider));
+});

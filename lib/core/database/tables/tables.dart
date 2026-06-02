@@ -157,14 +157,63 @@ class UserSettings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+class Projects extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class LLMProviders extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get company => text().nullable()();
+  TextColumn get accentColorHex => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class LLMModels extends Table {
+  TextColumn get id => text()();
+  TextColumn get providerId => text()();
+  TextColumn get name => text()();
+  BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class LLMOutputAttachments extends Table {
+  TextColumn get id => text()();
+  TextColumn get outputId => text()();
+  TextColumn get fileName => text()();
+  TextColumn get mimeType => text()();
+  TextColumn get localPath => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class PromptExamples extends Table {
   TextColumn get id => text()();
-  TextColumn get promptId => text()();
+  TextColumn get projectId => text().nullable()();
+  TextColumn get promptId => text().nullable()();
   TextColumn get title => text()();
   TextColumn get compiledPrompt => text()();
   TextColumn get contextPackId => text().nullable()();
   TextColumn get variableValuesJson => text().nullable()();
   TextColumn get notes => text().nullable()();
+  TextColumn get refinementNote => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
@@ -176,8 +225,11 @@ class PromptExamples extends Table {
 class PromptExampleOutputs extends Table {
   TextColumn get id => text()();
   TextColumn get exampleId => text()();
+  TextColumn get providerId => text().nullable()();
+  TextColumn get modelId => text().nullable()();
   TextColumn get providerName => text()();
   TextColumn get modelName => text().nullable()();
+  TextColumn get outputType => text().withDefault(const Constant('text'))();
   TextColumn get outputText => text()();
   IntColumn get score => integer().nullable()();
   TextColumn get notes => text().nullable()();

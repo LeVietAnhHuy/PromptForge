@@ -5,30 +5,51 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import 'tables/tables.dart';
+import 'daos/daos.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(tables: [
-  Prompts,
-  PromptVersions,
-  PromptVariables,
-  ContextPacks,
-  PromptContextPackLinks,
-  Tags,
-  PromptTags,
-  Collections,
-  PromptCollectionLinks,
-  InboxItems,
-  UserSettings,
-  PromptExamples,
-  PromptExampleOutputs,
-  ContextPackVersions,
-])
+@DriftDatabase(
+  tables: [
+    Prompts,
+    PromptVersions,
+    PromptVariables,
+    ContextPacks,
+    ContextPackVersions,
+    PromptContextPackLinks,
+    Tags,
+    PromptTags,
+    Collections,
+    PromptCollectionLinks,
+    InboxItems,
+    UserSettings,
+    PromptExamples,
+    PromptExampleOutputs,
+    Projects,
+    LLMProviders,
+    LLMModels,
+    LLMOutputAttachments,
+  ],
+  daos: [
+    PromptDao,
+    ContextPackDao,
+    TagDao,
+    CollectionDao,
+    InboxItemDao,
+    UserSettingsDao,
+    PromptExampleDao,
+    PromptExampleOutputDao,
+    ProjectDao,
+    LLMProviderDao,
+    LLMModelDao,
+    LLMOutputAttachmentDao,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -59,6 +80,19 @@ class AppDatabase extends _$AppDatabase {
           try { await m.drop(promptVersions); } catch (_) {}
           try { await m.createTable(promptVersions); } catch (_) {}
           try { await m.createTable(contextPackVersions); } catch (_) {}
+        }
+        if (from < 4) {
+          try { await m.createTable(projects); } catch (_) {}
+          try { await m.createTable(lLMProviders); } catch (_) {}
+          try { await m.createTable(lLMModels); } catch (_) {}
+          try { await m.createTable(lLMOutputAttachments); } catch (_) {}
+          try { await m.addColumn(promptExamples, promptExamples.projectId); } catch (_) {}
+          try { await m.addColumn(promptExamples, promptExamples.refinementNote); } catch (_) {}
+          // Note: Drift schema alter required for nullability changes
+          try { await m.alterTable(TableMigration(promptExamples)); } catch (_) {}
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.providerId); } catch (_) {}
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.modelId); } catch (_) {}
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.outputType); } catch (_) {}
         }
       },
     );

@@ -157,6 +157,54 @@ class SeedData {
       updatedAt: now,
     ));
 
+    // Seed LLM Providers
+    final providerDao = LLMProviderDao(db);
+    final modelDao = LLMModelDao(db);
+
+    final providers = [
+      {'id': 'openai', 'name': 'ChatGPT', 'company': 'OpenAI', 'color': '#10a37f'},
+      {'id': 'anthropic', 'name': 'Claude', 'company': 'Anthropic', 'color': '#d97757'},
+      {'id': 'google', 'name': 'Gemini', 'company': 'Google', 'color': '#1a73e8'},
+      {'id': 'alibaba', 'name': 'Qwen', 'company': 'Alibaba Cloud', 'color': '#6e32c9'},
+      {'id': 'deepseek', 'name': 'DeepSeek', 'company': 'DeepSeek', 'color': '#4a90e2'},
+      {'id': 'meta', 'name': 'Llama', 'company': 'Meta', 'color': '#0668E1'},
+      {'id': 'mistral', 'name': 'Mistral', 'company': 'Mistral AI', 'color': '#f2a900'},
+      {'id': 'local', 'name': 'Local Model', 'company': 'Various', 'color': '#555555'},
+      {'id': 'other', 'name': 'Other', 'company': 'Other', 'color': '#888888'},
+    ];
+
+    for (final p in providers) {
+      await providerDao.createProvider(LLMProvidersCompanion.insert(
+        id: p['id']!,
+        name: p['name']!,
+        company: Value(p['company']),
+        accentColorHex: Value(p['color']),
+        createdAt: now,
+      ));
+    }
+
+    // Seed some basic models
+    final models = [
+      {'id': 'gpt-4o', 'providerId': 'openai', 'name': 'GPT-4o'},
+      {'id': 'gpt-4-turbo', 'providerId': 'openai', 'name': 'GPT-4 Turbo'},
+      {'id': 'claude-3-5-sonnet', 'providerId': 'anthropic', 'name': 'Claude 3.5 Sonnet'},
+      {'id': 'claude-3-opus', 'providerId': 'anthropic', 'name': 'Claude 3 Opus'},
+      {'id': 'gemini-1-5-pro', 'providerId': 'google', 'name': 'Gemini 1.5 Pro'},
+      {'id': 'qwen-max', 'providerId': 'alibaba', 'name': 'Qwen Max'},
+      {'id': 'deepseek-coder', 'providerId': 'deepseek', 'name': 'DeepSeek Coder V2'},
+      {'id': 'llama-3-70b', 'providerId': 'meta', 'name': 'Llama 3 70B'},
+      {'id': 'mistral-large', 'providerId': 'mistral', 'name': 'Mistral Large'},
+    ];
+
+    for (final m in models) {
+      await modelDao.createModel(LLMModelsCompanion.insert(
+        id: m['id']!,
+        providerId: m['providerId']!,
+        name: m['name']!,
+        createdAt: now,
+      ));
+    }
+
     await settingsDao.setSetting(UserSettingsCompanion.insert(
       key: 'is_seeded',
       value: 'true',

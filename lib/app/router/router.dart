@@ -17,6 +17,9 @@ import '../../features/inbox/presentation/inbox_screen.dart';
 import '../../features/inbox/presentation/inbox_editor_screen.dart';
 import '../../features/prompt_library/presentation/prompt_version_history_screen.dart';
 import '../../features/context_packs/presentation/context_pack_version_history_screen.dart';
+import '../../features/projects/presentation/project_list_screen.dart';
+import '../../features/projects/presentation/project_detail_screen.dart';
+import '../../features/projects/presentation/prompt_run_editor_screen.dart';
 import '../layout/responsive_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -42,6 +45,35 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'edit/:id',
                     builder: (context, state) => InboxEditorScreen(
                       itemId: state.pathParameters['id'],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/projects',
+                builder: (context, state) => const ProjectListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) => ProjectDetailScreen(
+                      projectId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id/runs/new',
+                    builder: (context, state) => PromptRunEditorScreen(
+                      projectId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':id/runs/:runId',
+                    builder: (context, state) => PromptRunEditorScreen(
+                      projectId: state.pathParameters['id']!,
+                      runId: state.pathParameters['runId'],
                     ),
                   ),
                 ],

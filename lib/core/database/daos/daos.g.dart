@@ -132,3 +132,54 @@ class PromptExampleOutputDaoManager {
       $$PromptExampleOutputsTableTableManager(
           _db.attachedDatabase, _db.promptExampleOutputs);
 }
+
+mixin _$ProjectDaoMixin on DatabaseAccessor<AppDatabase> {
+  $ProjectsTable get projects => attachedDatabase.projects;
+  ProjectDaoManager get managers => ProjectDaoManager(this);
+}
+
+class ProjectDaoManager {
+  final _$ProjectDaoMixin _db;
+  ProjectDaoManager(this._db);
+  $$ProjectsTableTableManager get projects =>
+      $$ProjectsTableTableManager(_db.attachedDatabase, _db.projects);
+}
+
+mixin _$LLMProviderDaoMixin on DatabaseAccessor<AppDatabase> {
+  $LLMProvidersTable get lLMProviders => attachedDatabase.lLMProviders;
+  LLMProviderDaoManager get managers => LLMProviderDaoManager(this);
+}
+
+class LLMProviderDaoManager {
+  final _$LLMProviderDaoMixin _db;
+  LLMProviderDaoManager(this._db);
+  $$LLMProvidersTableTableManager get lLMProviders =>
+      $$LLMProvidersTableTableManager(_db.attachedDatabase, _db.lLMProviders);
+}
+
+mixin _$LLMModelDaoMixin on DatabaseAccessor<AppDatabase> {
+  $LLMModelsTable get lLMModels => attachedDatabase.lLMModels;
+  LLMModelDaoManager get managers => LLMModelDaoManager(this);
+}
+
+class LLMModelDaoManager {
+  final _$LLMModelDaoMixin _db;
+  LLMModelDaoManager(this._db);
+  $$LLMModelsTableTableManager get lLMModels =>
+      $$LLMModelsTableTableManager(_db.attachedDatabase, _db.lLMModels);
+}
+
+mixin _$LLMOutputAttachmentDaoMixin on DatabaseAccessor<AppDatabase> {
+  $LLMOutputAttachmentsTable get lLMOutputAttachments =>
+      attachedDatabase.lLMOutputAttachments;
+  LLMOutputAttachmentDaoManager get managers =>
+      LLMOutputAttachmentDaoManager(this);
+}
+
+class LLMOutputAttachmentDaoManager {
+  final _$LLMOutputAttachmentDaoMixin _db;
+  LLMOutputAttachmentDaoManager(this._db);
+  $$LLMOutputAttachmentsTableTableManager get lLMOutputAttachments =>
+      $$LLMOutputAttachmentsTableTableManager(
+          _db.attachedDatabase, _db.lLMOutputAttachments);
+}

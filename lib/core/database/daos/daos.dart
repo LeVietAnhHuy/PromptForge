@@ -156,6 +156,14 @@ class PromptExampleDao extends DatabaseAccessor<AppDatabase> with _$PromptExampl
   PromptExampleDao(super.db);
 
   Future<void> createExample(PromptExamplesCompanion entry) => into(promptExamples).insert(entry);
+  Stream<List<PromptExample>> watchExamplesForProject(String projectId) {
+    return (select(promptExamples)
+          ..where((t) => t.projectId.equals(projectId))
+          ..where((t) => t.isArchived.not())
+          ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)]))
+        .watch();
+  }
+
   Future<bool> updateExample(PromptExamplesCompanion entry) => update(promptExamples).replace(entry);
   Future<int> archiveExample(String id) => (update(promptExamples)..where((t) => t.id.equals(id))).write(const PromptExamplesCompanion(isArchived: Value(true)));
   Stream<List<PromptExample>> watchExamplesForPrompt(String promptId) => (select(promptExamples)..where((t) => t.promptId.equals(promptId) & t.isArchived.not())).watch();
@@ -181,4 +189,39 @@ class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase> with _$Prompt
       await (update(promptExampleOutputs)..where((t) => t.id.equals(outputId))).write(const PromptExampleOutputsCompanion(isBest: Value(true)));
     });
   }
+}
+
+@DriftAccessor(tables: [Projects])
+class ProjectDao extends DatabaseAccessor<AppDatabase> with _$ProjectDaoMixin {
+  ProjectDao(super.db);
+
+  Future<void> createProject(ProjectsCompanion entry) => into(projects).insert(entry);
+  Future<bool> updateProject(ProjectsCompanion entry) => update(projects).replace(entry);
+  Future<int> archiveProject(String id) => (update(projects)..where((t) => t.id.equals(id))).write(const ProjectsCompanion(isArchived: Value(true)));
+  Stream<List<Project>> watchActiveProjects() => (select(projects)..where((t) => t.isArchived.not())..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])).watch();
+  Future<Project> getProjectById(String id) => (select(projects)..where((t) => t.id.equals(id))).getSingle();
+}
+
+@DriftAccessor(tables: [LLMProviders])
+class LLMProviderDao extends DatabaseAccessor<AppDatabase> with _$LLMProviderDaoMixin {
+  LLMProviderDao(super.db);
+
+  Future<void> createProvider(LLMProvidersCompanion entry) => into(lLMProviders).insert(entry);
+  Future<List<LLMProvider>> getAllProviders() => select(lLMProviders).get();
+}
+
+@DriftAccessor(tables: [LLMModels])
+class LLMModelDao extends DatabaseAccessor<AppDatabase> with _$LLMModelDaoMixin {
+  LLMModelDao(super.db);
+
+  Future<void> createModel(LLMModelsCompanion entry) => into(lLMModels).insert(entry);
+  Future<List<LLMModel>> getModelsForProvider(String providerId) => (select(lLMModels)..where((t) => t.providerId.equals(providerId))).get();
+}
+
+@DriftAccessor(tables: [LLMOutputAttachments])
+class LLMOutputAttachmentDao extends DatabaseAccessor<AppDatabase> with _$LLMOutputAttachmentDaoMixin {
+  LLMOutputAttachmentDao(super.db);
+
+  Future<void> createAttachment(LLMOutputAttachmentsCompanion entry) => into(lLMOutputAttachments).insert(entry);
+  Future<List<LLMOutputAttachment>> getAttachmentsForOutput(String outputId) => (select(lLMOutputAttachments)..where((t) => t.outputId.equals(outputId))).get();
 }
