@@ -71,7 +71,8 @@ void main() {
     final prompts = await database.select(database.prompts).get();
     expect(prompts.length, 1);
     final p = prompts.first;
-
+    expect(p.title, 'Test Prompt');
+    expect(p.body, 'Hello {{name}}');
     final tags = await database.select(database.tags).get();
     expect(tags.length, 2);
 

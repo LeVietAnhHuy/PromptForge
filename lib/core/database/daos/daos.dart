@@ -20,9 +20,11 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
   
   // Versions
   Future<void> createPromptVersion(PromptVersionsCompanion entry) => into(promptVersions).insert(entry);
+  Stream<List<PromptVersion>> watchPromptVersions(String promptId) => 
+      (select(promptVersions)..where((t) => t.promptId.equals(promptId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
 }
 
-@DriftAccessor(tables: [ContextPacks])
+@DriftAccessor(tables: [ContextPacks, ContextPackVersions])
 class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDaoMixin {
   ContextPackDao(super.db);
 
@@ -31,6 +33,11 @@ class ContextPackDao extends DatabaseAccessor<AppDatabase> with _$ContextPackDao
   Future<List<ContextPack>> getAllContextPacks() => (select(contextPacks)..where((t) => t.isArchived.not())).get();
   Future<bool> updateContextPack(ContextPacksCompanion entry) => update(contextPacks).replace(entry);
   Future<int> archiveContextPack(String id) => (update(contextPacks)..where((t) => t.id.equals(id))).write(const ContextPacksCompanion(isArchived: Value(true)));
+
+  // Versions
+  Future<void> createContextPackVersion(ContextPackVersionsCompanion entry) => into(contextPackVersions).insert(entry);
+  Stream<List<ContextPackVersion>> watchContextPackVersions(String packId) => 
+      (select(contextPackVersions)..where((t) => t.contextPackId.equals(packId))..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
 }
 
 @DriftAccessor(tables: [InboxItems])

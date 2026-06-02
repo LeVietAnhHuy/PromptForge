@@ -23,10 +23,24 @@ class Prompts extends Table {
 class PromptVersions extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get promptId => text()(); // FK
-  TextColumn get titleSnapshot => text()();
-  TextColumn get bodySnapshot => text()();
-  TextColumn get purposeSnapshot => text().nullable()();
-  TextColumn get changeNote => text().nullable()();
+  TextColumn get title => text()();
+  TextColumn get body => text()();
+  TextColumn get tagsJson => text().nullable()();
+  TextColumn get variableMetadataJson => text().nullable()();
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class ContextPackVersions extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get contextPackId => text()(); // FK
+  TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
+  TextColumn get content => text()();
+  TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override

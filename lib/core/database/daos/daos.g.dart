@@ -21,6 +21,8 @@ class PromptDaoManager {
 
 mixin _$ContextPackDaoMixin on DatabaseAccessor<AppDatabase> {
   $ContextPacksTable get contextPacks => attachedDatabase.contextPacks;
+  $ContextPackVersionsTable get contextPackVersions =>
+      attachedDatabase.contextPackVersions;
   ContextPackDaoManager get managers => ContextPackDaoManager(this);
 }
 
@@ -29,6 +31,9 @@ class ContextPackDaoManager {
   ContextPackDaoManager(this._db);
   $$ContextPacksTableTableManager get contextPacks =>
       $$ContextPacksTableTableManager(_db.attachedDatabase, _db.contextPacks);
+  $$ContextPackVersionsTableTableManager get contextPackVersions =>
+      $$ContextPackVersionsTableTableManager(
+          _db.attachedDatabase, _db.contextPackVersions);
 }
 
 mixin _$InboxItemDaoMixin on DatabaseAccessor<AppDatabase> {

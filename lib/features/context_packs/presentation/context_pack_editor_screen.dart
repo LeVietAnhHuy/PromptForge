@@ -85,6 +85,21 @@ class _ContextPackEditorScreenState extends ConsumerState<ContextPackEditorScree
         ));
       } else {
         // Update existing
+        bool nameChanged = _existingPack!.name != _titleController.text;
+        bool descChanged = _existingPack!.description != _descriptionController.text;
+        bool contentChanged = _existingPack!.content != _contentController.text;
+
+        if (nameChanged || descChanged || contentChanged) {
+          await dao.createContextPackVersion(ContextPackVersionsCompanion.insert(
+            id: const Uuid().v4(),
+            contextPackId: _existingPack!.id,
+            name: _existingPack!.name,
+            description: _existingPack!.description != null ? drift.Value(_existingPack!.description!) : const drift.Value.absent(),
+            content: _existingPack!.content,
+            createdAt: now,
+          ));
+        }
+
         await dao.updateContextPack(ContextPacksCompanion.insert(
           id: _existingPack!.id,
           name: _titleController.text,
@@ -153,12 +168,18 @@ class _ContextPackEditorScreenState extends ConsumerState<ContextPackEditorScree
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Context Pack' : 'New Context Pack'),
         actions: [
-          if (isEditing)
+          if (isEditing) ...[
+            IconButton(
+              icon: const Icon(Icons.manage_history),
+              tooltip: 'Version History',
+              onPressed: () => context.push('/library/context-packs/versions/${_existingPack!.id}'),
+            ),
             IconButton(
               icon: const Icon(Icons.delete),
               tooltip: 'Delete',
               onPressed: _deletePack,
             ),
+          ],
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: 'Save',

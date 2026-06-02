@@ -8,6 +8,7 @@ import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 
 import '../../prompt_compiler/domain/prompt_compiler.dart';
+import 'dart:convert' as dart_convert;
 import 'package:flutter/foundation.dart';
 
 
@@ -183,6 +184,45 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       } else {
         // Update existing
         currentPromptId = _existingPrompt!.id;
+        
+        // 1. Fetch current live tags and variables to check for changes and to snapshot
+        final existingTags = await tagDao.getTagsForPrompt(currentPromptId);
+        final pvDao = ref.read(promptVariableDaoProvider);
+        final existingVars = await pvDao.getVariablesForPrompt(currentPromptId);
+        
+        final currentTagNames = existingTags.map((t) => t.name).toList();
+        final newTagNames = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+        
+        bool titleChanged = _existingPrompt!.title != _titleController.text;
+        bool bodyChanged = _existingPrompt!.body != _bodyController.text;
+        bool tagsChanged = currentTagNames.join(',') != newTagNames.join(',');
+        
+        // For simplicity, consider variables changed if names don't match, or just rely on body changes since variables are tied to body.
+        bool varsChanged = existingVars.map((v) => v.name).join(',') != _detectedVariables.join(',');
+
+        if (titleChanged || bodyChanged || tagsChanged || varsChanged) {
+          // Create snapshot of the existing state before we overwrite it
+          final tagsJson = dart_convert.jsonEncode(currentTagNames);
+          final varsJson = dart_convert.jsonEncode(existingVars.map((v) => {
+            'name': v.name,
+            'label': v.label,
+            'description': v.description,
+            'defaultValue': v.defaultValue,
+            'exampleValue': v.exampleValue,
+            'isRequired': v.isRequired,
+          }).toList());
+
+          await promptDao.createPromptVersion(PromptVersionsCompanion.insert(
+            id: const Uuid().v4(),
+            promptId: currentPromptId,
+            title: _existingPrompt!.title,
+            body: _existingPrompt!.body,
+            tagsJson: drift.Value(tagsJson),
+            variableMetadataJson: drift.Value(varsJson),
+            createdAt: now,
+          ));
+        }
+
         await promptDao.updatePrompt(PromptsCompanion.insert(
           id: currentPromptId,
           title: _titleController.text,
@@ -335,9 +375,14 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         actions: [
           if (isEditing) ...[
             IconButton(
-              icon: const Icon(Icons.history),
+              icon: const Icon(Icons.science),
               tooltip: 'Examples & Comparisons',
               onPressed: () => context.push('/library/examples/${_existingPrompt!.id}'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.manage_history),
+              tooltip: 'Version History',
+              onPressed: () => context.push('/library/versions/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.play_arrow),

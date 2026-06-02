@@ -22,12 +22,13 @@ part 'database.g.dart';
   UserSettings,
   PromptExamples,
   PromptExampleOutputs,
+  ContextPackVersions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -51,6 +52,13 @@ class AppDatabase extends _$AppDatabase {
           // Stage 10: added PromptExamples and Outputs
           try { await m.createTable(promptExamples); } catch (_) {}
           try { await m.createTable(promptExampleOutputs); } catch (_) {}
+        }
+        if (from < 3) {
+          // Stage 13: added version history for prompts and context packs
+          // Drop unused older prompt_versions table and create the new one
+          try { await m.drop(promptVersions); } catch (_) {}
+          try { await m.createTable(promptVersions); } catch (_) {}
+          try { await m.createTable(contextPackVersions); } catch (_) {}
         }
       },
     );

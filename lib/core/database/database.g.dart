@@ -717,29 +717,32 @@ class $PromptVersionsTable extends PromptVersions
   late final GeneratedColumn<String> promptId = GeneratedColumn<String>(
       'prompt_id', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _titleSnapshotMeta =
-      const VerificationMeta('titleSnapshot');
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
-  late final GeneratedColumn<String> titleSnapshot = GeneratedColumn<String>(
-      'title_snapshot', aliasedName, false,
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+      'title', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _bodySnapshotMeta =
-      const VerificationMeta('bodySnapshot');
+  static const VerificationMeta _bodyMeta = const VerificationMeta('body');
   @override
-  late final GeneratedColumn<String> bodySnapshot = GeneratedColumn<String>(
-      'body_snapshot', aliasedName, false,
+  late final GeneratedColumn<String> body = GeneratedColumn<String>(
+      'body', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _purposeSnapshotMeta =
-      const VerificationMeta('purposeSnapshot');
+  static const VerificationMeta _tagsJsonMeta =
+      const VerificationMeta('tagsJson');
   @override
-  late final GeneratedColumn<String> purposeSnapshot = GeneratedColumn<String>(
-      'purpose_snapshot', aliasedName, true,
+  late final GeneratedColumn<String> tagsJson = GeneratedColumn<String>(
+      'tags_json', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
-  static const VerificationMeta _changeNoteMeta =
-      const VerificationMeta('changeNote');
+  static const VerificationMeta _variableMetadataJsonMeta =
+      const VerificationMeta('variableMetadataJson');
   @override
-  late final GeneratedColumn<String> changeNote = GeneratedColumn<String>(
-      'change_note', aliasedName, true,
+  late final GeneratedColumn<String> variableMetadataJson =
+      GeneratedColumn<String>('variable_metadata_json', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
@@ -751,10 +754,11 @@ class $PromptVersionsTable extends PromptVersions
   List<GeneratedColumn> get $columns => [
         id,
         promptId,
-        titleSnapshot,
-        bodySnapshot,
-        purposeSnapshot,
-        changeNote,
+        title,
+        body,
+        tagsJson,
+        variableMetadataJson,
+        note,
         createdAt
       ];
   @override
@@ -778,33 +782,31 @@ class $PromptVersionsTable extends PromptVersions
     } else if (isInserting) {
       context.missing(_promptIdMeta);
     }
-    if (data.containsKey('title_snapshot')) {
+    if (data.containsKey('title')) {
       context.handle(
-          _titleSnapshotMeta,
-          titleSnapshot.isAcceptableOrUnknown(
-              data['title_snapshot']!, _titleSnapshotMeta));
+          _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
-      context.missing(_titleSnapshotMeta);
+      context.missing(_titleMeta);
     }
-    if (data.containsKey('body_snapshot')) {
+    if (data.containsKey('body')) {
       context.handle(
-          _bodySnapshotMeta,
-          bodySnapshot.isAcceptableOrUnknown(
-              data['body_snapshot']!, _bodySnapshotMeta));
+          _bodyMeta, body.isAcceptableOrUnknown(data['body']!, _bodyMeta));
     } else if (isInserting) {
-      context.missing(_bodySnapshotMeta);
+      context.missing(_bodyMeta);
     }
-    if (data.containsKey('purpose_snapshot')) {
-      context.handle(
-          _purposeSnapshotMeta,
-          purposeSnapshot.isAcceptableOrUnknown(
-              data['purpose_snapshot']!, _purposeSnapshotMeta));
+    if (data.containsKey('tags_json')) {
+      context.handle(_tagsJsonMeta,
+          tagsJson.isAcceptableOrUnknown(data['tags_json']!, _tagsJsonMeta));
     }
-    if (data.containsKey('change_note')) {
+    if (data.containsKey('variable_metadata_json')) {
       context.handle(
-          _changeNoteMeta,
-          changeNote.isAcceptableOrUnknown(
-              data['change_note']!, _changeNoteMeta));
+          _variableMetadataJsonMeta,
+          variableMetadataJson.isAcceptableOrUnknown(
+              data['variable_metadata_json']!, _variableMetadataJsonMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -825,14 +827,17 @@ class $PromptVersionsTable extends PromptVersions
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       promptId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}prompt_id'])!,
-      titleSnapshot: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}title_snapshot'])!,
-      bodySnapshot: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}body_snapshot'])!,
-      purposeSnapshot: attachedDatabase.typeMapping.read(
-          DriftSqlType.string, data['${effectivePrefix}purpose_snapshot']),
-      changeNote: attachedDatabase.typeMapping
-          .read(DriftSqlType.string, data['${effectivePrefix}change_note']),
+      title: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
+      body: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}body'])!,
+      tagsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}tags_json']),
+      variableMetadataJson: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}variable_metadata_json']),
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -847,31 +852,36 @@ class $PromptVersionsTable extends PromptVersions
 class PromptVersion extends DataClass implements Insertable<PromptVersion> {
   final String id;
   final String promptId;
-  final String titleSnapshot;
-  final String bodySnapshot;
-  final String? purposeSnapshot;
-  final String? changeNote;
+  final String title;
+  final String body;
+  final String? tagsJson;
+  final String? variableMetadataJson;
+  final String? note;
   final DateTime createdAt;
   const PromptVersion(
       {required this.id,
       required this.promptId,
-      required this.titleSnapshot,
-      required this.bodySnapshot,
-      this.purposeSnapshot,
-      this.changeNote,
+      required this.title,
+      required this.body,
+      this.tagsJson,
+      this.variableMetadataJson,
+      this.note,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['prompt_id'] = Variable<String>(promptId);
-    map['title_snapshot'] = Variable<String>(titleSnapshot);
-    map['body_snapshot'] = Variable<String>(bodySnapshot);
-    if (!nullToAbsent || purposeSnapshot != null) {
-      map['purpose_snapshot'] = Variable<String>(purposeSnapshot);
+    map['title'] = Variable<String>(title);
+    map['body'] = Variable<String>(body);
+    if (!nullToAbsent || tagsJson != null) {
+      map['tags_json'] = Variable<String>(tagsJson);
     }
-    if (!nullToAbsent || changeNote != null) {
-      map['change_note'] = Variable<String>(changeNote);
+    if (!nullToAbsent || variableMetadataJson != null) {
+      map['variable_metadata_json'] = Variable<String>(variableMetadataJson);
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -881,14 +891,15 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
     return PromptVersionsCompanion(
       id: Value(id),
       promptId: Value(promptId),
-      titleSnapshot: Value(titleSnapshot),
-      bodySnapshot: Value(bodySnapshot),
-      purposeSnapshot: purposeSnapshot == null && nullToAbsent
+      title: Value(title),
+      body: Value(body),
+      tagsJson: tagsJson == null && nullToAbsent
           ? const Value.absent()
-          : Value(purposeSnapshot),
-      changeNote: changeNote == null && nullToAbsent
+          : Value(tagsJson),
+      variableMetadataJson: variableMetadataJson == null && nullToAbsent
           ? const Value.absent()
-          : Value(changeNote),
+          : Value(variableMetadataJson),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdAt: Value(createdAt),
     );
   }
@@ -899,10 +910,12 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
     return PromptVersion(
       id: serializer.fromJson<String>(json['id']),
       promptId: serializer.fromJson<String>(json['promptId']),
-      titleSnapshot: serializer.fromJson<String>(json['titleSnapshot']),
-      bodySnapshot: serializer.fromJson<String>(json['bodySnapshot']),
-      purposeSnapshot: serializer.fromJson<String?>(json['purposeSnapshot']),
-      changeNote: serializer.fromJson<String?>(json['changeNote']),
+      title: serializer.fromJson<String>(json['title']),
+      body: serializer.fromJson<String>(json['body']),
+      tagsJson: serializer.fromJson<String?>(json['tagsJson']),
+      variableMetadataJson:
+          serializer.fromJson<String?>(json['variableMetadataJson']),
+      note: serializer.fromJson<String?>(json['note']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -912,10 +925,11 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'promptId': serializer.toJson<String>(promptId),
-      'titleSnapshot': serializer.toJson<String>(titleSnapshot),
-      'bodySnapshot': serializer.toJson<String>(bodySnapshot),
-      'purposeSnapshot': serializer.toJson<String?>(purposeSnapshot),
-      'changeNote': serializer.toJson<String?>(changeNote),
+      'title': serializer.toJson<String>(title),
+      'body': serializer.toJson<String>(body),
+      'tagsJson': serializer.toJson<String?>(tagsJson),
+      'variableMetadataJson': serializer.toJson<String?>(variableMetadataJson),
+      'note': serializer.toJson<String?>(note),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -923,37 +937,35 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
   PromptVersion copyWith(
           {String? id,
           String? promptId,
-          String? titleSnapshot,
-          String? bodySnapshot,
-          Value<String?> purposeSnapshot = const Value.absent(),
-          Value<String?> changeNote = const Value.absent(),
+          String? title,
+          String? body,
+          Value<String?> tagsJson = const Value.absent(),
+          Value<String?> variableMetadataJson = const Value.absent(),
+          Value<String?> note = const Value.absent(),
           DateTime? createdAt}) =>
       PromptVersion(
         id: id ?? this.id,
         promptId: promptId ?? this.promptId,
-        titleSnapshot: titleSnapshot ?? this.titleSnapshot,
-        bodySnapshot: bodySnapshot ?? this.bodySnapshot,
-        purposeSnapshot: purposeSnapshot.present
-            ? purposeSnapshot.value
-            : this.purposeSnapshot,
-        changeNote: changeNote.present ? changeNote.value : this.changeNote,
+        title: title ?? this.title,
+        body: body ?? this.body,
+        tagsJson: tagsJson.present ? tagsJson.value : this.tagsJson,
+        variableMetadataJson: variableMetadataJson.present
+            ? variableMetadataJson.value
+            : this.variableMetadataJson,
+        note: note.present ? note.value : this.note,
         createdAt: createdAt ?? this.createdAt,
       );
   PromptVersion copyWithCompanion(PromptVersionsCompanion data) {
     return PromptVersion(
       id: data.id.present ? data.id.value : this.id,
       promptId: data.promptId.present ? data.promptId.value : this.promptId,
-      titleSnapshot: data.titleSnapshot.present
-          ? data.titleSnapshot.value
-          : this.titleSnapshot,
-      bodySnapshot: data.bodySnapshot.present
-          ? data.bodySnapshot.value
-          : this.bodySnapshot,
-      purposeSnapshot: data.purposeSnapshot.present
-          ? data.purposeSnapshot.value
-          : this.purposeSnapshot,
-      changeNote:
-          data.changeNote.present ? data.changeNote.value : this.changeNote,
+      title: data.title.present ? data.title.value : this.title,
+      body: data.body.present ? data.body.value : this.body,
+      tagsJson: data.tagsJson.present ? data.tagsJson.value : this.tagsJson,
+      variableMetadataJson: data.variableMetadataJson.present
+          ? data.variableMetadataJson.value
+          : this.variableMetadataJson,
+      note: data.note.present ? data.note.value : this.note,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -963,81 +975,89 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
     return (StringBuffer('PromptVersion(')
           ..write('id: $id, ')
           ..write('promptId: $promptId, ')
-          ..write('titleSnapshot: $titleSnapshot, ')
-          ..write('bodySnapshot: $bodySnapshot, ')
-          ..write('purposeSnapshot: $purposeSnapshot, ')
-          ..write('changeNote: $changeNote, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('variableMetadataJson: $variableMetadataJson, ')
+          ..write('note: $note, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, promptId, titleSnapshot, bodySnapshot,
-      purposeSnapshot, changeNote, createdAt);
+  int get hashCode => Object.hash(id, promptId, title, body, tagsJson,
+      variableMetadataJson, note, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is PromptVersion &&
           other.id == this.id &&
           other.promptId == this.promptId &&
-          other.titleSnapshot == this.titleSnapshot &&
-          other.bodySnapshot == this.bodySnapshot &&
-          other.purposeSnapshot == this.purposeSnapshot &&
-          other.changeNote == this.changeNote &&
+          other.title == this.title &&
+          other.body == this.body &&
+          other.tagsJson == this.tagsJson &&
+          other.variableMetadataJson == this.variableMetadataJson &&
+          other.note == this.note &&
           other.createdAt == this.createdAt);
 }
 
 class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
   final Value<String> id;
   final Value<String> promptId;
-  final Value<String> titleSnapshot;
-  final Value<String> bodySnapshot;
-  final Value<String?> purposeSnapshot;
-  final Value<String?> changeNote;
+  final Value<String> title;
+  final Value<String> body;
+  final Value<String?> tagsJson;
+  final Value<String?> variableMetadataJson;
+  final Value<String?> note;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const PromptVersionsCompanion({
     this.id = const Value.absent(),
     this.promptId = const Value.absent(),
-    this.titleSnapshot = const Value.absent(),
-    this.bodySnapshot = const Value.absent(),
-    this.purposeSnapshot = const Value.absent(),
-    this.changeNote = const Value.absent(),
+    this.title = const Value.absent(),
+    this.body = const Value.absent(),
+    this.tagsJson = const Value.absent(),
+    this.variableMetadataJson = const Value.absent(),
+    this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PromptVersionsCompanion.insert({
     required String id,
     required String promptId,
-    required String titleSnapshot,
-    required String bodySnapshot,
-    this.purposeSnapshot = const Value.absent(),
-    this.changeNote = const Value.absent(),
+    required String title,
+    required String body,
+    this.tagsJson = const Value.absent(),
+    this.variableMetadataJson = const Value.absent(),
+    this.note = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         promptId = Value(promptId),
-        titleSnapshot = Value(titleSnapshot),
-        bodySnapshot = Value(bodySnapshot),
+        title = Value(title),
+        body = Value(body),
         createdAt = Value(createdAt);
   static Insertable<PromptVersion> custom({
     Expression<String>? id,
     Expression<String>? promptId,
-    Expression<String>? titleSnapshot,
-    Expression<String>? bodySnapshot,
-    Expression<String>? purposeSnapshot,
-    Expression<String>? changeNote,
+    Expression<String>? title,
+    Expression<String>? body,
+    Expression<String>? tagsJson,
+    Expression<String>? variableMetadataJson,
+    Expression<String>? note,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (promptId != null) 'prompt_id': promptId,
-      if (titleSnapshot != null) 'title_snapshot': titleSnapshot,
-      if (bodySnapshot != null) 'body_snapshot': bodySnapshot,
-      if (purposeSnapshot != null) 'purpose_snapshot': purposeSnapshot,
-      if (changeNote != null) 'change_note': changeNote,
+      if (title != null) 'title': title,
+      if (body != null) 'body': body,
+      if (tagsJson != null) 'tags_json': tagsJson,
+      if (variableMetadataJson != null)
+        'variable_metadata_json': variableMetadataJson,
+      if (note != null) 'note': note,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1046,19 +1066,21 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
   PromptVersionsCompanion copyWith(
       {Value<String>? id,
       Value<String>? promptId,
-      Value<String>? titleSnapshot,
-      Value<String>? bodySnapshot,
-      Value<String?>? purposeSnapshot,
-      Value<String?>? changeNote,
+      Value<String>? title,
+      Value<String>? body,
+      Value<String?>? tagsJson,
+      Value<String?>? variableMetadataJson,
+      Value<String?>? note,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return PromptVersionsCompanion(
       id: id ?? this.id,
       promptId: promptId ?? this.promptId,
-      titleSnapshot: titleSnapshot ?? this.titleSnapshot,
-      bodySnapshot: bodySnapshot ?? this.bodySnapshot,
-      purposeSnapshot: purposeSnapshot ?? this.purposeSnapshot,
-      changeNote: changeNote ?? this.changeNote,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      tagsJson: tagsJson ?? this.tagsJson,
+      variableMetadataJson: variableMetadataJson ?? this.variableMetadataJson,
+      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1073,17 +1095,21 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     if (promptId.present) {
       map['prompt_id'] = Variable<String>(promptId.value);
     }
-    if (titleSnapshot.present) {
-      map['title_snapshot'] = Variable<String>(titleSnapshot.value);
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
     }
-    if (bodySnapshot.present) {
-      map['body_snapshot'] = Variable<String>(bodySnapshot.value);
+    if (body.present) {
+      map['body'] = Variable<String>(body.value);
     }
-    if (purposeSnapshot.present) {
-      map['purpose_snapshot'] = Variable<String>(purposeSnapshot.value);
+    if (tagsJson.present) {
+      map['tags_json'] = Variable<String>(tagsJson.value);
     }
-    if (changeNote.present) {
-      map['change_note'] = Variable<String>(changeNote.value);
+    if (variableMetadataJson.present) {
+      map['variable_metadata_json'] =
+          Variable<String>(variableMetadataJson.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1099,10 +1125,11 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     return (StringBuffer('PromptVersionsCompanion(')
           ..write('id: $id, ')
           ..write('promptId: $promptId, ')
-          ..write('titleSnapshot: $titleSnapshot, ')
-          ..write('bodySnapshot: $bodySnapshot, ')
-          ..write('purposeSnapshot: $purposeSnapshot, ')
-          ..write('changeNote: $changeNote, ')
+          ..write('title: $title, ')
+          ..write('body: $body, ')
+          ..write('tagsJson: $tagsJson, ')
+          ..write('variableMetadataJson: $variableMetadataJson, ')
+          ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5420,6 +5447,396 @@ class PromptExampleOutputsCompanion
   }
 }
 
+class $ContextPackVersionsTable extends ContextPackVersions
+    with TableInfo<$ContextPackVersionsTable, ContextPackVersion> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContextPackVersionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _contextPackIdMeta =
+      const VerificationMeta('contextPackId');
+  @override
+  late final GeneratedColumn<String> contextPackId = GeneratedColumn<String>(
+      'context_pack_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _descriptionMeta =
+      const VerificationMeta('description');
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+      'description', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _contentMeta =
+      const VerificationMeta('content');
+  @override
+  late final GeneratedColumn<String> content = GeneratedColumn<String>(
+      'content', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, contextPackId, name, description, content, note, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'context_pack_versions';
+  @override
+  VerificationContext validateIntegrity(Insertable<ContextPackVersion> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('context_pack_id')) {
+      context.handle(
+          _contextPackIdMeta,
+          contextPackId.isAcceptableOrUnknown(
+              data['context_pack_id']!, _contextPackIdMeta));
+    } else if (isInserting) {
+      context.missing(_contextPackIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+          _descriptionMeta,
+          description.isAcceptableOrUnknown(
+              data['description']!, _descriptionMeta));
+    }
+    if (data.containsKey('content')) {
+      context.handle(_contentMeta,
+          content.isAcceptableOrUnknown(data['content']!, _contentMeta));
+    } else if (isInserting) {
+      context.missing(_contentMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ContextPackVersion map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContextPackVersion(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      contextPackId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}context_pack_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      description: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}description']),
+      content: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}content'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $ContextPackVersionsTable createAlias(String alias) {
+    return $ContextPackVersionsTable(attachedDatabase, alias);
+  }
+}
+
+class ContextPackVersion extends DataClass
+    implements Insertable<ContextPackVersion> {
+  final String id;
+  final String contextPackId;
+  final String name;
+  final String? description;
+  final String content;
+  final String? note;
+  final DateTime createdAt;
+  const ContextPackVersion(
+      {required this.id,
+      required this.contextPackId,
+      required this.name,
+      this.description,
+      required this.content,
+      this.note,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['context_pack_id'] = Variable<String>(contextPackId);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['content'] = Variable<String>(content);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ContextPackVersionsCompanion toCompanion(bool nullToAbsent) {
+    return ContextPackVersionsCompanion(
+      id: Value(id),
+      contextPackId: Value(contextPackId),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      content: Value(content),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ContextPackVersion.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContextPackVersion(
+      id: serializer.fromJson<String>(json['id']),
+      contextPackId: serializer.fromJson<String>(json['contextPackId']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+      content: serializer.fromJson<String>(json['content']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'contextPackId': serializer.toJson<String>(contextPackId),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+      'content': serializer.toJson<String>(content),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ContextPackVersion copyWith(
+          {String? id,
+          String? contextPackId,
+          String? name,
+          Value<String?> description = const Value.absent(),
+          String? content,
+          Value<String?> note = const Value.absent(),
+          DateTime? createdAt}) =>
+      ContextPackVersion(
+        id: id ?? this.id,
+        contextPackId: contextPackId ?? this.contextPackId,
+        name: name ?? this.name,
+        description: description.present ? description.value : this.description,
+        content: content ?? this.content,
+        note: note.present ? note.value : this.note,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  ContextPackVersion copyWithCompanion(ContextPackVersionsCompanion data) {
+    return ContextPackVersion(
+      id: data.id.present ? data.id.value : this.id,
+      contextPackId: data.contextPackId.present
+          ? data.contextPackId.value
+          : this.contextPackId,
+      name: data.name.present ? data.name.value : this.name,
+      description:
+          data.description.present ? data.description.value : this.description,
+      content: data.content.present ? data.content.value : this.content,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContextPackVersion(')
+          ..write('id: $id, ')
+          ..write('contextPackId: $contextPackId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('content: $content, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id, contextPackId, name, description, content, note, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContextPackVersion &&
+          other.id == this.id &&
+          other.contextPackId == this.contextPackId &&
+          other.name == this.name &&
+          other.description == this.description &&
+          other.content == this.content &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt);
+}
+
+class ContextPackVersionsCompanion extends UpdateCompanion<ContextPackVersion> {
+  final Value<String> id;
+  final Value<String> contextPackId;
+  final Value<String> name;
+  final Value<String?> description;
+  final Value<String> content;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ContextPackVersionsCompanion({
+    this.id = const Value.absent(),
+    this.contextPackId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+    this.content = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContextPackVersionsCompanion.insert({
+    required String id,
+    required String contextPackId,
+    required String name,
+    this.description = const Value.absent(),
+    required String content,
+    this.note = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        contextPackId = Value(contextPackId),
+        name = Value(name),
+        content = Value(content),
+        createdAt = Value(createdAt);
+  static Insertable<ContextPackVersion> custom({
+    Expression<String>? id,
+    Expression<String>? contextPackId,
+    Expression<String>? name,
+    Expression<String>? description,
+    Expression<String>? content,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (contextPackId != null) 'context_pack_id': contextPackId,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      if (content != null) 'content': content,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContextPackVersionsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? contextPackId,
+      Value<String>? name,
+      Value<String?>? description,
+      Value<String>? content,
+      Value<String?>? note,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return ContextPackVersionsCompanion(
+      id: id ?? this.id,
+      contextPackId: contextPackId ?? this.contextPackId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      content: content ?? this.content,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (contextPackId.present) {
+      map['context_pack_id'] = Variable<String>(contextPackId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (content.present) {
+      map['content'] = Variable<String>(content.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContextPackVersionsCompanion(')
+          ..write('id: $id, ')
+          ..write('contextPackId: $contextPackId, ')
+          ..write('name: $name, ')
+          ..write('description: $description, ')
+          ..write('content: $content, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5440,6 +5857,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PromptExamplesTable promptExamples = $PromptExamplesTable(this);
   late final $PromptExampleOutputsTable promptExampleOutputs =
       $PromptExampleOutputsTable(this);
+  late final $ContextPackVersionsTable contextPackVersions =
+      $ContextPackVersionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5457,7 +5876,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         inboxItems,
         userSettings,
         promptExamples,
-        promptExampleOutputs
+        promptExampleOutputs,
+        contextPackVersions
       ];
 }
 
@@ -5766,10 +6186,11 @@ typedef $$PromptVersionsTableCreateCompanionBuilder = PromptVersionsCompanion
     Function({
   required String id,
   required String promptId,
-  required String titleSnapshot,
-  required String bodySnapshot,
-  Value<String?> purposeSnapshot,
-  Value<String?> changeNote,
+  required String title,
+  required String body,
+  Value<String?> tagsJson,
+  Value<String?> variableMetadataJson,
+  Value<String?> note,
   required DateTime createdAt,
   Value<int> rowid,
 });
@@ -5777,10 +6198,11 @@ typedef $$PromptVersionsTableUpdateCompanionBuilder = PromptVersionsCompanion
     Function({
   Value<String> id,
   Value<String> promptId,
-  Value<String> titleSnapshot,
-  Value<String> bodySnapshot,
-  Value<String?> purposeSnapshot,
-  Value<String?> changeNote,
+  Value<String> title,
+  Value<String> body,
+  Value<String?> tagsJson,
+  Value<String?> variableMetadataJson,
+  Value<String?> note,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -5800,18 +6222,21 @@ class $$PromptVersionsTableFilterComposer
   ColumnFilters<String> get promptId => $composableBuilder(
       column: $table.promptId, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get titleSnapshot => $composableBuilder(
-      column: $table.titleSnapshot, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get bodySnapshot => $composableBuilder(
-      column: $table.bodySnapshot, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get purposeSnapshot => $composableBuilder(
-      column: $table.purposeSnapshot,
+  ColumnFilters<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get variableMetadataJson => $composableBuilder(
+      column: $table.variableMetadataJson,
       builder: (column) => ColumnFilters(column));
 
-  ColumnFilters<String> get changeNote => $composableBuilder(
-      column: $table.changeNote, builder: (column) => ColumnFilters(column));
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -5832,20 +6257,21 @@ class $$PromptVersionsTableOrderingComposer
   ColumnOrderings<String> get promptId => $composableBuilder(
       column: $table.promptId, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get titleSnapshot => $composableBuilder(
-      column: $table.titleSnapshot,
+  ColumnOrderings<String> get title => $composableBuilder(
+      column: $table.title, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get body => $composableBuilder(
+      column: $table.body, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get tagsJson => $composableBuilder(
+      column: $table.tagsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get variableMetadataJson => $composableBuilder(
+      column: $table.variableMetadataJson,
       builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<String> get bodySnapshot => $composableBuilder(
-      column: $table.bodySnapshot,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get purposeSnapshot => $composableBuilder(
-      column: $table.purposeSnapshot,
-      builder: (column) => ColumnOrderings(column));
-
-  ColumnOrderings<String> get changeNote => $composableBuilder(
-      column: $table.changeNote, builder: (column) => ColumnOrderings(column));
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
@@ -5866,17 +6292,20 @@ class $$PromptVersionsTableAnnotationComposer
   GeneratedColumn<String> get promptId =>
       $composableBuilder(column: $table.promptId, builder: (column) => column);
 
-  GeneratedColumn<String> get titleSnapshot => $composableBuilder(
-      column: $table.titleSnapshot, builder: (column) => column);
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
 
-  GeneratedColumn<String> get bodySnapshot => $composableBuilder(
-      column: $table.bodySnapshot, builder: (column) => column);
+  GeneratedColumn<String> get body =>
+      $composableBuilder(column: $table.body, builder: (column) => column);
 
-  GeneratedColumn<String> get purposeSnapshot => $composableBuilder(
-      column: $table.purposeSnapshot, builder: (column) => column);
+  GeneratedColumn<String> get tagsJson =>
+      $composableBuilder(column: $table.tagsJson, builder: (column) => column);
 
-  GeneratedColumn<String> get changeNote => $composableBuilder(
-      column: $table.changeNote, builder: (column) => column);
+  GeneratedColumn<String> get variableMetadataJson => $composableBuilder(
+      column: $table.variableMetadataJson, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -5911,40 +6340,44 @@ class $$PromptVersionsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<String> id = const Value.absent(),
             Value<String> promptId = const Value.absent(),
-            Value<String> titleSnapshot = const Value.absent(),
-            Value<String> bodySnapshot = const Value.absent(),
-            Value<String?> purposeSnapshot = const Value.absent(),
-            Value<String?> changeNote = const Value.absent(),
+            Value<String> title = const Value.absent(),
+            Value<String> body = const Value.absent(),
+            Value<String?> tagsJson = const Value.absent(),
+            Value<String?> variableMetadataJson = const Value.absent(),
+            Value<String?> note = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PromptVersionsCompanion(
             id: id,
             promptId: promptId,
-            titleSnapshot: titleSnapshot,
-            bodySnapshot: bodySnapshot,
-            purposeSnapshot: purposeSnapshot,
-            changeNote: changeNote,
+            title: title,
+            body: body,
+            tagsJson: tagsJson,
+            variableMetadataJson: variableMetadataJson,
+            note: note,
             createdAt: createdAt,
             rowid: rowid,
           ),
           createCompanionCallback: ({
             required String id,
             required String promptId,
-            required String titleSnapshot,
-            required String bodySnapshot,
-            Value<String?> purposeSnapshot = const Value.absent(),
-            Value<String?> changeNote = const Value.absent(),
+            required String title,
+            required String body,
+            Value<String?> tagsJson = const Value.absent(),
+            Value<String?> variableMetadataJson = const Value.absent(),
+            Value<String?> note = const Value.absent(),
             required DateTime createdAt,
             Value<int> rowid = const Value.absent(),
           }) =>
               PromptVersionsCompanion.insert(
             id: id,
             promptId: promptId,
-            titleSnapshot: titleSnapshot,
-            bodySnapshot: bodySnapshot,
-            purposeSnapshot: purposeSnapshot,
-            changeNote: changeNote,
+            title: title,
+            body: body,
+            tagsJson: tagsJson,
+            variableMetadataJson: variableMetadataJson,
+            note: note,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -8190,6 +8623,215 @@ typedef $$PromptExampleOutputsTableProcessedTableManager
         ),
         PromptExampleOutput,
         PrefetchHooks Function()>;
+typedef $$ContextPackVersionsTableCreateCompanionBuilder
+    = ContextPackVersionsCompanion Function({
+  required String id,
+  required String contextPackId,
+  required String name,
+  Value<String?> description,
+  required String content,
+  Value<String?> note,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$ContextPackVersionsTableUpdateCompanionBuilder
+    = ContextPackVersionsCompanion Function({
+  Value<String> id,
+  Value<String> contextPackId,
+  Value<String> name,
+  Value<String?> description,
+  Value<String> content,
+  Value<String?> note,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$ContextPackVersionsTableFilterComposer
+    extends Composer<_$AppDatabase, $ContextPackVersionsTable> {
+  $$ContextPackVersionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$ContextPackVersionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ContextPackVersionsTable> {
+  $$ContextPackVersionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get content => $composableBuilder(
+      column: $table.content, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ContextPackVersionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ContextPackVersionsTable> {
+  $$ContextPackVersionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get contextPackId => $composableBuilder(
+      column: $table.contextPackId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+      column: $table.description, builder: (column) => column);
+
+  GeneratedColumn<String> get content =>
+      $composableBuilder(column: $table.content, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ContextPackVersionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ContextPackVersionsTable,
+    ContextPackVersion,
+    $$ContextPackVersionsTableFilterComposer,
+    $$ContextPackVersionsTableOrderingComposer,
+    $$ContextPackVersionsTableAnnotationComposer,
+    $$ContextPackVersionsTableCreateCompanionBuilder,
+    $$ContextPackVersionsTableUpdateCompanionBuilder,
+    (
+      ContextPackVersion,
+      BaseReferences<_$AppDatabase, $ContextPackVersionsTable,
+          ContextPackVersion>
+    ),
+    ContextPackVersion,
+    PrefetchHooks Function()> {
+  $$ContextPackVersionsTableTableManager(
+      _$AppDatabase db, $ContextPackVersionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContextPackVersionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ContextPackVersionsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ContextPackVersionsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> contextPackId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<String?> description = const Value.absent(),
+            Value<String> content = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ContextPackVersionsCompanion(
+            id: id,
+            contextPackId: contextPackId,
+            name: name,
+            description: description,
+            content: content,
+            note: note,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String contextPackId,
+            required String name,
+            Value<String?> description = const Value.absent(),
+            required String content,
+            Value<String?> note = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ContextPackVersionsCompanion.insert(
+            id: id,
+            contextPackId: contextPackId,
+            name: name,
+            description: description,
+            content: content,
+            note: note,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$ContextPackVersionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $ContextPackVersionsTable,
+    ContextPackVersion,
+    $$ContextPackVersionsTableFilterComposer,
+    $$ContextPackVersionsTableOrderingComposer,
+    $$ContextPackVersionsTableAnnotationComposer,
+    $$ContextPackVersionsTableCreateCompanionBuilder,
+    $$ContextPackVersionsTableUpdateCompanionBuilder,
+    (
+      ContextPackVersion,
+      BaseReferences<_$AppDatabase, $ContextPackVersionsTable,
+          ContextPackVersion>
+    ),
+    ContextPackVersion,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8220,4 +8862,6 @@ class $AppDatabaseManager {
       $$PromptExamplesTableTableManager(_db, _db.promptExamples);
   $$PromptExampleOutputsTableTableManager get promptExampleOutputs =>
       $$PromptExampleOutputsTableTableManager(_db, _db.promptExampleOutputs);
+  $$ContextPackVersionsTableTableManager get contextPackVersions =>
+      $$ContextPackVersionsTableTableManager(_db, _db.contextPackVersions);
 }

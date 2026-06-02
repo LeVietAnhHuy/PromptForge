@@ -15,6 +15,8 @@ import '../../features/import_export/presentation/export_preview_screen.dart';
 import '../../features/import_export/presentation/import_screen.dart';
 import '../../features/inbox/presentation/inbox_screen.dart';
 import '../../features/inbox/presentation/inbox_editor_screen.dart';
+import '../../features/prompt_library/presentation/prompt_version_history_screen.dart';
+import '../../features/context_packs/presentation/context_pack_version_history_screen.dart';
 import '../layout/responsive_shell.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -69,6 +71,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
+                    path: 'versions/:id',
+                    builder: (context, state) => PromptVersionHistoryScreen(
+                      promptId: state.pathParameters['id']!,
+                    ),
+                  ),
+                  GoRoute(
                     path: 'examples/:id',
                     builder: (context, state) => PromptExamplesScreen(
                       promptId: state.pathParameters['id']!,
@@ -100,6 +108,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'editor/:id',
                     builder: (context, state) => ContextPackEditorScreen(
                       packId: state.pathParameters['id'],
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'versions/:id',
+                    builder: (context, state) => ContextPackVersionHistoryScreen(
+                      packId: state.pathParameters['id']!,
                     ),
                   ),
                 ],
