@@ -8,6 +8,7 @@ import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import 'prompt_card_conversion_dialog.dart';
 
 class PromptRunEditorScreen extends ConsumerStatefulWidget {
   final String projectId;
@@ -302,6 +303,55 @@ class _PromptRunEditorScreenState extends ConsumerState<PromptRunEditorScreen> {
             });
           },
         ),
+        if (_run != null)
+          IconButton(
+            icon: const Icon(Icons.publish),
+            tooltip: 'Save as Prompt Card',
+            onPressed: () async {
+              // Determine initial target notes from best output
+              String targetNotes = '';
+              if (_outputs.isNotEmpty) {
+                final bestOutput = _outputs.firstWhere((o) => o.isBest, orElse: () => _outputs.first);
+                targetNotes = 'Originally tested with ${bestOutput.providerName}';
+                if (bestOutput.modelName != null) {
+                  targetNotes += ' (${bestOutput.modelName})';
+                }
+              }
+
+              // Load project context
+              String projectPurpose = 'Converted from Workspace run';
+              try {
+                final projectDao = ref.read(projectDaoProvider);
+                final project = await projectDao.getProjectById(widget.projectId);
+                projectPurpose = 'Converted from Workspace project: ${project.name}';
+              } catch (_) {}
+
+              if (!context.mounted) return;
+              
+              final isDesktop = MediaQuery.of(context).size.width > 600;
+              if (isDesktop) {
+                showDialog(
+                  context: context,
+                  builder: (context) => PromptCardConversionDialog(
+                    run: _run!,
+                    initialPurpose: projectPurpose,
+                    initialTargetNotes: targetNotes,
+                  ),
+                );
+              } else {
+                showGeneralDialog(
+                  context: context,
+                  pageBuilder: (context, anim1, anim2) {
+                    return PromptCardConversionDialog(
+                      run: _run!,
+                      initialPurpose: projectPurpose,
+                      initialTargetNotes: targetNotes,
+                    );
+                  },
+                );
+              }
+            },
+          ),
         ElevatedButton.icon(
           icon: const Icon(Icons.save),
           label: const Text('Save'),
