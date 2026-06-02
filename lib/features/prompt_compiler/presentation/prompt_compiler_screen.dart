@@ -9,8 +9,10 @@ import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../execution/domain/llm_provider.dart';
 import '../domain/prompt_compiler_service.dart';
 import '../domain/target_tool_profile.dart';
+
 
 class PromptCompilerScreen extends ConsumerStatefulWidget {
   final String promptId;
@@ -33,6 +35,13 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
   TargetToolProfile _selectedProfile = const GenericProfile();
 
   PromptCompilerResult? _compileResult;
+  
+  // Execution state
+  LlmExecutionProvider? _selectedProvider;
+  List<Map<String, String>> _availableModels = [];
+  String? _selectedModelId;
+  bool _isExecuting = false;
+  LlmExecutionResponse? _executionResponse;
 
   @override
   void initState() {
@@ -59,6 +68,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
       }
 
       final packs = await contextPackDao.getContextPacksForPrompt(widget.promptId);
+      final providers = ref.read(executionProvidersProvider);
 
       // Simple heuristic to auto-select a profile based on targetNotes
       TargetToolProfile initialProfile = const GenericProfile();
@@ -75,12 +85,26 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
         initialProfile = const GeminiProfile();
       }
 
+      LlmExecutionProvider? initialProvider;
+      List<Map<String, String>> initialModels = [];
+      String? initialModelId;
+      if (providers.isNotEmpty) {
+        initialProvider = providers.first;
+        initialModels = await initialProvider.listAvailableModels();
+        if (initialModels.isNotEmpty) {
+          initialModelId = initialModels.first['id'];
+        }
+      }
+
       setState(() {
         _prompt = prompt;
         _variables = variables;
         _variableMetadata = metadataMap;
         _contextPacks = packs;
         _selectedProfile = initialProfile;
+        _selectedProvider = initialProvider;
+        _availableModels = initialModels;
+        _selectedModelId = initialModelId;
         _isLoading = false;
       });
       
@@ -119,6 +143,178 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _executePrompt() async {
+    if (_compileResult == null || _prompt == null || _selectedProvider == null || _selectedModelId == null) return;
+    
+    final missing = _compileResult!.missingRequiredVariables;
+    if (missing.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot execute: Missing required variables.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isExecuting = true;
+      _executionResponse = null;
+    });
+
+    final modelName = _availableModels.firstWhere((m) => m['id'] == _selectedModelId)['name'] ?? _selectedModelId!;
+
+    final request = LlmExecutionRequest(
+      compiledPrompt: _compileResult!.compiledText,
+      providerId: _selectedProvider!.providerId,
+      modelId: _selectedModelId!,
+      modelName: modelName,
+      targetProfileId: _selectedProfile.id,
+    );
+
+    final response = await _selectedProvider!.execute(request);
+
+    if (mounted) {
+      setState(() {
+        _isExecuting = false;
+        _executionResponse = response;
+      });
+
+      if (response.error != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Execution failed: ${response.error}'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      } else {
+        // Save output
+        final dao = ref.read(promptExampleDaoProvider);
+        final exampleId = const Uuid().v4();
+        final now = DateTime.now();
+        
+        final varsMap = _controllers.map((k, v) => MapEntry(k, v.text));
+        final jsonStr = jsonEncode(varsMap);
+
+        // Save a new Run with the output
+        await dao.createExample(PromptExamplesCompanion.insert(
+          id: exampleId,
+          promptId: drift.Value(_prompt!.id),
+          title: 'Run: $modelName',
+          compiledPrompt: _compileResult!.compiledText,
+          variableValuesJson: drift.Value(jsonStr),
+          createdAt: now,
+          updatedAt: now,
+        ));
+
+        final outputDao = ref.read(promptExampleOutputDaoProvider);
+        await outputDao.addOutput(PromptExampleOutputsCompanion.insert(
+          id: const Uuid().v4(),
+          exampleId: exampleId,
+          providerId: drift.Value(response.providerId),
+          modelId: drift.Value(response.modelId),
+          providerName: _selectedProvider!.providerName,
+          modelName: drift.Value(response.modelName),
+          outputText: response.outputText,
+          createdAt: now,
+          updatedAt: now,
+        ));
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Execution successful. Output saved to history.')),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildExecutionPanel() {
+    final providers = ref.watch(executionProvidersProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Execute',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Provider', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                child: DropdownButton<LlmExecutionProvider>(
+                  value: _selectedProvider,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: providers.map((p) {
+                    return DropdownMenuItem(value: p, child: Text(p.providerName));
+                  }).toList(),
+                  onChanged: _isExecuting ? null : (provider) async {
+                    if (provider != null) {
+                      final models = await provider.listAvailableModels();
+                      setState(() {
+                        _selectedProvider = provider;
+                        _availableModels = models;
+                        _selectedModelId = models.isNotEmpty ? models.first['id'] : null;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+                child: DropdownButton<String>(
+                  value: _selectedModelId,
+                  isExpanded: true,
+                  underline: const SizedBox(),
+                  items: _availableModels.map((m) {
+                    return DropdownMenuItem(value: m['id'], child: Text(m['name'] ?? m['id']!));
+                  }).toList(),
+                  onChanged: _isExecuting ? null : (modelId) {
+                    setState(() {
+                      _selectedModelId = modelId;
+                    });
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton.icon(
+              onPressed: _isExecuting || _compileResult == null ? null : _executePrompt,
+              icon: _isExecuting 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                : const Icon(Icons.play_arrow),
+              label: const Text('Run'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              ),
+            ),
+          ],
+        ),
+        if (_executionResponse != null && _executionResponse!.error == null) ...[
+          const SizedBox(height: 16),
+          Text('Output', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: SelectableText(_executionResponse!.outputText),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _copyToClipboard() async {
@@ -410,7 +606,15 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                   flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: _buildPreviewPanel(),
+                    child: Column(
+                      children: [
+                        Expanded(child: _buildPreviewPanel()),
+                        const SizedBox(height: 16),
+                        const Divider(),
+                        const SizedBox(height: 16),
+                        _buildExecutionPanel(),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -428,6 +632,11 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                     height: MediaQuery.of(context).size.height * 0.5,
                     padding: const EdgeInsets.all(16.0),
                     child: _buildPreviewPanel(),
+                  ),
+                  const Divider(),
+                  Container(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _buildExecutionPanel(),
                   ),
                 ],
               ),

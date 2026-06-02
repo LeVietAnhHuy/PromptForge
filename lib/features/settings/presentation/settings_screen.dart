@@ -13,6 +13,14 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         children: [
           ListTile(
+            leading: const Icon(Icons.key),
+            title: const Text('API Keys'),
+            subtitle: const Text('Configure your BYOK LLM execution keys safely.'),
+            onTap: () {
+              context.go('/settings/keys');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.upload_file),
             title: const Text('Export Data'),
             subtitle: const Text('Export your prompts and context packs to JSON.'),
