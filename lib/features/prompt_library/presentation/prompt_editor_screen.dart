@@ -101,9 +101,11 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     try {
       final promptDao = ref.read(promptDaoProvider);
       final tagDao = ref.read(tagDaoProvider);
+      final pvDao = ref.read(promptVariableDaoProvider);
       
       final prompt = await promptDao.getPromptById(widget.promptId!);
       final tags = await tagDao.getTagsForPrompt(widget.promptId!);
+      final vars = await pvDao.getVariablesForPrompt(widget.promptId!);
       
       setState(() {
         _existingPrompt = prompt;
@@ -111,6 +113,28 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         _bodyController.text = prompt.body;
         _purposeController.text = prompt.purpose ?? '';
         _tagsController.text = tags.map((t) => t.name).join(', ');
+        
+        final variables = PromptCompiler.extractVariables(prompt.body);
+        _detectedVariables = variables;
+        _variableForms = {};
+        for (final v in vars) {
+          if (variables.contains(v.name)) {
+            _variableForms[v.name] = _VariableMetadataForm(
+              name: v.name,
+              label: v.label,
+              description: v.description,
+              defaultValue: v.defaultValue,
+              exampleValue: v.exampleValue,
+              isRequired: v.isRequired,
+            );
+          }
+        }
+        for (final v in variables) {
+          if (!_variableForms.containsKey(v)) {
+            _variableForms[v] = _VariableMetadataForm(name: v, isRequired: true);
+          }
+        }
+
         _isLoading = false;
       });
     } catch (e) {
@@ -170,8 +194,30 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       }
 
       // Save tags
-      final tagNames = _tagsController.text.split(',');
+      final tagNames = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
       await tagDao.replaceTagsForPrompt(currentPromptId, tagNames);
+
+      // Save variables
+      final pvDao = ref.read(promptVariableDaoProvider);
+      int order = 0;
+      final varCompanions = _detectedVariables.map((vName) {
+        final form = _variableForms[vName]!;
+        final comp = PromptVariablesCompanion.insert(
+          id: const Uuid().v4(),
+          promptId: currentPromptId,
+          name: vName,
+          label: form.labelController.text.isNotEmpty ? drift.Value(form.labelController.text) : const drift.Value.absent(),
+          description: form.descriptionController.text.isNotEmpty ? drift.Value(form.descriptionController.text) : const drift.Value.absent(),
+          defaultValue: form.defaultController.text.isNotEmpty ? drift.Value(form.defaultController.text) : const drift.Value.absent(),
+          exampleValue: form.exampleController.text.isNotEmpty ? drift.Value(form.exampleController.text) : const drift.Value.absent(),
+          isRequired: drift.Value(form.isRequired),
+          sortOrder: drift.Value(order++),
+          createdAt: now,
+          updatedAt: now,
+        );
+        return comp;
+      }).toList();
+      await pvDao.syncVariablesForPrompt(currentPromptId, varCompanions);
 
       if (mounted) {
         context.pop();
@@ -291,12 +337,12 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
             IconButton(
               icon: const Icon(Icons.history),
               tooltip: 'Examples & Comparisons',
-              onPressed: () => context.go('/library/examples/${_existingPrompt!.id}'),
+              onPressed: () => context.push('/library/examples/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.play_arrow),
               tooltip: 'Use Prompt (Compile)',
-              onPressed: () => context.go('/library/compile/${_existingPrompt!.id}'),
+              onPressed: () => context.push('/library/compile/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.copy),
@@ -368,6 +414,77 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 return null;
               },
             ),
+            if (_detectedVariables.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text('Variable Metadata', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              ..._detectedVariables.map((vName) {
+                final form = _variableForms[vName]!;
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('{{$vName}}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Row(
+                              children: [
+                                const Text('Required: '),
+                                Switch(
+                                  value: form.isRequired,
+                                  onChanged: (val) {
+                                    setState(() => form.isRequired = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 16,
+                          children: [
+                            SizedBox(
+                              width: 300,
+                              child: TextField(
+                                controller: form.labelController,
+                                decoration: const InputDecoration(labelText: 'Display Label', border: OutlineInputBorder()),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 300,
+                              child: TextField(
+                                controller: form.descriptionController,
+                                decoration: const InputDecoration(labelText: 'Description (Helper text)', border: OutlineInputBorder()),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 300,
+                              child: TextField(
+                                controller: form.defaultController,
+                                decoration: const InputDecoration(labelText: 'Default Value', border: OutlineInputBorder()),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 300,
+                              child: TextField(
+                                controller: form.exampleController,
+                                decoration: const InputDecoration(labelText: 'Example Value (Hint)', border: OutlineInputBorder()),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
           ],
         ),
       ),

@@ -302,7 +302,7 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                             ));
                             
                             if (context.mounted) {
-                              context.go('/library/examples/${_prompt!.id}/compare/$exampleId');
+                              context.push('/library/examples/${_prompt!.id}/compare/$exampleId');
                             }
                           }
                         },
