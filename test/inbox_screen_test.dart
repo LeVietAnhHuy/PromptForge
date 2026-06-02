@@ -89,7 +89,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).first, 'Some Title');
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byTooltip('Save'));
     await tester.pumpAndSettle();
 
     expect(find.text('Content cannot be empty'), findsOneWidget);
@@ -106,7 +106,7 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), 'Test Content');
     await tester.enterText(find.byType(TextField).at(2), 'Test Source');
     
-    await tester.tap(find.byIcon(Icons.check));
+    await tester.tap(find.byTooltip('Save'));
     await tester.pumpAndSettle();
 
     final items = await database.select(database.inboxItems).get();

@@ -29,10 +29,49 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   bool _isLoading = true;
   _ViewMode _viewMode = _ViewMode.edit;
 
+  final _rawScrollController = ScrollController();
+  final _previewScrollController = ScrollController();
+  bool _isSyncingScroll = false;
+
   @override
   void initState() {
     super.initState();
     _loadItem();
+    
+    _rawScrollController.addListener(_syncToPreview);
+    _previewScrollController.addListener(_syncToRaw);
+  }
+
+  void _syncToPreview() {
+    if (_viewMode != _ViewMode.split) return;
+    if (_isSyncingScroll) return;
+    if (!_previewScrollController.hasClients || !_rawScrollController.hasClients) return;
+
+    _isSyncingScroll = true;
+    final sourceMax = _rawScrollController.position.maxScrollExtent;
+    final targetMax = _previewScrollController.position.maxScrollExtent;
+    if (sourceMax > 0 && targetMax > 0) {
+      final ratio = _rawScrollController.offset / sourceMax;
+      final targetOffset = ratio * targetMax;
+      _previewScrollController.jumpTo(targetOffset.clamp(0.0, targetMax));
+    }
+    _isSyncingScroll = false;
+  }
+
+  void _syncToRaw() {
+    if (_viewMode != _ViewMode.split) return;
+    if (_isSyncingScroll) return;
+    if (!_previewScrollController.hasClients || !_rawScrollController.hasClients) return;
+
+    _isSyncingScroll = true;
+    final sourceMax = _previewScrollController.position.maxScrollExtent;
+    final targetMax = _rawScrollController.position.maxScrollExtent;
+    if (sourceMax > 0 && targetMax > 0) {
+      final ratio = _previewScrollController.offset / sourceMax;
+      final targetOffset = ratio * targetMax;
+      _rawScrollController.jumpTo(targetOffset.clamp(0.0, targetMax));
+    }
+    _isSyncingScroll = false;
   }
 
   Future<void> _loadItem() async {
@@ -141,6 +180,10 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
 
   @override
   void dispose() {
+    _rawScrollController.removeListener(_syncToPreview);
+    _previewScrollController.removeListener(_syncToRaw);
+    _rawScrollController.dispose();
+    _previewScrollController.dispose();
     _titleController.dispose();
     _contentController.dispose();
     _sourceController.dispose();
@@ -273,6 +316,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   Widget _buildEditor() {
     return TextField(
       controller: _contentController,
+      scrollController: _rawScrollController,
       decoration: const InputDecoration(
         border: InputBorder.none,
         contentPadding: EdgeInsets.all(12),
@@ -301,6 +345,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
             )
           : Markdown(
               data: _contentController.text,
+              controller: _previewScrollController,
               selectable: true,
               padding: const EdgeInsets.all(16),
             ),
