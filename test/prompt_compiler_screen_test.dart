@@ -119,4 +119,49 @@ void main() {
     await tester.pumpWidget(Container());
     await tester.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('PromptCompilerScreen executes prompt with Mock Provider and displays output', (tester) async {
+    final now = DateTime.now();
+    await database.into(database.prompts).insert(PromptsCompanion.insert(
+      id: 'exec-prompt-id',
+      title: 'Exec Prompt',
+      body: 'Simple prompt to execute',
+      createdAt: now,
+      updatedAt: now,
+    ));
+
+    await tester.pumpWidget(createTestApp('exec-prompt-id'));
+    await tester.pumpAndSettle();
+
+    // Verify Execution Panel exists
+    expect(find.text('Execute'), findsOneWidget);
+    expect(find.text('Provider'), findsOneWidget);
+    
+    // Select Mock Provider if not selected
+    // Note: Provider is MockProvider by default since it's the first in the list
+    expect(find.text('Mock Provider'), findsOneWidget);
+
+    // Click Run
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Run'));
+    await tester.pump(); // Start execution
+    
+    // Wait for the simulated delay (1.5 seconds)
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    // Verify output appears
+    expect(find.text('Output'), findsOneWidget);
+    expect(find.textContaining('This is a deterministic mock output from Mock Fast Model'), findsOneWidget);
+    expect(find.textContaining('Execution successful. Output saved to history.'), findsOneWidget);
+
+    // Verify it saved to DB
+    final outputs = await database.select(database.promptExampleOutputs).get();
+    expect(outputs.length, 1);
+    expect(outputs.first.outputText, contains('deterministic mock output'));
+    expect(outputs.first.providerId, 'mock');
+    
+    // Unmount
+    await tester.pumpWidget(Container());
+    await tester.pump(const Duration(seconds: 1));
+  });
 }
