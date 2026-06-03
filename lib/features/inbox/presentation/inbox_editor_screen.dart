@@ -9,6 +9,7 @@ import '../../../core/database/database_providers.dart';
 import '../application/inbox_providers.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'inline_markdown_editor.dart';
+import '../domain/markdown_reader_style.dart';
 
 class InboxEditorScreen extends ConsumerStatefulWidget {
   final String? itemId; // null means creating a new item
@@ -29,6 +30,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
   InboxItem? _existingItem;
   bool _isLoading = true;
   _ViewMode _viewMode = _ViewMode.edit;
+  MarkdownReaderStyle _readerStyle = MarkdownReaderStyle.promptForge;
 
   @override
   void initState() {
@@ -258,15 +260,36 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
                   children: [
                     const Icon(Icons.info_outline, size: 16, color: Colors.grey),
                     const SizedBox(width: 8),
-                    Text(
-                      'Click any section to edit it in place.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                    Expanded(
+                      child: Text(
+                        'Click any section to edit it in place.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      ),
+                    ),
+                    DropdownButton<MarkdownReaderStyle>(
+                      value: _readerStyle,
+                      underline: const SizedBox(),
+                      isDense: true,
+                      iconSize: 20,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
+                      items: MarkdownReaderStyle.values.map((style) {
+                        return DropdownMenuItem(
+                          value: style,
+                          child: Text(style.displayName),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => _readerStyle = val);
+                      },
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: InlineMarkdownEditor(controller: _contentController),
+                child: InlineMarkdownEditor(
+                  controller: _contentController,
+                  readerStyle: _readerStyle,
+                ),
               ),
             ],
           ),

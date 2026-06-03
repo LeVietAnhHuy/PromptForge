@@ -72,6 +72,18 @@ void main() {
     // Verify TOC sidebar renders (only on desktop)
     expect(find.text('Contents'), findsOneWidget);
     
+    // Verify default style is PromptForge
+    expect(find.text('PromptForge'), findsOneWidget);
+
+    // Change style to GitHub
+    await tester.tap(find.text('PromptForge'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GitHub').last);
+    await tester.pumpAndSettle();
+    
+    // Verify style changed
+    expect(find.text('GitHub'), findsOneWidget);
+
     // Verify TOC items render
     expect(find.text('H1 Title'), findsWidgets); // Exists in body and TOC
     expect(find.text('H2 Sub'), findsWidgets);

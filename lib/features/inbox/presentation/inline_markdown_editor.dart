@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../domain/markdown_block_parser.dart';
+import '../domain/markdown_reader_style.dart';
 
 class InlineMarkdownEditor extends StatefulWidget {
   final TextEditingController controller;
+  final MarkdownReaderStyle readerStyle;
 
   const InlineMarkdownEditor({
     super.key,
     required this.controller,
+    this.readerStyle = MarkdownReaderStyle.promptForge,
   });
 
   @override
@@ -24,6 +27,8 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   List<MarkdownTocItem> _tocItems = [];
   final Map<String, GlobalKey> _headingKeys = {};
   final _scrollController = ScrollController();
+  
+  String? _activeHeadingId;
 
   @override
   void initState() {
@@ -31,6 +36,7 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     _blockEditController = TextEditingController();
     _parseBlocks();
     widget.controller.addListener(_onControllerChanged);
+    _scrollController.addListener(_onScroll);
   }
 
   @override
@@ -38,6 +44,7 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     widget.controller.removeListener(_onControllerChanged);
     _blockEditController.dispose();
     _focusNode.dispose();
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -56,7 +63,41 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
       // Clean up unused keys
       final currentHeadingBlockIds = _blocks.where((b) => b.type == MarkdownBlockType.heading).map((b) => b.id).toSet();
       _headingKeys.removeWhere((id, key) => !currentHeadingBlockIds.contains(id));
+      
+      // Update active heading initially
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
     });
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    
+    // Find the heading closest to the top of the viewport
+    String? newActiveId;
+    double minDistance = double.infinity;
+    
+    for (final item in _tocItems) {
+      final key = _headingKeys[item.blockId];
+      if (key != null && key.currentContext != null) {
+        final RenderBox box = key.currentContext!.findRenderObject() as RenderBox;
+        final position = box.localToGlobal(Offset.zero);
+        
+        // If the heading is above or slightly below the top of the viewport
+        if (position.dy <= 200) {
+          newActiveId = item.blockId;
+        } else if (newActiveId == null && position.dy < minDistance) {
+          // Fallback to the closest one if none are above the threshold
+          minDistance = position.dy;
+          newActiveId = item.blockId;
+        }
+      }
+    }
+    
+    if (newActiveId != _activeHeadingId) {
+      setState(() {
+        _activeHeadingId = newActiveId;
+      });
+    }
   }
 
   void _startEditing(MarkdownBlock block) {
@@ -111,51 +152,14 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     if (key != null && key.currentContext != null) {
       Scrollable.ensureVisible(
         key.currentContext!,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        alignment: 0.05, // Slight padding from the top
       );
+      setState(() {
+        _activeHeadingId = blockId;
+      });
     }
-  }
-
-  MarkdownStyleSheet _buildStyleSheet(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
-    return MarkdownStyleSheet(
-      h1: theme.textTheme.headlineMedium?.copyWith(
-        color: colorScheme.primary,
-        fontWeight: FontWeight.bold,
-      ),
-      h2: theme.textTheme.titleLarge?.copyWith(
-        color: colorScheme.secondary,
-        fontWeight: FontWeight.w600,
-      ),
-      h3: theme.textTheme.titleMedium?.copyWith(
-        color: colorScheme.onSurface,
-        fontWeight: FontWeight.w600,
-      ),
-      p: theme.textTheme.bodyMedium?.copyWith(
-        height: 1.5,
-      ),
-      code: theme.textTheme.bodyMedium?.copyWith(
-        backgroundColor: colorScheme.surfaceContainerHighest,
-        fontFamily: 'monospace',
-      ),
-      codeblockDecoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      codeblockPadding: const EdgeInsets.all(12),
-      blockquoteDecoration: BoxDecoration(
-        border: Border(left: BorderSide(color: colorScheme.primary, width: 4)),
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      ),
-      blockquotePadding: const EdgeInsets.all(12),
-      horizontalRuleDecoration: BoxDecoration(
-        border: Border(top: BorderSide(color: colorScheme.outlineVariant, width: 2)),
-      ),
-    );
   }
 
   Widget _buildTocSidebar() {
@@ -181,12 +185,23 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
               itemCount: _tocItems.length,
               itemBuilder: (context, index) {
                 final item = _tocItems[index];
+                final isActive = item.blockId == _activeHeadingId;
+                
                 return InkWell(
                   onTap: () => _scrollToHeading(item.blockId),
                   borderRadius: BorderRadius.circular(4),
-                  child: Padding(
+                  child: Container(
+                    decoration: isActive
+                        ? BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border(left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3)),
+                          )
+                        : const BoxDecoration(
+                            border: Border(left: BorderSide(color: Colors.transparent, width: 3)),
+                          ),
                     padding: EdgeInsets.only(
-                      left: 8.0 + (item.level - 1) * 16.0,
+                      left: 8.0 + (item.level - 1) * 12.0,
                       top: 8.0,
                       bottom: 8.0,
                       right: 8.0,
@@ -194,7 +209,10 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
                     child: Text(
                       item.text,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        color: isActive 
+                            ? Theme.of(context).colorScheme.onSurface 
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -243,94 +261,98 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     final showSidebar = isDesktop && _tocItems.length >= 2;
     final showMobileFab = !isDesktop && _tocItems.length >= 2;
-    final styleSheet = _buildStyleSheet(context);
+    final styleSheet = widget.readerStyle.buildStyleSheet(context);
 
-    final listView = ListView.builder(
+    // Using SingleChildScrollView + Column instead of ListView.builder 
+    // ensures all heading blocks are mounted and have valid GlobalKeys.
+    // This makes Scrollable.ensureVisible work perfectly for TOC jumps.
+    final listView = SingleChildScrollView(
       controller: _scrollController,
-      itemCount: _blocks.length,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemBuilder: (context, index) {
-        final block = _blocks[index];
-        final isEditing = _editingBlockId == block.id;
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: _blocks.map((block) {
+          final isEditing = _editingBlockId == block.id;
 
-        if (isEditing) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Theme.of(context).colorScheme.primary),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: TextField(
-                      controller: _blockEditController,
-                      focusNode: _focusNode,
-                      maxLines: null,
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(8),
+          if (isEditing) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Theme.of(context).colorScheme.primary),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      style: const TextStyle(fontFamily: 'monospace'),
+                      child: TextField(
+                        controller: _blockEditController,
+                        focusNode: _focusNode,
+                        maxLines: null,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.all(8),
+                        ),
+                        style: const TextStyle(fontFamily: 'monospace'),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.check, color: Colors.green),
-                      tooltip: 'Save Block',
-                      onPressed: () => _commitEdit(block),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.red),
-                      tooltip: 'Cancel Edit',
-                      onPressed: _cancelEdit,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }
-
-        Widget blockContent;
-        // For empty lines, render some clickable vertical space
-        if (block.type == MarkdownBlockType.empty) {
-          blockContent = const SizedBox(height: 20, width: double.infinity);
-        } else {
-          blockContent = MarkdownBody(
-            data: block.rawText,
-            selectable: false, // Disabling selectability to allow tapping the block
-            fitContent: true,
-            styleSheet: styleSheet,
-          );
-        }
-
-        // Attach GlobalKey only to heading blocks
-        if (block.type == MarkdownBlockType.heading) {
-          final key = _headingKeys.putIfAbsent(block.id, () => GlobalKey());
-          blockContent = Container(key: key, child: blockContent);
-        }
-
-        return MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: () => _startEditing(block),
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.transparent),
-                borderRadius: BorderRadius.circular(4),
+                  const SizedBox(width: 8),
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check, color: Colors.green),
+                        tooltip: 'Save Block',
+                        onPressed: () => _commitEdit(block),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        tooltip: 'Cancel Edit',
+                        onPressed: _cancelEdit,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              child: blockContent,
+            );
+          }
+
+          Widget blockContent;
+          // For empty lines, render some clickable vertical space
+          if (block.type == MarkdownBlockType.empty) {
+            blockContent = const SizedBox(height: 20, width: double.infinity);
+          } else {
+            blockContent = MarkdownBody(
+              data: block.rawText,
+              selectable: false, // Disabling selectability to allow tapping the block
+              fitContent: true,
+              styleSheet: styleSheet,
+            );
+          }
+
+          // Attach GlobalKey only to heading blocks
+          if (block.type == MarkdownBlockType.heading) {
+            final key = _headingKeys.putIfAbsent(block.id, () => GlobalKey());
+            blockContent = Container(key: key, child: blockContent);
+          }
+
+          return MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => _startEditing(block),
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.transparent),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: blockContent,
+              ),
             ),
-          ),
-        );
-      },
+          );
+        }).toList(),
+      ),
     );
 
     final content = showSidebar
