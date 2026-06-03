@@ -99,5 +99,55 @@ void main() {
         expect(toc.isEmpty, true);
       });
     });
+
+    group('Deterministic Block IDs', () {
+      test('Block IDs are stable across repeated parses', () {
+        final text = '# Title\nParagraph\n## Section\n```\ncode\n```';
+        final blocks1 = parser.parse(text);
+        final blocks2 = parser.parse(text);
+
+        expect(blocks1.length, blocks2.length);
+        for (int i = 0; i < blocks1.length; i++) {
+          expect(blocks1[i].id, blocks2[i].id);
+        }
+      });
+
+      test('Block IDs use line number and type', () {
+        final text = '# Heading\nParagraph';
+        final blocks = parser.parse(text);
+
+        expect(blocks[0].id, 'block_0_heading');
+        expect(blocks[1].id, 'block_1_paragraph');
+      });
+
+      test('TOC blockId matches heading block ID', () {
+        final text = '# Title\nPara\n## Section 1\n### Sub';
+        final blocks = parser.parse(text);
+        final toc = parser.extractToc(blocks);
+
+        // Each TOC item's blockId should match a heading block's id
+        final headingIds = blocks
+            .where((b) => b.type == MarkdownBlockType.heading)
+            .map((b) => b.id)
+            .toSet();
+
+        for (final item in toc) {
+          expect(headingIds.contains(item.blockId), true,
+            reason: 'TOC item "${item.text}" blockId "${item.blockId}" not found in heading blocks');
+        }
+      });
+
+      test('TOC blockId is stable across reparses', () {
+        final text = '# Alpha\n## Beta\n### Gamma';
+        final toc1 = parser.extractToc(parser.parse(text));
+        final toc2 = parser.extractToc(parser.parse(text));
+
+        expect(toc1.length, toc2.length);
+        for (int i = 0; i < toc1.length; i++) {
+          expect(toc1[i].id, toc2[i].id);
+          expect(toc1[i].blockId, toc2[i].blockId);
+        }
+      });
+    });
   });
 }

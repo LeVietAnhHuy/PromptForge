@@ -24,12 +24,14 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   String? _editingBlockId;
   late TextEditingController _blockEditController;
   final _focusNode = FocusNode();
-  
+
   List<MarkdownTocItem> _tocItems = [];
+  // Keyed by tocItem.id (stable, content-derived).
+  // This is the ONLY key map. No intermediate blockId mapping needed
+  // because block IDs are now deterministic (line-based).
   final Map<String, GlobalKey> _headingKeys = {};
-  final Map<String, String> _blockIdToTocId = {};
   final _scrollController = ScrollController();
-  
+
   String? _activeTocId;
   bool _isProgrammaticScroll = false;
 
@@ -59,50 +61,65 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   }
 
   void _parseBlocks() {
+    final newBlocks = _parser.parse(widget.controller.text);
+    final newTocItems = _parser.extractToc(newBlocks);
+
+    // Clean up keys for TOC items that no longer exist
+    final currentTocIds = newTocItems.map((t) => t.id).toSet();
+    _headingKeys.removeWhere((id, _) => !currentTocIds.contains(id));
+
     setState(() {
-      _blocks = _parser.parse(widget.controller.text);
-      _tocItems = _parser.extractToc(_blocks);
-      
-      _blockIdToTocId.clear();
-      for (final item in _tocItems) {
-        _blockIdToTocId[item.blockId] = item.id;
-      }
-      
-      // Clean up unused keys by TOC ID (which is stable)
-      final currentTocIds = _tocItems.map((t) => t.id).toSet();
-      _headingKeys.removeWhere((id, key) => !currentTocIds.contains(id));
-      
-      // Update active heading initially
-      WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
+      _blocks = newBlocks;
+      _tocItems = newTocItems;
     });
+
+    // Recompute active heading after layout
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isProgrammaticScroll) _computeActiveHeading();
+    });
+  }
+
+  /// Build a lookup from block.id -> tocItem.id for the current parse.
+  /// Called lazily during build.
+  Map<String, String> _buildBlockIdToTocId() {
+    final map = <String, String>{};
+    for (final item in _tocItems) {
+      map[item.blockId] = item.id;
+    }
+    return map;
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients || _isProgrammaticScroll) return;
-    
-    // Find the heading closest to the top of the viewport
+    _computeActiveHeading();
+  }
+
+  void _computeActiveHeading() {
+    if (!mounted || !_scrollController.hasClients) return;
+
     String? newActiveId;
-    double minDistance = double.infinity;
-    
+
+    // Walk TOC items in order. The last heading whose top is at or above
+    // a threshold near the top of the screen is the "active" one.
     for (final item in _tocItems) {
       final key = _headingKeys[item.id];
-      if (key != null && key.currentContext != null) {
-        final RenderBox box = key.currentContext!.findRenderObject() as RenderBox;
-        final position = box.localToGlobal(Offset.zero);
-        
-        // dy is relative to the screen. 
-        // We want the heading that is closest to the top (or just above it).
-        // 120 is roughly the height of the AppBar + toolbar
-        if (position.dy <= 160) {
-          newActiveId = item.id;
-        } else if (newActiveId == null && position.dy < minDistance) {
-          // Fallback to the closest one if none are above the threshold
-          minDistance = position.dy;
-          newActiveId = item.id;
-        }
+      if (key == null || key.currentContext == null) continue;
+
+      final renderObject = key.currentContext!.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.attached) continue;
+
+      final position = renderObject.localToGlobal(Offset.zero);
+
+      // Heading is at or above 180px from screen top → it's scrolled into view
+      if (position.dy <= 180) {
+        newActiveId = item.id;
+      } else if (newActiveId == null) {
+        // If no heading has scrolled past yet, pick the first visible one
+        newActiveId = item.id;
+        break; // It's below threshold, no need to check further
       }
     }
-    
+
     if (newActiveId != _activeTocId) {
       setState(() {
         _activeTocId = newActiveId;
@@ -115,7 +132,6 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
       _editingBlockId = block.id;
       _blockEditController.text = block.rawText;
     });
-    // Request focus on next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_focusNode.canRequestFocus) {
         _focusNode.requestFocus();
@@ -125,26 +141,24 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
 
   void _commitEdit(MarkdownBlock block) {
     if (_editingBlockId != block.id) return;
-    
+
     final newText = _blockEditController.text;
     if (newText != block.rawText) {
       final lines = widget.controller.text.split('\n');
       final newLines = newText.split('\n');
-      
-      // Ensure we don't go out of bounds
+
       if (block.startLine <= lines.length) {
         final endLine = block.endLine < lines.length ? block.endLine : lines.length - 1;
         lines.replaceRange(block.startLine, endLine + 1, newLines);
-        
+
         final fullText = lines.join('\n');
-        
-        // Remove listener temporarily to avoid recursive parsing
+
         widget.controller.removeListener(_onControllerChanged);
         widget.controller.text = fullText;
         widget.controller.addListener(_onControllerChanged);
       }
     }
-    
+
     setState(() {
       _editingBlockId = null;
     });
@@ -159,32 +173,36 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
 
   Future<void> _scrollToHeading(String tocId) async {
     final key = _headingKeys[tocId];
-    if (key != null && key.currentContext != null) {
+    if (key == null || key.currentContext == null) return;
+
+    // Immediately highlight and guard against scroll listener overriding
+    setState(() {
+      _activeTocId = tocId;
+      _isProgrammaticScroll = true;
+    });
+
+    final renderObject = key.currentContext!.findRenderObject();
+    if (renderObject != null) {
+      final viewport = RenderAbstractViewport.of(renderObject);
+      // getOffsetToReveal with 0.0 alignment = top of viewport
+      final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
+      // Subtract a small amount so the heading isn't flush against the very edge
+      final target = (reveal.offset - 8.0).clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+
+      await _scrollController.animateTo(
+        target,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    }
+
+    if (mounted) {
       setState(() {
-        _activeTocId = tocId;
-        _isProgrammaticScroll = true;
+        _isProgrammaticScroll = false;
       });
-      
-      final renderObject = key.currentContext!.findRenderObject();
-      if (renderObject != null) {
-        final viewport = RenderAbstractViewport.of(renderObject);
-        if (viewport != null) {
-          final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-          final target = (reveal.offset - 16.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-          
-          await _scrollController.animateTo(
-            target,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOutCubic,
-          );
-        }
-      }
-      
-      if (mounted) {
-        setState(() {
-          _isProgrammaticScroll = false;
-        });
-      }
     }
   }
 
@@ -212,7 +230,7 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
               itemBuilder: (context, index) {
                 final item = _tocItems[index];
                 final isActive = item.id == _activeTocId;
-                
+
                 return InkWell(
                   onTap: () => _scrollToHeading(item.id),
                   borderRadius: BorderRadius.circular(4),
@@ -235,8 +253,8 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
                     child: Text(
                       item.text,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: isActive 
-                            ? Theme.of(context).colorScheme.onSurface 
+                        color: isActive
+                            ? Theme.of(context).colorScheme.onSurface
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                       ),
@@ -256,7 +274,13 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   void _showMobileToc() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => _buildTocSidebar(),
+      builder: (sheetContext) {
+        // Build a copy of the TOC sidebar for the bottom sheet
+        return Container(
+          constraints: const BoxConstraints(maxHeight: 400),
+          child: _buildTocSidebar(),
+        );
+      },
     );
   }
 
@@ -266,7 +290,6 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
       return GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () {
-          // If empty, just focus the full editor or start an empty block
           _startEditing(MarkdownBlock(
             id: 'empty',
             startLine: 0,
@@ -288,10 +311,10 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     final showSidebar = isDesktop && _tocItems.length >= 2;
     final showMobileFab = !isDesktop && _tocItems.length >= 2;
     final styleSheet = widget.readerStyle.buildStyleSheet(context);
+    final blockIdToTocId = _buildBlockIdToTocId();
 
-    // Using SingleChildScrollView + Column instead of ListView.builder 
-    // ensures all heading blocks are mounted and have valid GlobalKeys.
-    // This makes Scrollable.ensureVisible work perfectly for TOC jumps.
+    // SingleChildScrollView + Column ensures all heading GlobalKeys are
+    // always mounted, so getOffsetToReveal works on the first click.
     final listView = SingleChildScrollView(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -345,21 +368,20 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
           }
 
           Widget blockContent;
-          // For empty lines, render some clickable vertical space
           if (block.type == MarkdownBlockType.empty) {
-            blockContent = const SizedBox(height: 20, width: double.infinity);
+            blockContent = const SizedBox(height: 16, width: double.infinity);
           } else {
             blockContent = MarkdownBody(
               data: block.rawText,
-              selectable: false, // Disabling selectability to allow tapping the block
+              selectable: false,
               fitContent: true,
               styleSheet: styleSheet,
             );
           }
 
-          // Attach GlobalKey only to heading blocks
+          // Attach GlobalKey to heading blocks using the stable tocItem.id
           if (block.type == MarkdownBlockType.heading) {
-            final tocId = _blockIdToTocId[block.id];
+            final tocId = blockIdToTocId[block.id];
             if (tocId != null) {
               final key = _headingKeys.putIfAbsent(tocId, () => GlobalKey());
               blockContent = Container(key: key, child: blockContent);
@@ -371,7 +393,7 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
             child: GestureDetector(
               onTap: () => _startEditing(block),
               child: Container(
-                margin: const EdgeInsets.symmetric(vertical: 4),
+                margin: const EdgeInsets.symmetric(vertical: 2),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.transparent),
                   borderRadius: BorderRadius.circular(4),
@@ -403,12 +425,11 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
             right: 16,
             child: FloatingActionButton.small(
               onPressed: () {
-                // If in edit mode, tapping this doesn't break anything, but we might want to defocus
                 FocusScope.of(context).unfocus();
                 _showMobileToc();
               },
-              child: const Icon(Icons.list),
               tooltip: 'Contents',
+              child: const Icon(Icons.list),
             ),
           ),
         ],

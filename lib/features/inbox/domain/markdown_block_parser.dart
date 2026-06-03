@@ -71,7 +71,7 @@ class MarkdownBlockParser {
       // Blank line
       if (line.trim().isEmpty) {
         blocks.add(MarkdownBlock(
-          id: DateTime.now().microsecondsSinceEpoch.toString() + '_$currentLineIdx',
+          id: 'block_${currentLineIdx}_empty',
           startLine: currentLineIdx,
           endLine: currentLineIdx,
           rawText: line,
@@ -193,7 +193,7 @@ class MarkdownBlockParser {
   MarkdownBlock _createBlock(List<String> lines, int start, int end, MarkdownBlockType type) {
     final sublist = lines.sublist(start, end + 1);
     return MarkdownBlock(
-      id: DateTime.now().microsecondsSinceEpoch.toString() + '_$start',
+      id: 'block_${start}_${type.name}',
       startLine: start,
       endLine: end,
       rawText: sublist.join('\n'),

@@ -7,7 +7,6 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../application/inbox_providers.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'inline_markdown_editor.dart';
 import '../domain/markdown_reader_style.dart';
 
