@@ -40,6 +40,20 @@ class MarkdownBlock {
   }
 }
 
+class MarkdownTocItem {
+  final String id;
+  final String text;
+  final int level;
+  final String blockId;
+
+  MarkdownTocItem({
+    required this.id,
+    required this.text,
+    required this.level,
+    required this.blockId,
+  });
+}
+
 class MarkdownBlockParser {
   List<MarkdownBlock> parse(String text) {
     if (text.isEmpty) {
@@ -137,6 +151,43 @@ class MarkdownBlockParser {
     }
 
     return blocks;
+  }
+
+  List<MarkdownTocItem> extractToc(List<MarkdownBlock> blocks) {
+    final toc = <MarkdownTocItem>[];
+    
+    // Track seen ids to handle duplicate headings
+    final seenIds = <String, int>{};
+
+    for (int i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      if (block.type == MarkdownBlockType.heading) {
+        final text = block.rawText.trim();
+        int level = 0;
+        while (level < text.length && text[level] == '#') {
+          level++;
+        }
+        
+        if (level > 0 && level <= 4) { // Only H1-H4
+          final title = text.substring(level).trim();
+          if (title.isNotEmpty) {
+            String baseId = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'^-+|-+$'), '');
+            if (baseId.isEmpty) baseId = 'heading';
+            
+            seenIds[baseId] = (seenIds[baseId] ?? -1) + 1;
+            final uniqueId = seenIds[baseId]! > 0 ? '$baseId-${seenIds[baseId]}' : baseId;
+
+            toc.add(MarkdownTocItem(
+              id: uniqueId,
+              text: title,
+              level: level,
+              blockId: block.id,
+            ));
+          }
+        }
+      }
+    }
+    return toc;
   }
 
   MarkdownBlock _createBlock(List<String> lines, int start, int end, MarkdownBlockType type) {

@@ -55,5 +55,49 @@ void main() {
       final blocks = parser.parse(text);
       expect(blocks.isEmpty, true);
     });
+
+    group('TOC Extraction', () {
+      test('Extracts H1, H2, H3 headings', () {
+        final text = '# Title\nPara\n## Section 1\n### Subsection';
+        final blocks = parser.parse(text);
+        final toc = parser.extractToc(blocks);
+        
+        expect(toc.length, 3);
+        expect(toc[0].level, 1);
+        expect(toc[0].text, 'Title');
+        expect(toc[1].level, 2);
+        expect(toc[1].text, 'Section 1');
+        expect(toc[2].level, 3);
+        expect(toc[2].text, 'Subsection');
+      });
+
+      test('Ignores non-heading blocks', () {
+        final text = 'Para\n- List\n```\ncode\n```\n# Heading';
+        final blocks = parser.parse(text);
+        final toc = parser.extractToc(blocks);
+        
+        expect(toc.length, 1);
+        expect(toc[0].text, 'Heading');
+      });
+
+      test('Handles duplicate headings with unique IDs', () {
+        final text = '# Duplicate\n## Duplicate\n### Duplicate';
+        final blocks = parser.parse(text);
+        final toc = parser.extractToc(blocks);
+        
+        expect(toc.length, 3);
+        expect(toc[0].id, 'duplicate');
+        expect(toc[1].id, 'duplicate-1');
+        expect(toc[2].id, 'duplicate-2');
+      });
+
+      test('Handles empty headings', () {
+        final text = '# \n##';
+        final blocks = parser.parse(text);
+        final toc = parser.extractToc(blocks);
+        
+        expect(toc.isEmpty, true);
+      });
+    });
   });
 }

@@ -43,4 +43,49 @@ void main() {
     // Verify full TextField is back
     expect(find.byType(TextField).at(1), findsOneWidget);
   });
+
+  testWidgets('InboxEditorScreen shows TOC on desktop when multiple headings exist', (tester) async {
+    // Set desktop window size for this test
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(
+          home: InboxEditorScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Enter markdown text with 3 headings
+    await tester.enterText(
+      find.byType(TextField).at(1),
+      '# H1 Title\n\nSome text\n\n## H2 Sub\n\nMore text\n\n### H3 Detail',
+    );
+    await tester.pump();
+
+    // Switch to Preview
+    await tester.tap(find.text('Preview'));
+    await tester.pumpAndSettle();
+
+    // Verify TOC sidebar renders (only on desktop)
+    expect(find.text('Contents'), findsOneWidget);
+    
+    // Verify TOC items render
+    expect(find.text('H1 Title'), findsWidgets); // Exists in body and TOC
+    expect(find.text('H2 Sub'), findsWidgets);
+    expect(find.text('H3 Detail'), findsWidgets);
+
+    // Tap a TOC item
+    await tester.tap(find.text('H3 Detail').last); // The last one is typically in the TOC
+    await tester.pumpAndSettle();
+    
+    // Verify we did not enter inline edit mode
+    expect(find.byTooltip('Save Block'), findsNothing);
+
+    // Reset view
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
 }
