@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import '../domain/markdown_block_parser.dart';
 import '../domain/markdown_reader_style.dart';
@@ -26,9 +27,11 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   
   List<MarkdownTocItem> _tocItems = [];
   final Map<String, GlobalKey> _headingKeys = {};
+  final Map<String, String> _blockIdToTocId = {};
   final _scrollController = ScrollController();
   
-  String? _activeHeadingId;
+  String? _activeTocId;
+  bool _isProgrammaticScroll = false;
 
   @override
   void initState() {
@@ -60,9 +63,14 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
       _blocks = _parser.parse(widget.controller.text);
       _tocItems = _parser.extractToc(_blocks);
       
-      // Clean up unused keys
-      final currentHeadingBlockIds = _blocks.where((b) => b.type == MarkdownBlockType.heading).map((b) => b.id).toSet();
-      _headingKeys.removeWhere((id, key) => !currentHeadingBlockIds.contains(id));
+      _blockIdToTocId.clear();
+      for (final item in _tocItems) {
+        _blockIdToTocId[item.blockId] = item.id;
+      }
+      
+      // Clean up unused keys by TOC ID (which is stable)
+      final currentTocIds = _tocItems.map((t) => t.id).toSet();
+      _headingKeys.removeWhere((id, key) => !currentTocIds.contains(id));
       
       // Update active heading initially
       WidgetsBinding.instance.addPostFrameCallback((_) => _onScroll());
@@ -70,32 +78,34 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
   }
 
   void _onScroll() {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients || _isProgrammaticScroll) return;
     
     // Find the heading closest to the top of the viewport
     String? newActiveId;
     double minDistance = double.infinity;
     
     for (final item in _tocItems) {
-      final key = _headingKeys[item.blockId];
+      final key = _headingKeys[item.id];
       if (key != null && key.currentContext != null) {
         final RenderBox box = key.currentContext!.findRenderObject() as RenderBox;
         final position = box.localToGlobal(Offset.zero);
         
-        // If the heading is above or slightly below the top of the viewport
-        if (position.dy <= 200) {
-          newActiveId = item.blockId;
+        // dy is relative to the screen. 
+        // We want the heading that is closest to the top (or just above it).
+        // 120 is roughly the height of the AppBar + toolbar
+        if (position.dy <= 160) {
+          newActiveId = item.id;
         } else if (newActiveId == null && position.dy < minDistance) {
           // Fallback to the closest one if none are above the threshold
           minDistance = position.dy;
-          newActiveId = item.blockId;
+          newActiveId = item.id;
         }
       }
     }
     
-    if (newActiveId != _activeHeadingId) {
+    if (newActiveId != _activeTocId) {
       setState(() {
-        _activeHeadingId = newActiveId;
+        _activeTocId = newActiveId;
       });
     }
   }
@@ -147,18 +157,34 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
     });
   }
 
-  void _scrollToHeading(String blockId) {
-    final key = _headingKeys[blockId];
+  Future<void> _scrollToHeading(String tocId) async {
+    final key = _headingKeys[tocId];
     if (key != null && key.currentContext != null) {
-      Scrollable.ensureVisible(
-        key.currentContext!,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutCubic,
-        alignment: 0.05, // Slight padding from the top
-      );
       setState(() {
-        _activeHeadingId = blockId;
+        _activeTocId = tocId;
+        _isProgrammaticScroll = true;
       });
+      
+      final renderObject = key.currentContext!.findRenderObject();
+      if (renderObject != null) {
+        final viewport = RenderAbstractViewport.of(renderObject);
+        if (viewport != null) {
+          final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
+          final target = (reveal.offset - 16.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+          
+          await _scrollController.animateTo(
+            target,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _isProgrammaticScroll = false;
+        });
+      }
     }
   }
 
@@ -185,10 +211,10 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
               itemCount: _tocItems.length,
               itemBuilder: (context, index) {
                 final item = _tocItems[index];
-                final isActive = item.blockId == _activeHeadingId;
+                final isActive = item.id == _activeTocId;
                 
                 return InkWell(
-                  onTap: () => _scrollToHeading(item.blockId),
+                  onTap: () => _scrollToHeading(item.id),
                   borderRadius: BorderRadius.circular(4),
                   child: Container(
                     decoration: isActive
@@ -333,8 +359,11 @@ class _InlineMarkdownEditorState extends State<InlineMarkdownEditor> {
 
           // Attach GlobalKey only to heading blocks
           if (block.type == MarkdownBlockType.heading) {
-            final key = _headingKeys.putIfAbsent(block.id, () => GlobalKey());
-            blockContent = Container(key: key, child: blockContent);
+            final tocId = _blockIdToTocId[block.id];
+            if (tocId != null) {
+              final key = _headingKeys.putIfAbsent(tocId, () => GlobalKey());
+              blockContent = Container(key: key, child: blockContent);
+            }
           }
 
           return MouseRegion(
