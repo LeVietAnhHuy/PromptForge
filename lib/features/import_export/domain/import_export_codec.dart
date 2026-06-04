@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:archive/archive.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/database/database.dart';
 
 class ImportedPrompt {
@@ -9,6 +10,7 @@ class ImportedPrompt {
   final List<PromptVersion> versions;
   final List<PromptExample> examples;
   final Map<String, List<PromptExampleOutput>> exampleOutputs; // exampleId -> outputs
+  final Map<String, List<LLMOutputAttachment>> outputAttachments; // outputId -> attachments
 
   ImportedPrompt(
     this.prompt, 
@@ -18,6 +20,7 @@ class ImportedPrompt {
       this.versions = const [],
       this.examples = const [],
       this.exampleOutputs = const {},
+      this.outputAttachments = const {},
     ]
   );
 }
@@ -67,6 +70,7 @@ class ImportExportCodec {
     Map<String, List<PromptVersion>> promptVersions,
     Map<String, List<PromptExample>> promptExamples,
     Map<String, List<PromptExampleOutput>> exampleOutputs,
+    Map<String, List<LLMOutputAttachment>> attachments,
     List<ContextPack> contextPacks,
     Map<String, List<ContextPackVersion>> packVersions,
     List<InboxItem> inboxItems,
@@ -136,6 +140,12 @@ class ImportExportCodec {
             'isBest': o.isBest,
             'createdAt': o.createdAt.toIso8601String(),
             'updatedAt': o.updatedAt.toIso8601String(),
+            'attachments': (attachments[o.id] ?? []).map((a) => {
+              'fileName': a.fileName,
+              'mimeType': a.mimeType,
+              'sizeBytes': a.sizeBytes,
+              'attachmentType': a.attachmentType,
+            }).toList(),
           }).toList(),
         }).toList(),
       }).toList(),
@@ -243,12 +253,13 @@ class ImportExportCodec {
         final examplesRaw = raw['examples'] as List<dynamic>? ?? [];
         final examples = <PromptExample>[];
         final exampleOutputs = <String, List<PromptExampleOutput>>{};
+        final outputAttachments = <String, List<LLMOutputAttachment>>{};
         
         for (final e in examplesRaw) {
           if (e is Map<String, dynamic>) {
             final exampleId = e['id'] as String;
             examples.add(PromptExample(
-              id: exampleId,
+              id: '', // Generated during import
               projectId: e['projectId'] as String?,
               promptId: id,
               title: e['title'] as String,
@@ -266,21 +277,43 @@ class ImportExportCodec {
             final outputs = <PromptExampleOutput>[];
             for (final o in outputsRaw) {
               if (o is Map<String, dynamic>) {
+                final oId = const Uuid().v4();
                 outputs.add(PromptExampleOutput(
-                  id: '', // Will be assigned
-                  exampleId: exampleId,
+                  id: oId, // Use the real original ID? Wait, we generate new one during import, but we need the link.
+                  // For codec, just store what we parse and let ImportService handle it
+                  exampleId: '',
                   providerId: o['providerId'] as String?,
                   modelId: o['modelId'] as String?,
-                  providerName: o['providerName'] as String,
+                  providerName: o['providerName'] as String? ?? 'Unknown',
                   modelName: o['modelName'] as String?,
                   outputType: o['outputType'] as String? ?? 'text',
-                  outputText: o['outputText'] as String,
+                  outputText: o['outputText'] as String? ?? '',
                   score: o['score'] as int?,
                   notes: o['notes'] as String?,
                   isBest: o['isBest'] as bool? ?? false,
                   createdAt: DateTime.parse(o['createdAt'] as String),
                   updatedAt: DateTime.parse(o['updatedAt'] as String),
                 ));
+
+                final attsRaw = o['attachments'] as List<dynamic>? ?? [];
+                final atts = <LLMOutputAttachment>[];
+                for (final a in attsRaw) {
+                  if (a is Map<String, dynamic>) {
+                    atts.add(LLMOutputAttachment(
+                      id: '',
+                      outputId: oId, // Will link temporarily here
+                      fileName: a['fileName'] as String,
+                      mimeType: a['mimeType'] as String,
+                      localPath: '', // Cannot know local path during import until resolved
+                      sizeBytes: a['sizeBytes'] as int?,
+                      attachmentType: a['attachmentType'] as String?,
+                      createdAt: DateTime.parse(o['createdAt'] as String),
+                    ));
+                  }
+                }
+                if (atts.isNotEmpty) {
+                  outputAttachments[oId] = atts;
+                }
               }
             }
             exampleOutputs[exampleId] = outputs;
@@ -304,6 +337,7 @@ class ImportExportCodec {
           versions,
           examples,
           exampleOutputs,
+          outputAttachments,
         ));
       } catch (e) {
         invalidRecordsCount++;

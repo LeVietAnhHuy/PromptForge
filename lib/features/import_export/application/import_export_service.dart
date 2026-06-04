@@ -22,6 +22,7 @@ final importExportServiceProvider = Provider<ImportExportService>((ref) {
     pvDao: ref.watch(promptVariableDaoProvider),
     exampleDao: ref.watch(promptExampleDaoProvider),
     outputDao: ref.watch(promptExampleOutputDaoProvider),
+    attachmentDao: ref.watch(lLMOutputAttachmentDaoProvider),
   );
 });
 
@@ -33,6 +34,7 @@ class ImportExportService {
   final PromptVariableDao pvDao;
   final PromptExampleDao exampleDao;
   final PromptExampleOutputDao outputDao;
+  final LLMOutputAttachmentDao attachmentDao;
 
   ImportExportService({
     required this.db,
@@ -42,6 +44,7 @@ class ImportExportService {
     required this.pvDao,
     required this.exampleDao,
     required this.outputDao,
+    required this.attachmentDao,
   });
 
   Future<String> exportActiveData() async {
@@ -54,6 +57,7 @@ class ImportExportService {
     final promptVersions = <String, List<PromptVersion>>{};
     final promptExamples = <String, List<PromptExample>>{};
     final exampleOutputs = <String, List<PromptExampleOutput>>{};
+    final outputAttachments = <String, List<LLMOutputAttachment>>{};
     
     for (final prompt in activePrompts) {
       final tags = await tagDao.getTagsForPrompt(prompt.id);
@@ -71,6 +75,13 @@ class ImportExportService {
       for (final example in examples) {
         final outputs = await outputDao.getOutputsForExample(example.id);
         exampleOutputs[example.id] = outputs;
+
+        for (final o in outputs) {
+          final atts = await attachmentDao.getAttachmentsForOutput(o.id);
+          if (atts.isNotEmpty) {
+            outputAttachments[o.id] = atts;
+          }
+        }
       }
     }
     
@@ -90,6 +101,7 @@ class ImportExportService {
       promptVersions,
       promptExamples,
       exampleOutputs,
+      outputAttachments,
       activeContextPacks,
       packVersions,
       inboxItems,
@@ -212,6 +224,20 @@ class ImportExportService {
               createdAt: o.createdAt,
               updatedAt: o.updatedAt,
             ));
+
+            final atts = imported.outputAttachments[o.id] ?? [];
+            for (final a in atts) {
+              await attachmentDao.createAttachment(LLMOutputAttachmentsCompanion.insert(
+                id: const Uuid().v4(),
+                outputId: o.id,
+                fileName: a.fileName,
+                mimeType: a.mimeType,
+                sizeBytes: a.sizeBytes != null ? drift.Value(a.sizeBytes!) : const drift.Value.absent(),
+                attachmentType: a.attachmentType != null ? drift.Value(a.attachmentType!) : const drift.Value.absent(),
+                localPath: '', // Cannot resolve local path, file data is not in export
+                createdAt: a.createdAt,
+              ));
+            }
           }
         }
       }

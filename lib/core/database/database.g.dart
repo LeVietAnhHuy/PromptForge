@@ -7100,12 +7100,24 @@ class $LLMOutputAttachmentsTable extends LLMOutputAttachments
   late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
       'mime_type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sizeBytesMeta =
+      const VerificationMeta('sizeBytes');
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+      'size_bytes', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _localPathMeta =
       const VerificationMeta('localPath');
   @override
   late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
       'local_path', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _attachmentTypeMeta =
+      const VerificationMeta('attachmentType');
+  @override
+  late final GeneratedColumn<String> attachmentType = GeneratedColumn<String>(
+      'attachment_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -7113,8 +7125,16 @@ class $LLMOutputAttachmentsTable extends LLMOutputAttachments
       'created_at', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, outputId, fileName, mimeType, localPath, createdAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        outputId,
+        fileName,
+        mimeType,
+        sizeBytes,
+        localPath,
+        attachmentType,
+        createdAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -7149,11 +7169,21 @@ class $LLMOutputAttachmentsTable extends LLMOutputAttachments
     } else if (isInserting) {
       context.missing(_mimeTypeMeta);
     }
+    if (data.containsKey('size_bytes')) {
+      context.handle(_sizeBytesMeta,
+          sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta));
+    }
     if (data.containsKey('local_path')) {
       context.handle(_localPathMeta,
           localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta));
     } else if (isInserting) {
       context.missing(_localPathMeta);
+    }
+    if (data.containsKey('attachment_type')) {
+      context.handle(
+          _attachmentTypeMeta,
+          attachmentType.isAcceptableOrUnknown(
+              data['attachment_type']!, _attachmentTypeMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -7178,8 +7208,12 @@ class $LLMOutputAttachmentsTable extends LLMOutputAttachments
           .read(DriftSqlType.string, data['${effectivePrefix}file_name'])!,
       mimeType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}mime_type'])!,
+      sizeBytes: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}size_bytes']),
       localPath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}local_path'])!,
+      attachmentType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}attachment_type']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -7197,14 +7231,18 @@ class LLMOutputAttachment extends DataClass
   final String outputId;
   final String fileName;
   final String mimeType;
+  final int? sizeBytes;
   final String localPath;
+  final String? attachmentType;
   final DateTime createdAt;
   const LLMOutputAttachment(
       {required this.id,
       required this.outputId,
       required this.fileName,
       required this.mimeType,
+      this.sizeBytes,
       required this.localPath,
+      this.attachmentType,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7213,7 +7251,13 @@ class LLMOutputAttachment extends DataClass
     map['output_id'] = Variable<String>(outputId);
     map['file_name'] = Variable<String>(fileName);
     map['mime_type'] = Variable<String>(mimeType);
+    if (!nullToAbsent || sizeBytes != null) {
+      map['size_bytes'] = Variable<int>(sizeBytes);
+    }
     map['local_path'] = Variable<String>(localPath);
+    if (!nullToAbsent || attachmentType != null) {
+      map['attachment_type'] = Variable<String>(attachmentType);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -7224,7 +7268,13 @@ class LLMOutputAttachment extends DataClass
       outputId: Value(outputId),
       fileName: Value(fileName),
       mimeType: Value(mimeType),
+      sizeBytes: sizeBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sizeBytes),
       localPath: Value(localPath),
+      attachmentType: attachmentType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(attachmentType),
       createdAt: Value(createdAt),
     );
   }
@@ -7237,7 +7287,9 @@ class LLMOutputAttachment extends DataClass
       outputId: serializer.fromJson<String>(json['outputId']),
       fileName: serializer.fromJson<String>(json['fileName']),
       mimeType: serializer.fromJson<String>(json['mimeType']),
+      sizeBytes: serializer.fromJson<int?>(json['sizeBytes']),
       localPath: serializer.fromJson<String>(json['localPath']),
+      attachmentType: serializer.fromJson<String?>(json['attachmentType']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -7249,7 +7301,9 @@ class LLMOutputAttachment extends DataClass
       'outputId': serializer.toJson<String>(outputId),
       'fileName': serializer.toJson<String>(fileName),
       'mimeType': serializer.toJson<String>(mimeType),
+      'sizeBytes': serializer.toJson<int?>(sizeBytes),
       'localPath': serializer.toJson<String>(localPath),
+      'attachmentType': serializer.toJson<String?>(attachmentType),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -7259,14 +7313,19 @@ class LLMOutputAttachment extends DataClass
           String? outputId,
           String? fileName,
           String? mimeType,
+          Value<int?> sizeBytes = const Value.absent(),
           String? localPath,
+          Value<String?> attachmentType = const Value.absent(),
           DateTime? createdAt}) =>
       LLMOutputAttachment(
         id: id ?? this.id,
         outputId: outputId ?? this.outputId,
         fileName: fileName ?? this.fileName,
         mimeType: mimeType ?? this.mimeType,
+        sizeBytes: sizeBytes.present ? sizeBytes.value : this.sizeBytes,
         localPath: localPath ?? this.localPath,
+        attachmentType:
+            attachmentType.present ? attachmentType.value : this.attachmentType,
         createdAt: createdAt ?? this.createdAt,
       );
   LLMOutputAttachment copyWithCompanion(LLMOutputAttachmentsCompanion data) {
@@ -7275,7 +7334,11 @@ class LLMOutputAttachment extends DataClass
       outputId: data.outputId.present ? data.outputId.value : this.outputId,
       fileName: data.fileName.present ? data.fileName.value : this.fileName,
       mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
       localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      attachmentType: data.attachmentType.present
+          ? data.attachmentType.value
+          : this.attachmentType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -7287,15 +7350,17 @@ class LLMOutputAttachment extends DataClass
           ..write('outputId: $outputId, ')
           ..write('fileName: $fileName, ')
           ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
           ..write('localPath: $localPath, ')
+          ..write('attachmentType: $attachmentType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, outputId, fileName, mimeType, localPath, createdAt);
+  int get hashCode => Object.hash(id, outputId, fileName, mimeType, sizeBytes,
+      localPath, attachmentType, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7304,7 +7369,9 @@ class LLMOutputAttachment extends DataClass
           other.outputId == this.outputId &&
           other.fileName == this.fileName &&
           other.mimeType == this.mimeType &&
+          other.sizeBytes == this.sizeBytes &&
           other.localPath == this.localPath &&
+          other.attachmentType == this.attachmentType &&
           other.createdAt == this.createdAt);
 }
 
@@ -7314,7 +7381,9 @@ class LLMOutputAttachmentsCompanion
   final Value<String> outputId;
   final Value<String> fileName;
   final Value<String> mimeType;
+  final Value<int?> sizeBytes;
   final Value<String> localPath;
+  final Value<String?> attachmentType;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const LLMOutputAttachmentsCompanion({
@@ -7322,7 +7391,9 @@ class LLMOutputAttachmentsCompanion
     this.outputId = const Value.absent(),
     this.fileName = const Value.absent(),
     this.mimeType = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
     this.localPath = const Value.absent(),
+    this.attachmentType = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -7331,7 +7402,9 @@ class LLMOutputAttachmentsCompanion
     required String outputId,
     required String fileName,
     required String mimeType,
+    this.sizeBytes = const Value.absent(),
     required String localPath,
+    this.attachmentType = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -7345,7 +7418,9 @@ class LLMOutputAttachmentsCompanion
     Expression<String>? outputId,
     Expression<String>? fileName,
     Expression<String>? mimeType,
+    Expression<int>? sizeBytes,
     Expression<String>? localPath,
+    Expression<String>? attachmentType,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -7354,7 +7429,9 @@ class LLMOutputAttachmentsCompanion
       if (outputId != null) 'output_id': outputId,
       if (fileName != null) 'file_name': fileName,
       if (mimeType != null) 'mime_type': mimeType,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
       if (localPath != null) 'local_path': localPath,
+      if (attachmentType != null) 'attachment_type': attachmentType,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -7365,7 +7442,9 @@ class LLMOutputAttachmentsCompanion
       Value<String>? outputId,
       Value<String>? fileName,
       Value<String>? mimeType,
+      Value<int?>? sizeBytes,
       Value<String>? localPath,
+      Value<String?>? attachmentType,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return LLMOutputAttachmentsCompanion(
@@ -7373,7 +7452,9 @@ class LLMOutputAttachmentsCompanion
       outputId: outputId ?? this.outputId,
       fileName: fileName ?? this.fileName,
       mimeType: mimeType ?? this.mimeType,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
       localPath: localPath ?? this.localPath,
+      attachmentType: attachmentType ?? this.attachmentType,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -7394,8 +7475,14 @@ class LLMOutputAttachmentsCompanion
     if (mimeType.present) {
       map['mime_type'] = Variable<String>(mimeType.value);
     }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
     if (localPath.present) {
       map['local_path'] = Variable<String>(localPath.value);
+    }
+    if (attachmentType.present) {
+      map['attachment_type'] = Variable<String>(attachmentType.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -7413,7 +7500,9 @@ class LLMOutputAttachmentsCompanion
           ..write('outputId: $outputId, ')
           ..write('fileName: $fileName, ')
           ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
           ..write('localPath: $localPath, ')
+          ..write('attachmentType: $attachmentType, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -11061,7 +11150,9 @@ typedef $$LLMOutputAttachmentsTableCreateCompanionBuilder
   required String outputId,
   required String fileName,
   required String mimeType,
+  Value<int?> sizeBytes,
   required String localPath,
+  Value<String?> attachmentType,
   required DateTime createdAt,
   Value<int> rowid,
 });
@@ -11071,7 +11162,9 @@ typedef $$LLMOutputAttachmentsTableUpdateCompanionBuilder
   Value<String> outputId,
   Value<String> fileName,
   Value<String> mimeType,
+  Value<int?> sizeBytes,
   Value<String> localPath,
+  Value<String?> attachmentType,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -11097,8 +11190,15 @@ class $$LLMOutputAttachmentsTableFilterComposer
   ColumnFilters<String> get mimeType => $composableBuilder(
       column: $table.mimeType, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+      column: $table.sizeBytes, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<String> get localPath => $composableBuilder(
       column: $table.localPath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get attachmentType => $composableBuilder(
+      column: $table.attachmentType,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -11125,8 +11225,15 @@ class $$LLMOutputAttachmentsTableOrderingComposer
   ColumnOrderings<String> get mimeType => $composableBuilder(
       column: $table.mimeType, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+      column: $table.sizeBytes, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get localPath => $composableBuilder(
       column: $table.localPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get attachmentType => $composableBuilder(
+      column: $table.attachmentType,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
@@ -11153,8 +11260,14 @@ class $$LLMOutputAttachmentsTableAnnotationComposer
   GeneratedColumn<String> get mimeType =>
       $composableBuilder(column: $table.mimeType, builder: (column) => column);
 
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
   GeneratedColumn<String> get localPath =>
       $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<String> get attachmentType => $composableBuilder(
+      column: $table.attachmentType, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -11194,7 +11307,9 @@ class $$LLMOutputAttachmentsTableTableManager extends RootTableManager<
             Value<String> outputId = const Value.absent(),
             Value<String> fileName = const Value.absent(),
             Value<String> mimeType = const Value.absent(),
+            Value<int?> sizeBytes = const Value.absent(),
             Value<String> localPath = const Value.absent(),
+            Value<String?> attachmentType = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -11203,7 +11318,9 @@ class $$LLMOutputAttachmentsTableTableManager extends RootTableManager<
             outputId: outputId,
             fileName: fileName,
             mimeType: mimeType,
+            sizeBytes: sizeBytes,
             localPath: localPath,
+            attachmentType: attachmentType,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -11212,7 +11329,9 @@ class $$LLMOutputAttachmentsTableTableManager extends RootTableManager<
             required String outputId,
             required String fileName,
             required String mimeType,
+            Value<int?> sizeBytes = const Value.absent(),
             required String localPath,
+            Value<String?> attachmentType = const Value.absent(),
             required DateTime createdAt,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -11221,7 +11340,9 @@ class $$LLMOutputAttachmentsTableTableManager extends RootTableManager<
             outputId: outputId,
             fileName: fileName,
             mimeType: mimeType,
+            sizeBytes: sizeBytes,
             localPath: localPath,
+            attachmentType: attachmentType,
             createdAt: createdAt,
             rowid: rowid,
           ),

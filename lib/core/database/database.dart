@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -93,6 +93,19 @@ class AppDatabase extends _$AppDatabase {
           try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.providerId); } catch (_) {}
           try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.modelId); } catch (_) {}
           try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.outputType); } catch (_) {}
+        }
+        if (from < 5) {
+          try { await m.addColumn(lLMOutputAttachments, lLMOutputAttachments.sizeBytes); } catch (_) {}
+          try { await m.addColumn(lLMOutputAttachments, lLMOutputAttachments.attachmentType); } catch (_) {}
+          // Update existing provider names
+          try {
+            await (update(lLMProviders)..where((t) => t.id.equals('openai'))).write(const LLMProvidersCompanion(name: Value('OpenAI')));
+            await (update(lLMProviders)..where((t) => t.id.equals('anthropic'))).write(const LLMProvidersCompanion(name: Value('Anthropic')));
+            await (update(lLMProviders)..where((t) => t.id.equals('google'))).write(const LLMProvidersCompanion(name: Value('Google')));
+            await (update(lLMProviders)..where((t) => t.id.equals('alibaba'))).write(const LLMProvidersCompanion(name: Value('Alibaba / Qwen')));
+            await (update(lLMProviders)..where((t) => t.id.equals('meta'))).write(const LLMProvidersCompanion(name: Value('Meta')));
+            await (update(lLMProviders)..where((t) => t.id.equals('local'))).write(const LLMProvidersCompanion(name: Value('Local')));
+          } catch (_) {}
         }
       },
     );

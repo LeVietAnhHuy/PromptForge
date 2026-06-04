@@ -162,14 +162,18 @@ class SeedData {
     final modelDao = LLMModelDao(db);
 
     final providers = [
-      {'id': 'openai', 'name': 'ChatGPT', 'company': 'OpenAI', 'color': '#10a37f'},
-      {'id': 'anthropic', 'name': 'Claude', 'company': 'Anthropic', 'color': '#d97757'},
-      {'id': 'google', 'name': 'Gemini', 'company': 'Google', 'color': '#1a73e8'},
-      {'id': 'alibaba', 'name': 'Qwen', 'company': 'Alibaba Cloud', 'color': '#6e32c9'},
+      {'id': 'openai', 'name': 'OpenAI', 'company': 'OpenAI', 'color': '#10a37f'},
+      {'id': 'anthropic', 'name': 'Anthropic', 'company': 'Anthropic', 'color': '#d97757'},
+      {'id': 'google', 'name': 'Google', 'company': 'Google', 'color': '#1a73e8'},
+      {'id': 'alibaba', 'name': 'Alibaba / Qwen', 'company': 'Alibaba Cloud', 'color': '#6e32c9'},
       {'id': 'deepseek', 'name': 'DeepSeek', 'company': 'DeepSeek', 'color': '#4a90e2'},
-      {'id': 'meta', 'name': 'Llama', 'company': 'Meta', 'color': '#0668E1'},
+      {'id': 'meta', 'name': 'Meta', 'company': 'Meta', 'color': '#0668E1'},
       {'id': 'mistral', 'name': 'Mistral', 'company': 'Mistral AI', 'color': '#f2a900'},
-      {'id': 'local', 'name': 'Local Model', 'company': 'Various', 'color': '#555555'},
+      {'id': 'xai', 'name': 'xAI', 'company': 'xAI', 'color': '#000000'},
+      {'id': 'cursor', 'name': 'Cursor', 'company': 'Cursor', 'color': '#000000'},
+      {'id': 'notebooklm', 'name': 'NotebookLM', 'company': 'Google', 'color': '#1a73e8'},
+      {'id': 'flow', 'name': 'Flow', 'company': 'Flow', 'color': '#000000'},
+      {'id': 'local', 'name': 'Local', 'company': 'Various', 'color': '#555555'},
       {'id': 'other', 'name': 'Other', 'company': 'Other', 'color': '#888888'},
     ];
 

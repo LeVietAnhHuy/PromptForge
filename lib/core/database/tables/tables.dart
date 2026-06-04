@@ -197,7 +197,9 @@ class LLMOutputAttachments extends Table {
   TextColumn get outputId => text()();
   TextColumn get fileName => text()();
   TextColumn get mimeType => text()();
+  IntColumn get sizeBytes => integer().nullable()();
   TextColumn get localPath => text()();
+  TextColumn get attachmentType => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
