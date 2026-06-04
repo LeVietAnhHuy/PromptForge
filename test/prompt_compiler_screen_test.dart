@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/database/database_providers.dart';
+import 'package:promptforge/features/execution/domain/llm_provider.dart';
 import 'package:promptforge/features/prompt_compiler/presentation/prompt_compiler_screen.dart';
 import 'package:drift/drift.dart' as drift;
 
@@ -22,6 +23,7 @@ void main() {
     return ProviderScope(
       overrides: [
         databaseProvider.overrideWithValue(database),
+        executionProvidersProvider.overrideWithValue([MockExecutionProvider()]),
       ],
       child: MaterialApp(
         home: PromptCompilerScreen(promptId: promptId),
@@ -142,7 +144,10 @@ void main() {
     expect(find.text('Mock Provider'), findsOneWidget);
 
     // Click Run
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Run'));
+    final runButton = find.widgetWithText(ElevatedButton, 'Run');
+    await tester.ensureVisible(runButton);
+    await tester.pumpAndSettle();
+    await tester.tap(runButton);
     await tester.pump(); // Start execution
     
     // Wait for the simulated delay (1.5 seconds)
@@ -150,6 +155,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify output appears
+    await tester.ensureVisible(find.text('Output'));
+    await tester.pumpAndSettle();
     expect(find.text('Output'), findsOneWidget);
     expect(find.textContaining('This is a deterministic mock output from Mock Fast Model'), findsOneWidget);
     expect(find.textContaining('Execution successful. Output saved to history.'), findsOneWidget);

@@ -158,7 +158,7 @@ void main() {
   });
 
   testWidgets('Prompt editor supports manual output capture', (tester) async {
-    final promptId = 'test-prompt-id';
+    const promptId = 'test-prompt-id';
     await database.into(database.prompts).insert(PromptsCompanion.insert(
       id: promptId,
       title: 'Test Output Prompt',

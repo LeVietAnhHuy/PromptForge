@@ -95,19 +95,19 @@ enum MarkdownReaderStyle {
             fontWeight: FontWeight.w600,
             height: 1.25,
           ),
-          h1Padding: EdgeInsets.only(bottom: 10, top: 4),
+          h1Padding: const EdgeInsets.only(bottom: 10, top: 4),
           h2: theme.textTheme.titleLarge?.copyWith(
             color: textColor,
             fontWeight: FontWeight.w600,
             height: 1.25,
           ),
-          h2Padding: EdgeInsets.only(bottom: 8, top: 16),
+          h2Padding: const EdgeInsets.only(bottom: 8, top: 16),
           h3: theme.textTheme.titleMedium?.copyWith(
             color: textColor,
             fontWeight: FontWeight.w600,
             height: 1.25,
           ),
-          h3Padding: EdgeInsets.only(bottom: 4, top: 12),
+          h3Padding: const EdgeInsets.only(bottom: 4, top: 12),
           p: theme.textTheme.bodyMedium?.copyWith(
             color: textColor,
             height: 1.6,

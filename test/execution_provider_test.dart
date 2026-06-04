@@ -56,9 +56,9 @@ void main() {
 
       final request = LlmExecutionRequest(
         compiledPrompt: 'Hello gemini',
-        providerId: 'gemini',
-        modelId: 'gemini-1.5-pro-latest',
-        modelName: 'Gemini 1.5 Pro',
+        providerId: 'google',
+        modelId: 'gemini-2.5-flash',
+        modelName: 'Gemini 2.5 Flash',
         targetProfileId: 'generic',
       );
 

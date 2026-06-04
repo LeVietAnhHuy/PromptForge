@@ -188,27 +188,7 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Raw Content', style: Theme.of(context).textTheme.titleSmall),
-                SegmentedButton<_ViewMode>(
-                  segments: const [
-                    ButtonSegment(value: _ViewMode.preview, label: Text('Preview')),
-                    ButtonSegment(value: _ViewMode.edit, label: Text('Edit Full Text')),
-                  ],
-                  selected: {_viewMode},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _viewMode = newSelection.first;
-                      if (_viewMode == _ViewMode.preview) {
-                        FocusScope.of(context).unfocus();
-                      }
-                    });
-                  },
-                ),
-              ],
-            ),
+            _buildModeToolbar(),
             const SizedBox(height: 8),
             Expanded(
               child: Container(
@@ -243,6 +223,48 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
     );
   }
 
+  Widget _buildModeToolbar() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 520;
+        final segmentedButton = SegmentedButton<_ViewMode>(
+          segments: [
+            const ButtonSegment(value: _ViewMode.preview, label: Text('Preview')),
+            ButtonSegment(value: _ViewMode.edit, label: Text(isNarrow ? 'Edit' : 'Edit Full Text')),
+          ],
+          selected: {_viewMode},
+          onSelectionChanged: (newSelection) {
+            setState(() {
+              _viewMode = newSelection.first;
+              if (_viewMode == _ViewMode.preview) {
+                FocusScope.of(context).unfocus();
+              }
+            });
+          },
+        );
+
+        if (isNarrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Raw Content', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              segmentedButton,
+            ],
+          );
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Raw Content', style: Theme.of(context).textTheme.titleSmall),
+            segmentedButton,
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildContentView(bool isDesktop) {
     switch (_viewMode) {
       case _ViewMode.edit:
@@ -265,21 +287,25 @@ class _InboxEditorScreenState extends ConsumerState<InboxEditorScreen> {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
                       ),
                     ),
-                    DropdownButton<MarkdownReaderStyle>(
-                      value: _readerStyle,
-                      underline: const SizedBox(),
-                      isDense: true,
-                      iconSize: 20,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
-                      items: MarkdownReaderStyle.values.map((style) {
-                        return DropdownMenuItem(
-                          value: style,
-                          child: Text(style.displayName),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _readerStyle = val);
-                      },
+                    SizedBox(
+                      width: isDesktop ? 180 : 130,
+                      child: DropdownButton<MarkdownReaderStyle>(
+                        value: _readerStyle,
+                        underline: const SizedBox(),
+                        isDense: true,
+                        isExpanded: true,
+                        iconSize: 20,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
+                        items: MarkdownReaderStyle.values.map((style) {
+                          return DropdownMenuItem(
+                            value: style,
+                            child: Text(style.displayName, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _readerStyle = val);
+                        },
+                      ),
                     ),
                   ],
                 ),

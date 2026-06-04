@@ -63,6 +63,7 @@ class _OutputEditorDialogState extends ConsumerState<OutputEditorDialog> {
           exampleId: widget.exampleId,
           providerName: _providerController.text,
           modelName: _modelController.text.isNotEmpty ? drift.Value(_modelController.text) : const drift.Value.absent(),
+          sourceType: const drift.Value('manual'),
           outputText: _outputController.text,
           score: _score != null ? drift.Value(_score) : const drift.Value.absent(),
           notes: _notesController.text.isNotEmpty ? drift.Value(_notesController.text) : const drift.Value.absent(),
@@ -71,16 +72,22 @@ class _OutputEditorDialogState extends ConsumerState<OutputEditorDialog> {
         ));
       } else {
         // Update
-        await dao.updateOutput(PromptExampleOutputsCompanion.insert(
-          id: widget.existingOutput!.id,
-          exampleId: widget.exampleId,
-          providerName: _providerController.text,
-          modelName: _modelController.text.isNotEmpty ? drift.Value(_modelController.text) : const drift.Value.absent(),
-          outputText: _outputController.text,
-          score: _score != null ? drift.Value(_score) : const drift.Value.absent(),
-          notes: _notesController.text.isNotEmpty ? drift.Value(_notesController.text) : const drift.Value.absent(),
-          createdAt: widget.existingOutput!.createdAt,
-          updatedAt: now,
+        final existing = widget.existingOutput!;
+        await dao.updateOutput(PromptExampleOutputsCompanion(
+          id: drift.Value(existing.id),
+          exampleId: drift.Value(widget.exampleId),
+          providerId: drift.Value(existing.providerId),
+          modelId: drift.Value(existing.modelId),
+          providerName: drift.Value(_providerController.text),
+          modelName: drift.Value(_modelController.text.isNotEmpty ? _modelController.text : null),
+          outputType: drift.Value(existing.outputType),
+          sourceType: drift.Value(widget.existingOutput!.sourceType),
+          outputText: drift.Value(_outputController.text),
+          score: drift.Value(_score),
+          notes: drift.Value(_notesController.text.isNotEmpty ? _notesController.text : null),
+          isBest: drift.Value(existing.isBest),
+          createdAt: drift.Value(existing.createdAt),
+          updatedAt: drift.Value(now),
         ));
       }
 
@@ -96,14 +103,17 @@ class _OutputEditorDialogState extends ConsumerState<OutputEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 600;
     return AlertDialog(
       title: Text(widget.existingOutput == null ? 'Add LLM Output' : 'Edit Output'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+      content: SizedBox(
+        width: isDesktop ? 560 : double.maxFinite,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Autocomplete<String>(
                 optionsBuilder: (TextEditingValue textEditingValue) {
                   const options = ['ChatGPT', 'Claude', 'Gemini', 'Grok', 'Perplexity', 'Local Model'];
@@ -178,7 +188,8 @@ class _OutputEditorDialogState extends ConsumerState<OutputEditorDialog> {
                 ),
                 maxLines: 3,
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

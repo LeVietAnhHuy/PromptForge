@@ -9,7 +9,7 @@ import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
-import '../../../shared/markdown/markdown_reader_style.dart';
+import '../../execution/application/llm_execution_service.dart';
 import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../execution/domain/llm_provider.dart';
 import '../domain/prompt_compiler_service.dart';
@@ -163,17 +163,16 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
       _executionResponse = null;
     });
 
-    final modelName = _availableModels.firstWhere((m) => m['id'] == _selectedModelId)['name'] ?? _selectedModelId!;
+    final modelName = _modelNameFor(_selectedModelId!);
 
-    final request = LlmExecutionRequest(
+    final service = ref.read(llmExecutionServiceProvider);
+    final response = await service.execute(
       compiledPrompt: _compileResult!.compiledText,
       providerId: _selectedProvider!.providerId,
       modelId: _selectedModelId!,
       modelName: modelName,
       targetProfileId: _selectedProfile.id,
     );
-
-    final response = await _selectedProvider!.execute(request);
 
     if (mounted) {
       setState(() {
@@ -210,18 +209,12 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
           updatedAt: now,
         ));
 
-        final outputDao = ref.read(promptExampleOutputDaoProvider);
-        await outputDao.addOutput(PromptExampleOutputsCompanion.insert(
-          id: const Uuid().v4(),
+        await service.saveResponseAsOutput(
           exampleId: exampleId,
-          providerId: drift.Value(response.providerId),
-          modelId: drift.Value(response.modelId),
-          providerName: _selectedProvider!.providerName,
-          modelName: drift.Value(response.modelName),
-          outputText: response.outputText,
-          createdAt: now,
-          updatedAt: now,
-        ));
+          response: response,
+          outputType: 'markdown',
+          sourceType: 'api',
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -230,6 +223,15 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
         }
       }
     }
+  }
+
+  String _modelNameFor(String modelId) {
+    for (final model in _availableModels) {
+      if (model['id'] == modelId) {
+        return model['name'] ?? modelId;
+      }
+    }
+    return modelId;
   }
 
   Widget _buildExecutionPanel() {
@@ -243,52 +245,12 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Provider', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
-                child: DropdownButton<LlmExecutionProvider>(
-                  value: _selectedProvider,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  items: providers.map((p) {
-                    return DropdownMenuItem(value: p, child: Text(p.providerName));
-                  }).toList(),
-                  onChanged: _isExecuting ? null : (provider) async {
-                    if (provider != null) {
-                      final models = await provider.listAvailableModels();
-                      setState(() {
-                        _selectedProvider = provider;
-                        _availableModels = models;
-                        _selectedModelId = models.isNotEmpty ? models.first['id'] : null;
-                      });
-                    }
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Model', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
-                child: DropdownButton<String>(
-                  value: _selectedModelId,
-                  isExpanded: true,
-                  underline: const SizedBox(),
-                  items: _availableModels.map((m) {
-                    return DropdownMenuItem(value: m['id'], child: Text(m['name'] ?? m['id']!));
-                  }).toList(),
-                  onChanged: _isExecuting ? null : (modelId) {
-                    setState(() {
-                      _selectedModelId = modelId;
-                    });
-                  },
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton.icon(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isNarrow = constraints.maxWidth < 700;
+            final providerField = _buildProviderDropdown(providers);
+            final modelField = _buildModelDropdown();
+            final runButton = ElevatedButton.icon(
               onPressed: _isExecuting || _compileResult == null ? null : _executePrompt,
               icon: _isExecuting 
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
@@ -298,9 +260,8 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               ),
-            ),
-            const SizedBox(width: 8),
-            OutlinedButton.icon(
+            );
+            final pasteButton = OutlinedButton.icon(
               onPressed: _compileResult == null ? null : () async {
                 FocusScope.of(context).unfocus();
                 await showDialog<bool>(
@@ -316,8 +277,37 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
-            ),
-          ],
+            );
+
+            if (isNarrow) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  providerField,
+                  const SizedBox(height: 12),
+                  modelField,
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [runButton, pasteButton],
+                  ),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: providerField),
+                const SizedBox(width: 8),
+                Expanded(child: modelField),
+                const SizedBox(width: 16),
+                runButton,
+                const SizedBox(width: 8),
+                pasteButton,
+              ],
+            );
+          },
         ),
         if (_executionResponse != null && _executionResponse!.error == null) ...[
           const SizedBox(height: 16),
@@ -330,10 +320,66 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8.0),
             ),
-            child: SelectableText(_executionResponse!.outputText),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 120),
+              child: SingleChildScrollView(
+                child: SelectableText(_executionResponse!.outputText),
+              ),
+            ),
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildProviderDropdown(List<LlmExecutionProvider> providers) {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Provider',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      ),
+      child: DropdownButton<LlmExecutionProvider>(
+        value: _selectedProvider,
+        isExpanded: true,
+        underline: const SizedBox(),
+        items: providers.map((p) {
+          return DropdownMenuItem(value: p, child: Text(p.providerName));
+        }).toList(),
+        onChanged: _isExecuting ? null : (provider) async {
+          if (provider != null) {
+            final models = await provider.listAvailableModels();
+            setState(() {
+              _selectedProvider = provider;
+              _availableModels = models;
+              _selectedModelId = models.isNotEmpty ? models.first['id'] : null;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildModelDropdown() {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Model',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      ),
+      child: DropdownButton<String>(
+        value: _selectedModelId,
+        isExpanded: true,
+        underline: const SizedBox(),
+        items: _availableModels.map((m) {
+          return DropdownMenuItem(value: m['id'], child: Text(m['name'] ?? m['id']!));
+        }).toList(),
+        onChanged: _isExecuting ? null : (modelId) {
+          setState(() {
+            _selectedModelId = modelId;
+          });
+        },
+      ),
     );
   }
 
@@ -626,14 +672,35 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
                   flex: 2,
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Expanded(child: _buildPreviewPanel()),
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 16),
-                        _buildExecutionPanel(),
-                      ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxHeight < 700) {
+                          return SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: 280,
+                                  child: _buildPreviewPanel(),
+                                ),
+                                const SizedBox(height: 16),
+                                const Divider(),
+                                const SizedBox(height: 16),
+                                _buildExecutionPanel(),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            Expanded(child: _buildPreviewPanel()),
+                            const SizedBox(height: 16),
+                            const Divider(),
+                            const SizedBox(height: 16),
+                            _buildExecutionPanel(),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),

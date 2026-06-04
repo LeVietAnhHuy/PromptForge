@@ -6,7 +6,7 @@ void main() {
     final parser = MarkdownBlockParser();
 
     test('splits headings into blocks', () {
-      final text = '# Heading 1\n## Heading 2';
+      const text = '# Heading 1\n## Heading 2';
       final blocks = parser.parse(text);
       expect(blocks.length, 2);
       expect(blocks[0].type, MarkdownBlockType.heading);
@@ -16,7 +16,7 @@ void main() {
     });
 
     test('splits paragraphs into blocks', () {
-      final text = 'Para 1 Line 1\nPara 1 Line 2\n\nPara 2';
+      const text = 'Para 1 Line 1\nPara 1 Line 2\n\nPara 2';
       final blocks = parser.parse(text);
       expect(blocks.length, 3);
       expect(blocks[0].type, MarkdownBlockType.paragraph);
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('splits bullet lists into one list block', () {
-      final text = '- Item 1\n- Item 2\n  - Subitem';
+      const text = '- Item 1\n- Item 2\n  - Subitem';
       final blocks = parser.parse(text);
       expect(blocks.length, 1);
       expect(blocks[0].type, MarkdownBlockType.list);
@@ -35,7 +35,7 @@ void main() {
     });
 
     test('preserves fenced code block as one block', () {
-      final text = '```dart\nfinal x = 1;\n```';
+      const text = '```dart\nfinal x = 1;\n```';
       final blocks = parser.parse(text);
       expect(blocks.length, 1);
       expect(blocks[0].type, MarkdownBlockType.code);
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('handles blockquotes', () {
-      final text = '> Quote\n> Quote line 2';
+      const text = '> Quote\n> Quote line 2';
       final blocks = parser.parse(text);
       expect(blocks.length, 1);
       expect(blocks[0].type, MarkdownBlockType.blockquote);
@@ -51,14 +51,14 @@ void main() {
     });
 
     test('handles empty content', () {
-      final text = '';
+      const text = '';
       final blocks = parser.parse(text);
       expect(blocks.isEmpty, true);
     });
 
     group('TOC Extraction', () {
       test('Extracts H1, H2, H3 headings', () {
-        final text = '# Title\nPara\n## Section 1\n### Subsection';
+        const text = '# Title\nPara\n## Section 1\n### Subsection';
         final blocks = parser.parse(text);
         final toc = parser.extractToc(blocks);
         
@@ -72,7 +72,7 @@ void main() {
       });
 
       test('Ignores non-heading blocks', () {
-        final text = 'Para\n- List\n```\ncode\n```\n# Heading';
+        const text = 'Para\n- List\n```\ncode\n```\n# Heading';
         final blocks = parser.parse(text);
         final toc = parser.extractToc(blocks);
         
@@ -81,7 +81,7 @@ void main() {
       });
 
       test('Handles duplicate headings with unique IDs', () {
-        final text = '# Duplicate\n## Duplicate\n### Duplicate';
+        const text = '# Duplicate\n## Duplicate\n### Duplicate';
         final blocks = parser.parse(text);
         final toc = parser.extractToc(blocks);
         
@@ -92,7 +92,7 @@ void main() {
       });
 
       test('Handles empty headings', () {
-        final text = '# \n##';
+        const text = '# \n##';
         final blocks = parser.parse(text);
         final toc = parser.extractToc(blocks);
         
@@ -102,7 +102,7 @@ void main() {
 
     group('Deterministic Block IDs', () {
       test('Block IDs are stable across repeated parses', () {
-        final text = '# Title\nParagraph\n## Section\n```\ncode\n```';
+        const text = '# Title\nParagraph\n## Section\n```\ncode\n```';
         final blocks1 = parser.parse(text);
         final blocks2 = parser.parse(text);
 
@@ -113,7 +113,7 @@ void main() {
       });
 
       test('Block IDs use line number and type', () {
-        final text = '# Heading\nParagraph';
+        const text = '# Heading\nParagraph';
         final blocks = parser.parse(text);
 
         expect(blocks[0].id, 'block_0_heading');
@@ -121,7 +121,7 @@ void main() {
       });
 
       test('TOC blockId matches heading block ID', () {
-        final text = '# Title\nPara\n## Section 1\n### Sub';
+        const text = '# Title\nPara\n## Section 1\n### Sub';
         final blocks = parser.parse(text);
         final toc = parser.extractToc(blocks);
 
@@ -138,7 +138,7 @@ void main() {
       });
 
       test('TOC blockId is stable across reparses', () {
-        final text = '# Alpha\n## Beta\n### Gamma';
+        const text = '# Alpha\n## Beta\n### Gamma';
         final toc1 = parser.extractToc(parser.parse(text));
         final toc2 = parser.extractToc(parser.parse(text));
 

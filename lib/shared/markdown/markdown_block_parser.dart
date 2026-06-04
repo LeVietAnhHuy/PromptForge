@@ -121,11 +121,11 @@ class MarkdownBlockParser {
       }
 
       // List (bullet or numbered)
-      final isListLine = (String l) {
+      bool isListLine(String l) {
         final t = l.trim();
         if (t.startsWith('- ') || t.startsWith('* ') || t.startsWith('+ ')) return true;
         return RegExp(r'^\d+\.\s').hasMatch(t);
-      };
+      }
 
       if (isListLine(line)) {
         int start = currentLineIdx;

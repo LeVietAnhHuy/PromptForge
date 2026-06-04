@@ -38,7 +38,7 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
   String? _selectedProviderId;
   String? _selectedModelId;
   String _outputType = 'markdown';
-  List<OutputAttachmentDraft> _attachments = [];
+  final List<OutputAttachmentDraft> _attachments = [];
   final AttachmentPickerService _attachmentPickerService = const AttachmentPickerService();
 
   @override
@@ -165,6 +165,7 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
         modelId: _selectedModelId != null && _selectedModelId != 'custom' ? drift.Value(_selectedModelId!) : const drift.Value.absent(),
         modelName: modelName.isNotEmpty ? drift.Value(modelName) : const drift.Value.absent(),
         outputType: drift.Value(_outputType),
+        sourceType: const drift.Value('manual'),
         outputText: _outputController.text,
         notes: _notesController.text.isNotEmpty ? drift.Value(_notesController.text) : const drift.Value.absent(),
         createdAt: now,
@@ -214,6 +215,46 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
     }
 
     final isDesktop = MediaQuery.of(context).size.width > 600;
+    final providerField = DropdownButtonFormField<String>(
+      isExpanded: true,
+      initialValue: _selectedProviderId,
+      decoration: const InputDecoration(
+        labelText: 'Provider',
+        border: OutlineInputBorder(),
+      ),
+      items: _providers.map((p) => DropdownMenuItem(
+        value: p.id,
+        child: Text(p.name, overflow: TextOverflow.ellipsis),
+      )).toList(),
+      onChanged: (val) {
+        if (val != null) {
+          setState(() {
+            _selectedProviderId = val;
+            _selectedModelId = _getModelsForProvider(val).first.id;
+          });
+        }
+      },
+    );
+    final modelField = DropdownButtonFormField<String>(
+      isExpanded: true,
+      initialValue: _selectedModelId,
+      decoration: const InputDecoration(
+        labelText: 'Model',
+        border: OutlineInputBorder(),
+      ),
+      items: _selectedProviderId != null ? _getModelsForProvider(_selectedProviderId!).map((m) {
+        String label = m.displayName;
+        if (m.isLegacy) label += ' [Legacy]';
+        if (m.isPreview) label += ' [Preview]';
+        return DropdownMenuItem(
+          value: m.id,
+          child: Text(label, overflow: TextOverflow.ellipsis),
+        );
+      }).toList() : [],
+      onChanged: (val) {
+        if (val != null) setState(() => _selectedModelId = val);
+      },
+    );
 
     return AlertDialog(
       title: const Text('Paste External LLM Output'),
@@ -226,56 +267,20 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _selectedProviderId,
-                        decoration: const InputDecoration(
-                          labelText: 'Provider',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _providers.map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name, overflow: TextOverflow.ellipsis),
-                        )).toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedProviderId = val;
-                              _selectedModelId = _getModelsForProvider(val).first.id;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _selectedModelId,
-                        decoration: const InputDecoration(
-                          labelText: 'Model',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _selectedProviderId != null ? _getModelsForProvider(_selectedProviderId!).map((m) {
-                          String label = m.displayName;
-                          if (m.isLegacy) label += ' [Legacy]';
-                          if (m.isPreview) label += ' [Preview]';
-                          return DropdownMenuItem(
-                            value: m.id,
-                            child: Text(label, overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList() : [],
-                        onChanged: (val) {
-                          if (val != null) setState(() => _selectedModelId = val);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                if (isDesktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: providerField),
+                      const SizedBox(width: 16),
+                      Expanded(child: modelField),
+                    ],
+                  )
+                else ...[
+                  providerField,
+                  const SizedBox(height: 16),
+                  modelField,
+                ],
                 if (_selectedModelId == 'custom') ...[
                   const SizedBox(height: 16),
                   TextFormField(

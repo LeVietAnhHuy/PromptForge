@@ -33,7 +33,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: AppDesign.elevationSm,
-        shape: RoundedRectangleBorder(borderRadius: AppDesign.borderLg),
+        shape: const RoundedRectangleBorder(borderRadius: AppDesign.borderLg),
         color: colorScheme.surfaceContainer,
         margin: const EdgeInsets.only(bottom: AppDesign.spacingMd),
       ),
@@ -44,7 +44,7 @@ class AppTheme {
           horizontal: AppDesign.spacingMd,
           vertical: AppDesign.spacingMd,
         ),
-        border: OutlineInputBorder(
+        border: const OutlineInputBorder(
           borderRadius: AppDesign.borderMd,
           borderSide: BorderSide.none,
         ),
@@ -66,7 +66,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: AppDesign.elevationSm,
-          shape: RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
+          shape: const RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppDesign.spacingLg,
             vertical: AppDesign.spacingMd,
@@ -76,20 +76,19 @@ class AppTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: colorScheme.surfaceContainerLow,
         indicatorColor: colorScheme.primaryContainer,
-        indicatorShape: RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
+        indicatorShape: const RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
         labelType: NavigationRailLabelType.all,
         useIndicator: true,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surfaceContainerLow,
         indicatorColor: colorScheme.primaryContainer,
-        indicatorShape: RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
+        indicatorShape: const RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
       ),
-      snackBarTheme: SnackBarThemeData(
+      snackBarTheme: const SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: AppDesign.borderMd),
       ),
     );
   }
 }
-

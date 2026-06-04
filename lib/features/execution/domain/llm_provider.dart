@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../../core/security/secure_storage_service.dart';
+import '../../prompt_examples/application/llm_model_catalog.dart';
 
 class LlmExecutionRequest {
   final String compiledPrompt;
@@ -39,6 +40,8 @@ class LlmExecutionResponse {
 abstract class LlmExecutionProvider {
   String get providerId;
   String get providerName;
+  bool get requiresApiKey;
+  String get credentialProviderId;
   
   Future<List<Map<String, String>>> listAvailableModels();
   
@@ -51,6 +54,12 @@ class MockExecutionProvider implements LlmExecutionProvider {
 
   @override
   String get providerName => 'Mock Provider';
+
+  @override
+  bool get requiresApiKey => false;
+
+  @override
+  String get credentialProviderId => providerId;
 
   @override
   Future<List<Map<String, String>>> listAvailableModels() async {
@@ -91,26 +100,50 @@ class GeminiExecutionProvider implements LlmExecutionProvider {
 
   GeminiExecutionProvider(this._secureStorage);
 
-  @override
-  String get providerId => 'gemini';
+  static const List<String> _supportedModelIds = [
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-pro-002',
+    'gemini-1.5-flash-002',
+  ];
 
   @override
-  String get providerName => 'Google Gemini';
+  String get providerId => 'google';
+
+  @override
+  String get providerName => 'Google';
+
+  @override
+  bool get requiresApiKey => true;
+
+  @override
+  String get credentialProviderId => providerId;
 
   @override
   Future<List<Map<String, String>>> listAvailableModels() async {
-    return [
-      {'id': 'gemini-1.5-pro-latest', 'name': 'Gemini 1.5 Pro'},
-      {'id': 'gemini-1.5-flash-latest', 'name': 'Gemini 1.5 Flash'},
-    ];
+    final catalog = defaultModelCatalog[providerId];
+    return _supportedModelIds.map((id) {
+      final option = catalog?.models.where((model) => model.id == id).firstOrNull;
+      return {
+        'id': id,
+        'name': option?.displayName ?? id,
+      };
+    }).toList();
   }
 
   @override
   Future<LlmExecutionResponse> execute(LlmExecutionRequest request) async {
     try {
-      final apiKey = await _secureStorage.getApiKey(providerId);
+      final apiKey = await _secureStorage.getApiKey(credentialProviderId) ??
+          await _secureStorage.getApiKey('gemini');
       if (apiKey == null || apiKey.isEmpty) {
-        return _errorResponse(request, 'Missing API key for Gemini. Please configure it in Settings.');
+        return _errorResponse(
+          request,
+          'Missing API key for Google. Add it in Settings > API Keys or paste the output manually.',
+        );
       }
 
       if (request.compiledPrompt.trim().isEmpty) {
@@ -137,9 +170,9 @@ class GeminiExecutionProvider implements LlmExecutionProvider {
         createdAt: DateTime.now(),
       );
     } on GenerativeAIException catch (e) {
-      return _errorResponse(request, 'Gemini API Error: ${e.message}');
-    } catch (e) {
-      return _errorResponse(request, 'Unknown error occurred: $e');
+      return _errorResponse(request, 'Google API error: ${e.message}');
+    } catch (_) {
+      return _errorResponse(request, 'Google execution failed. Check the selected model and try again.');
     }
   }
 
@@ -158,7 +191,7 @@ class GeminiExecutionProvider implements LlmExecutionProvider {
 final executionProvidersProvider = Provider<List<LlmExecutionProvider>>((ref) {
   final secureStorage = ref.watch(secureStorageProvider);
   return [
-    MockExecutionProvider(),
     GeminiExecutionProvider(secureStorage),
+    MockExecutionProvider(),
   ];
 });

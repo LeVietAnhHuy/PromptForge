@@ -88,32 +88,33 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
             ),
             child: Row(
               children: [
-                Chip(
-                  label: Text(widget.output.providerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  backgroundColor: colorScheme.primaryContainer,
-                  side: BorderSide.none,
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                ),
-                if (widget.output.modelName != null && widget.output.modelName!.isNotEmpty) ...[
-                  const SizedBox(width: AppDesign.spacingSm),
-                  Text(widget.output.modelName!, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                ],
-                const SizedBox(width: AppDesign.spacingSm),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(4),
+                Expanded(
+                  child: Wrap(
+                    spacing: AppDesign.spacingSm,
+                    runSpacing: AppDesign.spacingXs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Chip(
+                        label: Text(widget.output.providerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        backgroundColor: colorScheme.primaryContainer,
+                        side: BorderSide.none,
+                        padding: EdgeInsets.zero,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (widget.output.modelName != null && widget.output.modelName!.isNotEmpty)
+                        Text(
+                          widget.output.modelName!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      _buildBadge(widget.output.outputType.toUpperCase(), colorScheme.secondaryContainer, colorScheme.onSecondaryContainer),
+                      _buildBadge(widget.output.sourceType.toUpperCase(), colorScheme.tertiaryContainer, colorScheme.onTertiaryContainer),
+                    ],
                   ),
-                  child: Text(
-                    widget.output.outputType.toUpperCase(),
-                    style: TextStyle(fontSize: 10, color: colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold),
-                  ),
                 ),
-                const Spacer(),
                 Text(
-                  '${widget.output.createdAt.toLocal().toString().split('.')[0]}',
+                  widget.output.createdAt.toLocal().toString().split('.')[0],
                   style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(width: AppDesign.spacingSm),
@@ -300,6 +301,20 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color background, Color foreground) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, color: foreground, fontWeight: FontWeight.bold),
       ),
     );
   }

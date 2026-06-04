@@ -101,7 +101,7 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
           children: [
             ElevatedButton.icon(
               icon: const Icon(Icons.file_open),
-              label: const Text('Select JSON File'),
+              label: const Text('Select Backup File'),
               onPressed: _pickFile,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16.0),
@@ -109,7 +109,10 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
             ),
             if (_selectedFilePath != null) ...[
               const SizedBox(height: 8),
-              Text('Selected: $_selectedFilePath', style: Theme.of(context).textTheme.bodySmall),
+              SelectableText(
+                'Selected: $_selectedFilePath',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
             const SizedBox(height: 24),
             if (_error != null)
@@ -141,23 +144,30 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
                       ),
                       const Divider(height: 32),
                       Text('Merge Strategy (if IDs conflict):', style: Theme.of(context).textTheme.titleMedium),
-                      RadioListTile<MergeStrategy>(
-                        title: const Text('Skip Duplicate (Keep Existing)'),
-                        value: MergeStrategy.skip,
-                        groupValue: _strategy,
-                        onChanged: (val) => setState(() => _strategy = val!),
-                      ),
-                      RadioListTile<MergeStrategy>(
-                        title: const Text('Overwrite Existing'),
-                        value: MergeStrategy.overwrite,
-                        groupValue: _strategy,
-                        onChanged: (val) => setState(() => _strategy = val!),
-                      ),
-                      RadioListTile<MergeStrategy>(
-                        title: const Text('Duplicate (Generate New ID)'),
-                        value: MergeStrategy.duplicate,
-                        groupValue: _strategy,
-                        onChanged: (val) => setState(() => _strategy = val!),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<MergeStrategy>(
+                        initialValue: _strategy,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          labelText: 'Strategy',
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: MergeStrategy.skip,
+                            child: Text('Skip Duplicate (Keep Existing)'),
+                          ),
+                          DropdownMenuItem(
+                            value: MergeStrategy.overwrite,
+                            child: Text('Overwrite Existing'),
+                          ),
+                          DropdownMenuItem(
+                            value: MergeStrategy.duplicate,
+                            child: Text('Duplicate (Generate New ID)'),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setState(() => _strategy = val);
+                        },
                       ),
                       const SizedBox(height: 16),
                       SizedBox(

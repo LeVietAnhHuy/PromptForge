@@ -91,21 +91,32 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
           : _error != null
               ? Center(child: Text('Error: $_error'))
               : Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.backup, size: 64),
-                      const SizedBox(height: 16),
-                      const Text('Backup bundle is ready.', style: TextStyle(fontSize: 18)),
-                      const SizedBox(height: 8),
-                      Text('Size: ${(_zipBytes!.length / 1024).toStringAsFixed(2)} KB', style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.save),
-                        label: const Text('Save Backup to Disk'),
-                        onPressed: _saveToFile,
-                      ),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.backup, size: 64),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Backup bundle is ready.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 18),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Size: ${(_zipBytes!.length / 1024).toStringAsFixed(2)} KB',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.save),
+                          label: const Text('Save Backup to Disk'),
+                          onPressed: _saveToFile,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
     );

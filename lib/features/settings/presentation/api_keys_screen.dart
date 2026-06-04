@@ -21,9 +21,11 @@ class _ApiKeysScreenState extends ConsumerState<ApiKeysScreen> {
 
   Future<void> _loadKeys() async {
     final storage = ref.read(secureStorageProvider);
-    final geminiKey = await storage.getApiKey('gemini') ?? '';
+    final googleKey = await storage.getApiKey('google') ??
+        await storage.getApiKey('gemini') ??
+        '';
     
-    _controllers['gemini'] = TextEditingController(text: geminiKey);
+    _controllers['google'] = TextEditingController(text: googleKey);
     
     setState(() {
       _isLoading = false;
@@ -42,7 +44,7 @@ class _ApiKeysScreenState extends ConsumerState<ApiKeysScreen> {
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Saved API Key for $providerId.')),
+        SnackBar(content: Text('Saved API key for $providerId.')),
       );
     }
   }
@@ -83,38 +85,49 @@ class _ApiKeysScreenState extends ConsumerState<ApiKeysScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          _buildKeyInput('gemini', 'Google Gemini API Key'),
+          _buildKeyInput('google', 'Google Gemini API Key'),
         ],
       ),
     );
   }
 
   Widget _buildKeyInput(String providerId, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Row(
+    final input = TextField(
+      controller: _controllers[providerId],
+      obscureText: true,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        hintText: 'Enter API Key',
+      ),
+    );
+    final saveButton = ElevatedButton(
+      onPressed: () => _saveKey(providerId),
+      child: const Text('Save'),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 520;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _controllers[providerId],
-                obscureText: true,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'Enter API Key',
-                ),
+            Text(label, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (isNarrow) ...[
+              input,
+              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerRight, child: saveButton),
+            ] else
+              Row(
+                children: [
+                  Expanded(child: input),
+                  const SizedBox(width: 16),
+                  saveButton,
+                ],
               ),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton(
-              onPressed: () => _saveKey(providerId),
-              child: const Text('Save'),
-            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }

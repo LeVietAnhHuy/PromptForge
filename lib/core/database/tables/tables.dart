@@ -232,6 +232,7 @@ class PromptExampleOutputs extends Table {
   TextColumn get providerName => text()();
   TextColumn get modelName => text().nullable()();
   TextColumn get outputType => text().withDefault(const Constant('text'))();
+  TextColumn get sourceType => text().withDefault(const Constant('manual'))();
   TextColumn get outputText => text()();
   IntColumn get score => integer().nullable()();
   TextColumn get notes => text().nullable()();

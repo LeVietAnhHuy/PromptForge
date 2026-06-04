@@ -102,30 +102,23 @@ class _PromptBodyFocusEditorState extends State<PromptBodyFocusEditor> {
           bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: _handleCancel,
-            tooltip: 'Cancel',
-          ),
-          const SizedBox(width: AppDesign.spacingSm),
-          Text(
-            'Focus Editor',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Expanded(
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppDesign.spacingMd,
-              runSpacing: AppDesign.spacingSm,
-              children: [
-                if (_viewMode == _FocusViewMode.preview)
-                  DropdownButton<MarkdownReaderStyle>(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 540;
+          final controls = Wrap(
+            alignment: isNarrow ? WrapAlignment.start : WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppDesign.spacingMd,
+            runSpacing: AppDesign.spacingSm,
+            children: [
+              if (_viewMode == _FocusViewMode.preview)
+                SizedBox(
+                  width: isNarrow ? 160 : null,
+                  child: DropdownButton<MarkdownReaderStyle>(
                     value: _readerStyle,
                     underline: const SizedBox(),
                     isDense: true,
+                    isExpanded: isNarrow,
                     iconSize: 20,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
@@ -133,37 +126,88 @@ class _PromptBodyFocusEditorState extends State<PromptBodyFocusEditor> {
                     items: MarkdownReaderStyle.values.map((style) {
                       return DropdownMenuItem(
                         value: style,
-                        child: Text(style.displayName),
+                        child: Text(style.displayName, overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) setState(() => _readerStyle = val);
                     },
                   ),
-                SegmentedButton<_FocusViewMode>(
-                  segments: const [
-                    ButtonSegment(value: _FocusViewMode.preview, label: Text('Preview')),
-                    ButtonSegment(value: _FocusViewMode.edit, label: Text('Edit')),
-                  ],
-                  selected: {_viewMode},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _viewMode = newSelection.first;
-                      if (_viewMode == _FocusViewMode.preview) {
-                        FocusScope.of(context).unfocus();
-                      }
-                    });
-                  },
                 ),
-                FilledButton.icon(
-                  onPressed: _handleSave,
-                  icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Apply'),
+              SegmentedButton<_FocusViewMode>(
+                segments: const [
+                  ButtonSegment(value: _FocusViewMode.preview, label: Text('Preview')),
+                  ButtonSegment(value: _FocusViewMode.edit, label: Text('Edit')),
+                ],
+                selected: {_viewMode},
+                onSelectionChanged: (newSelection) {
+                  setState(() {
+                    _viewMode = newSelection.first;
+                    if (_viewMode == _FocusViewMode.preview) {
+                      FocusScope.of(context).unfocus();
+                    }
+                  });
+                },
+              ),
+            ],
+          );
+
+          final titleRow = Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _handleCancel,
+                tooltip: 'Cancel',
+              ),
+              const SizedBox(width: AppDesign.spacingSm),
+              Expanded(
+                child: Text(
+                  'Focus Editor',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
+              ),
+              FilledButton.icon(
+                onPressed: _handleSave,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Apply'),
+              ),
+            ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleRow,
+                const SizedBox(height: AppDesign.spacingSm),
+                controls,
               ],
-            ),
-          ),
-        ],
+            );
+          }
+
+          return Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _handleCancel,
+                tooltip: 'Cancel',
+              ),
+              const SizedBox(width: AppDesign.spacingSm),
+              Text(
+                'Focus Editor',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Expanded(child: controls),
+              FilledButton.icon(
+                onPressed: _handleSave,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Apply'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

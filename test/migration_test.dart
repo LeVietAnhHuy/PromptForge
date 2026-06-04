@@ -66,6 +66,7 @@ void main() {
     expect(out1.providerId, 'prov1');
     expect(out1.modelId, 'mod1');
     expect(out1.outputType, 'markdown');
+    expect(out1.sourceType, 'manual');
     
     // Verify LLMProviders and Models can be inserted
     await v3Db.into(v3Db.lLMProviders).insert(LLMProvidersCompanion.insert(

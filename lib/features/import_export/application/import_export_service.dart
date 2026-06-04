@@ -217,6 +217,7 @@ class ImportExportService {
               providerName: o.providerName,
               modelName: o.modelName != null ? drift.Value(o.modelName) : const drift.Value.absent(),
               outputType: drift.Value(o.outputType),
+              sourceType: drift.Value(o.sourceType),
               outputText: o.outputText,
               score: o.score != null ? drift.Value(o.score) : const drift.Value.absent(),
               notes: o.notes != null ? drift.Value(o.notes) : const drift.Value.absent(),

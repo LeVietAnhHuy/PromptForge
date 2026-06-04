@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -106,6 +106,9 @@ class AppDatabase extends _$AppDatabase {
             await (update(lLMProviders)..where((t) => t.id.equals('meta'))).write(const LLMProvidersCompanion(name: Value('Meta')));
             await (update(lLMProviders)..where((t) => t.id.equals('local'))).write(const LLMProvidersCompanion(name: Value('Local')));
           } catch (_) {}
+        }
+        if (from < 6) {
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.sourceType); } catch (_) {}
         }
       },
     );

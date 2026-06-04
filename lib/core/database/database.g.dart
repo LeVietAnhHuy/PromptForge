@@ -5458,6 +5458,14 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('text'));
+  static const VerificationMeta _sourceTypeMeta =
+      const VerificationMeta('sourceType');
+  @override
+  late final GeneratedColumn<String> sourceType = GeneratedColumn<String>(
+      'source_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('manual'));
   static const VerificationMeta _outputTextMeta =
       const VerificationMeta('outputText');
   @override
@@ -5504,6 +5512,7 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
         providerName,
         modelName,
         outputType,
+        sourceType,
         outputText,
         score,
         notes,
@@ -5561,6 +5570,12 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
           outputType.isAcceptableOrUnknown(
               data['output_type']!, _outputTypeMeta));
     }
+    if (data.containsKey('source_type')) {
+      context.handle(
+          _sourceTypeMeta,
+          sourceType.isAcceptableOrUnknown(
+              data['source_type']!, _sourceTypeMeta));
+    }
     if (data.containsKey('output_text')) {
       context.handle(
           _outputTextMeta,
@@ -5616,6 +5631,8 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
           .read(DriftSqlType.string, data['${effectivePrefix}model_name']),
       outputType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}output_type'])!,
+      sourceType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_type'])!,
       outputText: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}output_text'])!,
       score: attachedDatabase.typeMapping
@@ -5646,6 +5663,7 @@ class PromptExampleOutput extends DataClass
   final String providerName;
   final String? modelName;
   final String outputType;
+  final String sourceType;
   final String outputText;
   final int? score;
   final String? notes;
@@ -5660,6 +5678,7 @@ class PromptExampleOutput extends DataClass
       required this.providerName,
       this.modelName,
       required this.outputType,
+      required this.sourceType,
       required this.outputText,
       this.score,
       this.notes,
@@ -5682,6 +5701,7 @@ class PromptExampleOutput extends DataClass
       map['model_name'] = Variable<String>(modelName);
     }
     map['output_type'] = Variable<String>(outputType);
+    map['source_type'] = Variable<String>(sourceType);
     map['output_text'] = Variable<String>(outputText);
     if (!nullToAbsent || score != null) {
       map['score'] = Variable<int>(score);
@@ -5710,6 +5730,7 @@ class PromptExampleOutput extends DataClass
           ? const Value.absent()
           : Value(modelName),
       outputType: Value(outputType),
+      sourceType: Value(sourceType),
       outputText: Value(outputText),
       score:
           score == null && nullToAbsent ? const Value.absent() : Value(score),
@@ -5732,6 +5753,7 @@ class PromptExampleOutput extends DataClass
       providerName: serializer.fromJson<String>(json['providerName']),
       modelName: serializer.fromJson<String?>(json['modelName']),
       outputType: serializer.fromJson<String>(json['outputType']),
+      sourceType: serializer.fromJson<String>(json['sourceType']),
       outputText: serializer.fromJson<String>(json['outputText']),
       score: serializer.fromJson<int?>(json['score']),
       notes: serializer.fromJson<String?>(json['notes']),
@@ -5751,6 +5773,7 @@ class PromptExampleOutput extends DataClass
       'providerName': serializer.toJson<String>(providerName),
       'modelName': serializer.toJson<String?>(modelName),
       'outputType': serializer.toJson<String>(outputType),
+      'sourceType': serializer.toJson<String>(sourceType),
       'outputText': serializer.toJson<String>(outputText),
       'score': serializer.toJson<int?>(score),
       'notes': serializer.toJson<String?>(notes),
@@ -5768,6 +5791,7 @@ class PromptExampleOutput extends DataClass
           String? providerName,
           Value<String?> modelName = const Value.absent(),
           String? outputType,
+          String? sourceType,
           String? outputText,
           Value<int?> score = const Value.absent(),
           Value<String?> notes = const Value.absent(),
@@ -5782,6 +5806,7 @@ class PromptExampleOutput extends DataClass
         providerName: providerName ?? this.providerName,
         modelName: modelName.present ? modelName.value : this.modelName,
         outputType: outputType ?? this.outputType,
+        sourceType: sourceType ?? this.sourceType,
         outputText: outputText ?? this.outputText,
         score: score.present ? score.value : this.score,
         notes: notes.present ? notes.value : this.notes,
@@ -5802,6 +5827,8 @@ class PromptExampleOutput extends DataClass
       modelName: data.modelName.present ? data.modelName.value : this.modelName,
       outputType:
           data.outputType.present ? data.outputType.value : this.outputType,
+      sourceType:
+          data.sourceType.present ? data.sourceType.value : this.sourceType,
       outputText:
           data.outputText.present ? data.outputText.value : this.outputText,
       score: data.score.present ? data.score.value : this.score,
@@ -5822,6 +5849,7 @@ class PromptExampleOutput extends DataClass
           ..write('providerName: $providerName, ')
           ..write('modelName: $modelName, ')
           ..write('outputType: $outputType, ')
+          ..write('sourceType: $sourceType, ')
           ..write('outputText: $outputText, ')
           ..write('score: $score, ')
           ..write('notes: $notes, ')
@@ -5841,6 +5869,7 @@ class PromptExampleOutput extends DataClass
       providerName,
       modelName,
       outputType,
+      sourceType,
       outputText,
       score,
       notes,
@@ -5858,6 +5887,7 @@ class PromptExampleOutput extends DataClass
           other.providerName == this.providerName &&
           other.modelName == this.modelName &&
           other.outputType == this.outputType &&
+          other.sourceType == this.sourceType &&
           other.outputText == this.outputText &&
           other.score == this.score &&
           other.notes == this.notes &&
@@ -5875,6 +5905,7 @@ class PromptExampleOutputsCompanion
   final Value<String> providerName;
   final Value<String?> modelName;
   final Value<String> outputType;
+  final Value<String> sourceType;
   final Value<String> outputText;
   final Value<int?> score;
   final Value<String?> notes;
@@ -5890,6 +5921,7 @@ class PromptExampleOutputsCompanion
     this.providerName = const Value.absent(),
     this.modelName = const Value.absent(),
     this.outputType = const Value.absent(),
+    this.sourceType = const Value.absent(),
     this.outputText = const Value.absent(),
     this.score = const Value.absent(),
     this.notes = const Value.absent(),
@@ -5906,6 +5938,7 @@ class PromptExampleOutputsCompanion
     required String providerName,
     this.modelName = const Value.absent(),
     this.outputType = const Value.absent(),
+    this.sourceType = const Value.absent(),
     required String outputText,
     this.score = const Value.absent(),
     this.notes = const Value.absent(),
@@ -5927,6 +5960,7 @@ class PromptExampleOutputsCompanion
     Expression<String>? providerName,
     Expression<String>? modelName,
     Expression<String>? outputType,
+    Expression<String>? sourceType,
     Expression<String>? outputText,
     Expression<int>? score,
     Expression<String>? notes,
@@ -5943,6 +5977,7 @@ class PromptExampleOutputsCompanion
       if (providerName != null) 'provider_name': providerName,
       if (modelName != null) 'model_name': modelName,
       if (outputType != null) 'output_type': outputType,
+      if (sourceType != null) 'source_type': sourceType,
       if (outputText != null) 'output_text': outputText,
       if (score != null) 'score': score,
       if (notes != null) 'notes': notes,
@@ -5961,6 +5996,7 @@ class PromptExampleOutputsCompanion
       Value<String>? providerName,
       Value<String?>? modelName,
       Value<String>? outputType,
+      Value<String>? sourceType,
       Value<String>? outputText,
       Value<int?>? score,
       Value<String?>? notes,
@@ -5976,6 +6012,7 @@ class PromptExampleOutputsCompanion
       providerName: providerName ?? this.providerName,
       modelName: modelName ?? this.modelName,
       outputType: outputType ?? this.outputType,
+      sourceType: sourceType ?? this.sourceType,
       outputText: outputText ?? this.outputText,
       score: score ?? this.score,
       notes: notes ?? this.notes,
@@ -6009,6 +6046,9 @@ class PromptExampleOutputsCompanion
     }
     if (outputType.present) {
       map['output_type'] = Variable<String>(outputType.value);
+    }
+    if (sourceType.present) {
+      map['source_type'] = Variable<String>(sourceType.value);
     }
     if (outputText.present) {
       map['output_text'] = Variable<String>(outputText.value);
@@ -6044,6 +6084,7 @@ class PromptExampleOutputsCompanion
           ..write('providerName: $providerName, ')
           ..write('modelName: $modelName, ')
           ..write('outputType: $outputType, ')
+          ..write('sourceType: $sourceType, ')
           ..write('outputText: $outputText, ')
           ..write('score: $score, ')
           ..write('notes: $notes, ')
@@ -10318,6 +10359,7 @@ typedef $$PromptExampleOutputsTableCreateCompanionBuilder
   required String providerName,
   Value<String?> modelName,
   Value<String> outputType,
+  Value<String> sourceType,
   required String outputText,
   Value<int?> score,
   Value<String?> notes,
@@ -10335,6 +10377,7 @@ typedef $$PromptExampleOutputsTableUpdateCompanionBuilder
   Value<String> providerName,
   Value<String?> modelName,
   Value<String> outputType,
+  Value<String> sourceType,
   Value<String> outputText,
   Value<int?> score,
   Value<String?> notes,
@@ -10373,6 +10416,9 @@ class $$PromptExampleOutputsTableFilterComposer
 
   ColumnFilters<String> get outputType => $composableBuilder(
       column: $table.outputType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get outputText => $composableBuilder(
       column: $table.outputText, builder: (column) => ColumnFilters(column));
@@ -10424,6 +10470,9 @@ class $$PromptExampleOutputsTableOrderingComposer
   ColumnOrderings<String> get outputType => $composableBuilder(
       column: $table.outputType, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get outputText => $composableBuilder(
       column: $table.outputText, builder: (column) => ColumnOrderings(column));
 
@@ -10472,6 +10521,9 @@ class $$PromptExampleOutputsTableAnnotationComposer
 
   GeneratedColumn<String> get outputType => $composableBuilder(
       column: $table.outputType, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceType => $composableBuilder(
+      column: $table.sourceType, builder: (column) => column);
 
   GeneratedColumn<String> get outputText => $composableBuilder(
       column: $table.outputText, builder: (column) => column);
@@ -10529,6 +10581,7 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             Value<String> providerName = const Value.absent(),
             Value<String?> modelName = const Value.absent(),
             Value<String> outputType = const Value.absent(),
+            Value<String> sourceType = const Value.absent(),
             Value<String> outputText = const Value.absent(),
             Value<int?> score = const Value.absent(),
             Value<String?> notes = const Value.absent(),
@@ -10545,6 +10598,7 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             providerName: providerName,
             modelName: modelName,
             outputType: outputType,
+            sourceType: sourceType,
             outputText: outputText,
             score: score,
             notes: notes,
@@ -10561,6 +10615,7 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             required String providerName,
             Value<String?> modelName = const Value.absent(),
             Value<String> outputType = const Value.absent(),
+            Value<String> sourceType = const Value.absent(),
             required String outputText,
             Value<int?> score = const Value.absent(),
             Value<String?> notes = const Value.absent(),
@@ -10577,6 +10632,7 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             providerName: providerName,
             modelName: modelName,
             outputType: outputType,
+            sourceType: sourceType,
             outputText: outputText,
             score: score,
             notes: notes,
