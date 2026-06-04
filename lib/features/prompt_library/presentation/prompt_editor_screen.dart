@@ -1,20 +1,22 @@
+import 'dart:async';
+import 'dart:convert' as dart_convert;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
-
 import 'package:drift/drift.dart' as drift;
+
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
-
 import '../../prompt_compiler/domain/prompt_compiler_service.dart';
-import 'dart:convert' as dart_convert;
-import 'package:flutter/foundation.dart';
-
 import '../../../shared/markdown/inline_markdown_editor.dart';
 import '../../../shared/markdown/markdown_reader_style.dart';
 import '../../../app/theme/app_design.dart';
 import 'prompt_body_focus_editor.dart';
+import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
+import '../../prompt_examples/presentation/prompt_output_card.dart';
 
 
 
@@ -68,6 +70,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
   Map<String, _VariableMetadataForm> _variableForms = {};
   List<String> _detectedVariables = [];
+  
+  List<PromptExampleOutput> _outputs = [];
+  StreamSubscription<List<PromptExampleOutput>>? _outputsSubscription;
 
 
 @override
@@ -142,6 +147,16 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           }
         }
 
+        final outputDao = ref.read(promptExampleOutputDaoProvider);
+        _outputsSubscription?.cancel();
+        _outputsSubscription = outputDao.watchOutputsForPrompt(prompt.id).listen((data) {
+          if (mounted) {
+            setState(() {
+              _outputs = data;
+            });
+          }
+        });
+
         _isLoading = false;
       });
     } catch (e) {
@@ -156,6 +171,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
 @override
   void dispose() {
+    _outputsSubscription?.cancel();
     _bodyController.removeListener(_onBodyChanged);
     _titleController.dispose();
     _bodyController.dispose();
@@ -601,9 +617,86 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 );
               }),
             ],
+            const SizedBox(height: 32),
+            _buildOutputsLab(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildOutputsLab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Saved Outputs', style: Theme.of(context).textTheme.titleLarge),
+            FilledButton.icon(
+              onPressed: _existingPrompt == null 
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please save the prompt first.')));
+                  }
+                : () async {
+                    FocusScope.of(context).unfocus();
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => ManualOutputPasteDialog(
+                        promptId: _existingPrompt!.id,
+                        compiledPromptSnapshot: _bodyController.text,
+                      ),
+                    );
+                    if (result == true) {
+                      // Output saved, stream will auto-update
+                    }
+                  },
+              icon: const Icon(Icons.add),
+              label: const Text('Paste LLM Output'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_outputs.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, style: BorderStyle.solid),
+              borderRadius: AppDesign.borderLg,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.chat_bubble_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                Text('No manual outputs saved yet.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                const SizedBox(height: 8),
+                Text('Run the prompt externally and paste the result here.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ],
+            ),
+          )
+        else
+          ..._outputs.map((output) => PromptOutputCard(
+            output: output,
+            onDelete: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete output?'),
+                  content: const Text('Are you sure you want to delete this output?'),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+                    TextButton(onPressed: () => Navigator.of(context).pop(true), style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), child: const Text('Delete')),
+                  ],
+                ),
+              );
+              if (confirm == true && mounted) {
+                await ref.read(promptExampleOutputDaoProvider).deleteOutput(output.id);
+              }
+            },
+          )),
+      ],
     );
   }
 }

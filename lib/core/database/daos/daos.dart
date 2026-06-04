@@ -200,7 +200,7 @@ class PromptExampleDao extends DatabaseAccessor<AppDatabase> with _$PromptExampl
   Future<PromptExample> getExampleById(String id) => (select(promptExamples)..where((t) => t.id.equals(id))).getSingle();
 }
 
-@DriftAccessor(tables: [PromptExampleOutputs])
+@DriftAccessor(tables: [PromptExampleOutputs, PromptExamples])
 class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase> with _$PromptExampleOutputDaoMixin {
   PromptExampleOutputDao(super.db);
 
@@ -209,6 +209,17 @@ class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase> with _$Prompt
   Future<int> deleteOutput(String id) => (delete(promptExampleOutputs)..where((t) => t.id.equals(id))).go();
   Stream<List<PromptExampleOutput>> watchOutputsForExample(String exampleId) => (select(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).watch();
   Future<List<PromptExampleOutput>> getOutputsForExample(String exampleId) => (select(promptExampleOutputs)..where((t) => t.exampleId.equals(exampleId))).get();
+
+  Stream<List<PromptExampleOutput>> watchOutputsForPrompt(String promptId) {
+    final query = select(promptExampleOutputs).join([
+      innerJoin(promptExamples, promptExamples.id.equalsExp(promptExampleOutputs.exampleId))
+    ])..where(promptExamples.promptId.equals(promptId))
+      ..orderBy([OrderingTerm(expression: promptExampleOutputs.createdAt, mode: OrderingMode.desc)]);
+      
+    return query.watch().map((rows) {
+      return rows.map((row) => row.readTable(promptExampleOutputs)).toList();
+    });
+  }
 
   Future<void> markOutputAsBest(String exampleId, String outputId) async {
     await transaction(() async {

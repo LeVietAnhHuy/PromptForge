@@ -126,6 +126,7 @@ class PromptExampleDaoManager {
 mixin _$PromptExampleOutputDaoMixin on DatabaseAccessor<AppDatabase> {
   $PromptExampleOutputsTable get promptExampleOutputs =>
       attachedDatabase.promptExampleOutputs;
+  $PromptExamplesTable get promptExamples => attachedDatabase.promptExamples;
   PromptExampleOutputDaoManager get managers =>
       PromptExampleOutputDaoManager(this);
 }
@@ -136,6 +137,9 @@ class PromptExampleOutputDaoManager {
   $$PromptExampleOutputsTableTableManager get promptExampleOutputs =>
       $$PromptExampleOutputsTableTableManager(
           _db.attachedDatabase, _db.promptExampleOutputs);
+  $$PromptExamplesTableTableManager get promptExamples =>
+      $$PromptExamplesTableTableManager(
+          _db.attachedDatabase, _db.promptExamples);
 }
 
 mixin _$ProjectDaoMixin on DatabaseAccessor<AppDatabase> {

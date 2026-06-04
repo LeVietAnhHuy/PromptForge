@@ -19,13 +19,13 @@ void main() {
     await database.close();
   });
 
-  Widget createTestApp() {
+  Widget createTestApp({String? promptId}) {
     final router = GoRouter(
       initialLocation: '/',
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const PromptEditorScreen(),
+          builder: (context, state) => PromptEditorScreen(promptId: promptId),
         ),
       ],
     );
@@ -154,6 +154,67 @@ void main() {
     
     // Apply and close modal
     await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Prompt editor supports manual output capture', (tester) async {
+    final promptId = 'test-prompt-id';
+    await database.into(database.prompts).insert(PromptsCompanion.insert(
+      id: promptId,
+      title: 'Test Output Prompt',
+      body: 'Body text',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    ));
+
+    await tester.pumpWidget(createTestApp(promptId: promptId));
+    await tester.pumpAndSettle();
+
+    // 1. Scroll to Outputs Lab
+    await tester.scrollUntilVisible(
+      find.text('Saved Outputs'),
+      500.0,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    // 2. Now Paste LLM Output should work
+    final pasteButton = find.text('Paste LLM Output');
+    expect(pasteButton, findsOneWidget);
+    await tester.ensureVisible(pasteButton);
+    await tester.pumpAndSettle();
+    
+    await tester.tap(pasteButton);
+    await tester.pumpAndSettle();
+
+    // Dialog should be present
+    expect(find.text('Paste External LLM Output'), findsOneWidget);
+
+    // 3. Fill form
+    await tester.enterText(find.widgetWithText(TextFormField, 'Provider (e.g. Claude)'), 'ChatGPT');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Model (Optional)'), 'GPT-4o');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Pasted Output'), 'This is a mocked output from ChatGPT.');
+    await tester.pump();
+
+    // Save Output
+    await tester.tap(find.text('Save Output'));
+    await tester.pumpAndSettle();
+
+    // Modal should close and card should appear
+    expect(find.text('Paste External LLM Output'), findsNothing);
+    expect(find.text('Output saved manually.'), findsOneWidget);
+    
+    // Verify card is rendered
+    expect(find.text('ChatGPT'), findsWidgets); // chip
+    expect(find.text('GPT-4o'), findsOneWidget); // model name
+    expect(find.text('This is a mocked output from ChatGPT.'), findsOneWidget); // markdown body
+
+    // Wait for SnackBar to disappear
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
+    await tester.pumpAndSettle();
+    
+    // Unmount to trigger dispose
+    await tester.pumpWidget(Container());
     await tester.pumpAndSettle();
   });
 }

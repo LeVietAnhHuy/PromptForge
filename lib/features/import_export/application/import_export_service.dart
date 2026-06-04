@@ -200,8 +200,11 @@ class ImportExportService {
             await outputDao.into(outputDao.promptExampleOutputs).insert(PromptExampleOutputsCompanion.insert(
               id: const Uuid().v4(),
               exampleId: newExampleId,
+              providerId: o.providerId != null ? drift.Value(o.providerId) : const drift.Value.absent(),
+              modelId: o.modelId != null ? drift.Value(o.modelId) : const drift.Value.absent(),
               providerName: o.providerName,
               modelName: o.modelName != null ? drift.Value(o.modelName) : const drift.Value.absent(),
+              outputType: drift.Value(o.outputType),
               outputText: o.outputText,
               score: o.score != null ? drift.Value(o.score) : const drift.Value.absent(),
               notes: o.notes != null ? drift.Value(o.notes) : const drift.Value.absent(),

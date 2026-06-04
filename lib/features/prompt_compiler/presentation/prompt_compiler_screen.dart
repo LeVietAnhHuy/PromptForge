@@ -9,6 +9,8 @@ import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../shared/markdown/markdown_reader_style.dart';
+import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../execution/domain/llm_provider.dart';
 import '../domain/prompt_compiler_service.dart';
 import '../domain/target_tool_profile.dart';
@@ -295,6 +297,24 @@ class _PromptCompilerScreenState extends ConsumerState<PromptCompilerScreen> {
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              onPressed: _compileResult == null ? null : () async {
+                FocusScope.of(context).unfocus();
+                await showDialog<bool>(
+                  context: context,
+                  builder: (context) => ManualOutputPasteDialog(
+                    promptId: _prompt!.id,
+                    compiledPromptSnapshot: _compileResult!.compiledText,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.paste),
+              label: const Text('Paste Output'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
             ),
           ],
