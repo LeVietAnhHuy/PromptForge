@@ -50,12 +50,22 @@ void main() {
     // 2. Enter tags
     await tester.enterText(find.widgetWithText(TextFormField, 'Tags (comma-separated)'), 'tag1, tag2');
 
-    // 3. Enter body with variables
+    // 3. Enter body with variables (via Focus Editor)
+    await tester.tap(find.text('Open Focus Editor'));
+    await tester.pumpAndSettle();
+    
+    // Switch to Edit mode inside the modal
+    await tester.tap(find.text('Edit').last); // .last because there might be one hidden or whatever, actually just 'Edit' is fine
+    await tester.pumpAndSettle();
+
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
       'Hello {{name}}',
     );
-    await tester.pumpAndSettle(); // Wait for variable extraction
+    await tester.pump();
+    
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle(); // Wait for modal to close and variable extraction
 
     // Verify metadata form appears (may need to scroll in the ListView)
     await tester.scrollUntilVisible(
@@ -90,14 +100,18 @@ void main() {
     expect(vars.first.isRequired, true);
   });
 
-  testWidgets('Prompt body supports Preview/Edit toggle with rich markdown', (tester) async {
+  testWidgets('Prompt Focus Editor supports Preview/Edit toggle with rich markdown', (tester) async {
     await tester.pumpWidget(createTestApp());
     await tester.pumpAndSettle();
 
-    // New prompt defaults to Edit mode
-    expect(find.text('Preview'), findsOneWidget);
-    expect(find.text('Edit'), findsOneWidget);
-    expect(find.text('Prompt Body'), findsOneWidget);
+    // Open Focus Editor
+    await tester.tap(find.text('Open Focus Editor'));
+    await tester.pumpAndSettle();
+
+    // Modal defaults to Preview mode but if it's empty, we might want to edit it. 
+    // Actually our modal implementation defaults to Preview, let's switch to Edit
+    await tester.tap(find.text('Edit').last);
+    await tester.pumpAndSettle();
 
     // Body field is a TextFormField in Edit mode
     expect(
@@ -113,11 +127,11 @@ void main() {
     await tester.pump();
 
     // Switch to Preview mode
-    await tester.tap(find.text('Preview'));
+    await tester.tap(find.text('Preview').last);
     await tester.pumpAndSettle();
 
-    // InlineMarkdownEditor should now be visible
-    expect(find.byType(InlineMarkdownEditor), findsOneWidget);
+    // InlineMarkdownEditor should now be visible (at least 1, usually 2 because of background card)
+    expect(find.byType(InlineMarkdownEditor), findsWidgets);
 
     // The raw TextFormField for body should be gone
     expect(
@@ -126,10 +140,10 @@ void main() {
     );
 
     // Style selector should be present
-    expect(find.text('PromptForge'), findsOneWidget);
+    expect(find.text('PromptForge'), findsWidgets);
 
     // Switch back to Edit mode
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.text('Edit').last);
     await tester.pumpAndSettle();
 
     // TextFormField should be back with the same content
@@ -137,5 +151,9 @@ void main() {
       find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...').first,
     );
     expect(bodyField.controller?.text, '# My Heading\nSome paragraph text.\n## Section 2');
+    
+    // Apply and close modal
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
   });
 }

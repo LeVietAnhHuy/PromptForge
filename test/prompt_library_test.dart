@@ -80,12 +80,24 @@ void main() {
 
     // Enter details
     await tester.enterText(find.widgetWithText(TextFormField, 'Title'), 'My Awesome Prompt');
-    // Body field is inside a SizedBox, find by hint text
+    // Open Focus Editor modal
+    await tester.tap(find.text('Open Focus Editor'));
+    await tester.pumpAndSettle();
+
+    // Switch to Edit mode inside the modal
+    await tester.tap(find.text('Edit').last);
+    await tester.pumpAndSettle();
+
+    // Body field is inside the modal, find by hint text
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
       'This is the body.',
     );
     await tester.pump();
+
+    // Tap Apply in the modal
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
 
     // Tap save
     await tester.tap(find.byIcon(Icons.save));

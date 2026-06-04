@@ -13,8 +13,10 @@ import 'package:flutter/foundation.dart';
 
 import '../../../shared/markdown/inline_markdown_editor.dart';
 import '../../../shared/markdown/markdown_reader_style.dart';
+import '../../../app/theme/app_design.dart';
+import 'prompt_body_focus_editor.dart';
 
-enum _BodyViewMode { preview, edit }
+
 
 
 class _VariableMetadataForm {
@@ -63,9 +65,6 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   
   Prompt? _existingPrompt;
   bool _isLoading = true;
-
-  _BodyViewMode _bodyViewMode = _BodyViewMode.edit;
-  MarkdownReaderStyle _readerStyle = MarkdownReaderStyle.promptForge;
 
   Map<String, _VariableMetadataForm> _variableForms = {};
   List<String> _detectedVariables = [];
@@ -117,7 +116,6 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       
       setState(() {
         _existingPrompt = prompt;
-        _bodyViewMode = _BodyViewMode.preview; // Preview by default for existing prompts
         _titleController.text = prompt.title;
         _bodyController.text = prompt.body;
         _purposeController.text = prompt.purpose ?? '';
@@ -458,97 +456,78 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppDesign.spacingMd),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Prompt Body', style: Theme.of(context).textTheme.titleSmall),
-                SegmentedButton<_BodyViewMode>(
-                  segments: const [
-                    ButtonSegment(value: _BodyViewMode.preview, label: Text('Preview')),
-                    ButtonSegment(value: _BodyViewMode.edit, label: Text('Edit')),
-                  ],
-                  selected: {_bodyViewMode},
-                  onSelectionChanged: (newSelection) {
-                    setState(() {
-                      _bodyViewMode = newSelection.first;
-                      if (_bodyViewMode == _BodyViewMode.preview) {
-                        FocusScope.of(context).unfocus();
-                      }
-                    });
+                FilledButton.tonalIcon(
+                  onPressed: () async {
+                    FocusScope.of(context).unfocus();
+                    final newText = await PromptBodyFocusEditor.show(
+                      context,
+                      _bodyController.text,
+                    );
+                    if (newText != null && newText != _bodyController.text) {
+                      _bodyController.text = newText;
+                      // Form listeners will pick this up to extract variables
+                    }
                   },
+                  icon: const Icon(Icons.fullscreen),
+                  label: const Text('Open Focus Editor'),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 500,
+            const SizedBox(height: AppDesign.spacingSm),
+            InkWell(
+              onTap: () async {
+                FocusScope.of(context).unfocus();
+                final newText = await PromptBodyFocusEditor.show(
+                  context,
+                  _bodyController.text,
+                );
+                if (newText != null && newText != _bodyController.text) {
+                  _bodyController.text = newText;
+                }
+              },
+              borderRadius: AppDesign.borderMd,
               child: Container(
+                height: 250,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).colorScheme.outline),
-                  borderRadius: BorderRadius.circular(4.0),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  borderRadius: AppDesign.borderMd,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 ),
-                child: _bodyViewMode == _BodyViewMode.edit
-                    ? TextFormField(
+                clipBehavior: Clip.hardEdge,
+                child: IgnorePointer(
+                  // IgnorePointer so clicks on the preview trigger the InkWell instead of inline edit
+                  child: Stack(
+                    children: [
+                      InlineMarkdownEditor(
                         controller: _bodyController,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(12),
-                          hintText: 'Enter prompt body (Markdown supported)...',
-                        ),
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        style: const TextStyle(fontFamily: 'monospace'),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter the prompt body';
-                          }
-                          return null;
-                        },
-                      )
-                    : Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            child: Row(
-                              children: [
-                                const Icon(Icons.info_outline, size: 16, color: Colors.grey),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Click any section to edit it in place.',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                                  ),
-                                ),
-                                DropdownButton<MarkdownReaderStyle>(
-                                  value: _readerStyle,
-                                  underline: const SizedBox(),
-                                  isDense: true,
-                                  iconSize: 20,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
-                                  items: MarkdownReaderStyle.values.map((style) {
-                                    return DropdownMenuItem(
-                                      value: style,
-                                      child: Text(style.displayName),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) setState(() => _readerStyle = val);
-                                  },
-                                ),
+                        readerStyle: MarkdownReaderStyle.promptForge,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: 60,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.0),
+                                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
                               ],
                             ),
                           ),
-                          Expanded(
-                            child: InlineMarkdownEditor(
-                              controller: _bodyController,
-                              readerStyle: _readerStyle,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
+                    ],
+                  ),
+                ),
               ),
             ),
             if (_detectedVariables.isNotEmpty) ...[
