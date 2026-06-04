@@ -80,7 +80,11 @@ void main() {
 
     // Enter details
     await tester.enterText(find.widgetWithText(TextFormField, 'Title'), 'My Awesome Prompt');
-    await tester.enterText(find.widgetWithText(TextFormField, 'Prompt Body'), 'This is the body.');
+    // Body field is inside a SizedBox, find by hint text
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      'This is the body.',
+    );
     await tester.pump();
 
     // Tap save

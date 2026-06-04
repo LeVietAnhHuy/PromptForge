@@ -11,6 +11,10 @@ import '../../prompt_compiler/domain/prompt_compiler_service.dart';
 import 'dart:convert' as dart_convert;
 import 'package:flutter/foundation.dart';
 
+import '../../../shared/markdown/inline_markdown_editor.dart';
+import '../../../shared/markdown/markdown_reader_style.dart';
+
+enum _BodyViewMode { preview, edit }
 
 
 class _VariableMetadataForm {
@@ -59,6 +63,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   
   Prompt? _existingPrompt;
   bool _isLoading = true;
+
+  _BodyViewMode _bodyViewMode = _BodyViewMode.edit;
+  MarkdownReaderStyle _readerStyle = MarkdownReaderStyle.promptForge;
 
   Map<String, _VariableMetadataForm> _variableForms = {};
   List<String> _detectedVariables = [];
@@ -110,6 +117,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       
       setState(() {
         _existingPrompt = prompt;
+        _bodyViewMode = _BodyViewMode.preview; // Preview by default for existing prompts
         _titleController.text = prompt.title;
         _bodyController.text = prompt.body;
         _purposeController.text = prompt.purpose ?? '';
@@ -162,6 +170,13 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   }
 
   Future<void> _savePrompt() async {
+    // Body validation: in Preview mode the TextFormField validator isn't mounted
+    if (_bodyController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter the prompt body')),
+      );
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
 
     final promptDao = ref.read(promptDaoProvider);
@@ -444,20 +459,97 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _bodyController,
-              decoration: const InputDecoration(
-                labelText: 'Prompt Body',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Prompt Body', style: Theme.of(context).textTheme.titleSmall),
+                SegmentedButton<_BodyViewMode>(
+                  segments: const [
+                    ButtonSegment(value: _BodyViewMode.preview, label: Text('Preview')),
+                    ButtonSegment(value: _BodyViewMode.edit, label: Text('Edit')),
+                  ],
+                  selected: {_bodyViewMode},
+                  onSelectionChanged: (newSelection) {
+                    setState(() {
+                      _bodyViewMode = newSelection.first;
+                      if (_bodyViewMode == _BodyViewMode.preview) {
+                        FocusScope.of(context).unfocus();
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 500,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
+                  borderRadius: BorderRadius.circular(4.0),
+                ),
+                child: _bodyViewMode == _BodyViewMode.edit
+                    ? TextFormField(
+                        controller: _bodyController,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.all(12),
+                          hintText: 'Enter prompt body (Markdown supported)...',
+                        ),
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: const TextStyle(fontFamily: 'monospace'),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter the prompt body';
+                          }
+                          return null;
+                        },
+                      )
+                    : Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Click any section to edit it in place.',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                                  ),
+                                ),
+                                DropdownButton<MarkdownReaderStyle>(
+                                  value: _readerStyle,
+                                  underline: const SizedBox(),
+                                  isDense: true,
+                                  iconSize: 20,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary),
+                                  items: MarkdownReaderStyle.values.map((style) {
+                                    return DropdownMenuItem(
+                                      value: style,
+                                      child: Text(style.displayName),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _readerStyle = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: InlineMarkdownEditor(
+                              controller: _bodyController,
+                              readerStyle: _readerStyle,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
-              maxLines: 15,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter the prompt body';
-                }
-                return null;
-              },
             ),
             if (_detectedVariables.isNotEmpty) ...[
               const SizedBox(height: 24),
