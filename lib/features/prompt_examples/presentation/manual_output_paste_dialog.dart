@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../application/llm_model_catalog.dart';
+import '../application/attachment_picker_service.dart';
 
 class ManualOutputPasteDialog extends ConsumerStatefulWidget {
   final String promptId;
@@ -38,7 +38,8 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
   String? _selectedProviderId;
   String? _selectedModelId;
   String _outputType = 'markdown';
-  List<PlatformFile> _attachments = [];
+  List<OutputAttachmentDraft> _attachments = [];
+  final AttachmentPickerService _attachmentPickerService = const AttachmentPickerService();
 
   @override
   void initState() {
@@ -57,6 +58,13 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
         LLMProvider(id: 'anthropic', name: 'Anthropic', createdAt: now),
         LLMProvider(id: 'google', name: 'Google', createdAt: now),
         LLMProvider(id: 'deepseek', name: 'DeepSeek', createdAt: now),
+        LLMProvider(id: 'mistral-ai', name: 'Mistral AI', createdAt: now),
+        LLMProvider(id: 'meta-llama', name: 'Meta Llama', createdAt: now),
+        LLMProvider(id: 'zhipu-ai', name: 'Zhipu AI', createdAt: now),
+        LLMProvider(id: 'baidu', name: 'Baidu', createdAt: now),
+        LLMProvider(id: 'microsoft', name: 'Microsoft', createdAt: now),
+        LLMProvider(id: 'cohere', name: 'Cohere', createdAt: now),
+        LLMProvider(id: 'xai', name: 'xAI', createdAt: now),
         LLMProvider(id: 'other', name: 'Other', createdAt: now),
       ];
     }
@@ -90,18 +98,15 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
   }
 
   Future<void> _pickFiles() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-      );
-      if (result != null) {
+    final result = await _attachmentPickerService.pickOutputAttachments();
+    
+    if (mounted) {
+      if (result.errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result.errorMessage!)));
+      } else if (result.attachments.isNotEmpty) {
         setState(() {
-          _attachments.addAll(result.files);
+          _attachments.addAll(result.attachments);
         });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to pick files: $e')));
       }
     }
   }
@@ -173,25 +178,17 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
 
         for (final file in _attachments) {
           if (file.path != null) {
-            final targetPath = p.join(attachmentsDir.path, file.name);
+            final targetPath = p.join(attachmentsDir.path, file.fileName);
             await File(file.path!).copy(targetPath);
-            
-            String mimeType = 'application/octet-stream';
-            final ext = p.extension(file.name).toLowerCase();
-            if (ext == '.png') mimeType = 'image/png';
-            else if (ext == '.jpg' || ext == '.jpeg') mimeType = 'image/jpeg';
-            else if (ext == '.pdf') mimeType = 'application/pdf';
-            else if (ext == '.json') mimeType = 'application/json';
-            else if (ext == '.mp4') mimeType = 'video/mp4';
 
             await attachmentDao.createAttachment(LLMOutputAttachmentsCompanion.insert(
               id: const Uuid().v4(),
               outputId: outputId,
-              fileName: file.name,
-              mimeType: mimeType,
-              sizeBytes: drift.Value(file.size),
+              fileName: file.fileName,
+              mimeType: file.mimeType ?? 'application/octet-stream',
+              sizeBytes: file.sizeBytes != null ? drift.Value(file.sizeBytes!) : const drift.Value.absent(),
               localPath: targetPath,
-              attachmentType: drift.Value(_outputType),
+              attachmentType: drift.Value(file.attachmentType),
               createdAt: now,
             ));
           }
@@ -263,10 +260,15 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
                           labelText: 'Model',
                           border: OutlineInputBorder(),
                         ),
-                        items: _selectedProviderId != null ? _getModelsForProvider(_selectedProviderId!).map((m) => DropdownMenuItem(
-                          value: m.id,
-                          child: Text(m.displayName, overflow: TextOverflow.ellipsis),
-                        )).toList() : [],
+                        items: _selectedProviderId != null ? _getModelsForProvider(_selectedProviderId!).map((m) {
+                          String label = m.displayName;
+                          if (m.isLegacy) label += ' [Legacy]';
+                          if (m.isPreview) label += ' [Preview]';
+                          return DropdownMenuItem(
+                            value: m.id,
+                            child: Text(label, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList() : [],
                         onChanged: (val) {
                           if (val != null) setState(() => _selectedModelId = val);
                         },
@@ -328,12 +330,11 @@ class _ManualOutputPasteDialogState extends ConsumerState<ManualOutputPasteDialo
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _attachments.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final file = entry.value;
+                    children: _attachments.asMap().entries.map((e) {
+                      final file = e.value;
                       return Chip(
-                        label: Text(file.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        onDeleted: () => _removeAttachment(idx),
+                        label: Text(file.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        onDeleted: () => _removeAttachment(e.key),
                       );
                     }).toList(),
                   ),
