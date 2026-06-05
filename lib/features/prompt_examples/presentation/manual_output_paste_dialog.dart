@@ -11,6 +11,7 @@ import '../../../core/database/database_providers.dart';
 import '../../../shared/providers/provider_identity.dart';
 import '../application/llm_model_catalog.dart';
 import '../application/attachment_picker_service.dart';
+import 'model_picker_field.dart';
 
 /// Captures (or edits) a manual / external LLM output for a prompt. In create
 /// mode it spins up a new [PromptExample] to hold the output; in edit mode
@@ -389,25 +390,13 @@ class _ManualOutputPasteDialogState
       },
     );
 
-    final modelField = DropdownButtonFormField<String>(
-      isExpanded: true,
-      initialValue: _selectedModelId,
-      decoration: const InputDecoration(
-          labelText: 'Model', border: OutlineInputBorder()),
-      items: _selectedProviderId != null
-          ? _getModelsForProvider(_selectedProviderId!).map((m) {
-              String label = m.displayName;
-              if (m.isLegacy) label += ' [Legacy]';
-              if (m.isPreview) label += ' [Preview]';
-              return DropdownMenuItem(
-                value: m.id,
-                child: Text(label, overflow: TextOverflow.ellipsis),
-              );
-            }).toList()
+    final modelField = ModelPickerField(
+      providerId: _selectedProviderId,
+      models: _selectedProviderId != null
+          ? _getModelsForProvider(_selectedProviderId!)
           : const [],
-      onChanged: (val) {
-        if (val != null) setState(() => _selectedModelId = val);
-      },
+      selectedModelId: _selectedModelId,
+      onSelected: (id) => setState(() => _selectedModelId = id),
     );
 
     return AlertDialog(
