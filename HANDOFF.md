@@ -77,6 +77,38 @@ prefixed `stage23:`.
 - A few existing tests that asserted the old pop-on-save navigation were updated
   to the new in-place-save flow; data assertions are unchanged.
 
+## Stage 24 (Claude Code) — in progress
+
+Translating the Stage 24 brief into the Flutter stack. One commit per part,
+`stage24:` prefix. Parts completed so far:
+
+- Part B — real provider logos. Root cause: OpenAI/Cohere/Zhipu had no bundled
+  SVG so the registry fell back to a monogram. Vendored real marks from the
+  LobeHub icon set (MIT) into `assets/provider_icons/`; minimum set now all show
+  real logos. Kept `assets/provider_icons/` (brief suggested `provider_logos/`)
+  — deviation. Asset test verifies each bundled logo loads + parses.
+- Part A — model picker. Root cause of the unusable scroll: every group header
+  was `SliverPersistentHeader(pinned: true)`, so all headers pinned and stacked
+  at the top. Rewrote with naturally-scrolling expandable group headers, 60%-of-
+  window max height + always-visible scrollbar, family-first grouping with
+  capability buckets collapsed at the bottom, capability filter chips, and
+  keyboard expand/collapse. `capabilityOfFamily()` classifies models.
+- Part E — "3 attached, 2 saved" bug. **Root cause:** `_copyDraftsInto` wrote
+  every file to `attachments/<outputId>/<originalFileName>` with no uniqueness,
+  so two attachments sharing a base name overwrote each other on disk, and a
+  single failed/`path == null` copy mid-loop silently dropped the rest while the
+  already-written rows persisted — the saved count could fall below the attached
+  count with no error. **Fix:** extracted `AttachmentStorageService` that stores
+  each file under a unique `<uuid>__<name>` destination, never silently skips,
+  and returns saved/failed counts so the dialog warns instead of losing data.
+  Regression tests cover create + edit flows and the same-name case.
+  **Existing-data check:** the user's local DB isn't accessible from this
+  environment, so no automated scan was run. The bug only ever *under*-saved
+  (fewer rows than files) or overwrote a same-named file; it did not create rows
+  pointing at deleted files except in the same-name-overwrite case (two rows →
+  one file). Nothing was deleted as part of this fix; users who hit the bug
+  should re-attach the missing files. No silent cleanup performed.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

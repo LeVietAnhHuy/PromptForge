@@ -1,10 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
@@ -12,6 +9,7 @@ import '../../../shared/providers/provider_identity.dart';
 import '../../../shared/attachments/attachment_viewer.dart';
 import '../application/llm_model_catalog.dart';
 import '../application/attachment_picker_service.dart';
+import '../application/attachment_storage_service.dart';
 import 'model_picker_field.dart';
 
 /// Captures (or edits) a manual / external LLM output for a prompt. In create
@@ -191,29 +189,12 @@ class _ManualOutputPasteDialogState
     return '';
   }
 
-  Future<void> _copyDraftsInto(String outputId, DateTime now) async {
-    if (_attachments.isEmpty) return;
-    final appDir = await getApplicationDocumentsDirectory();
-    final attachmentsDir =
-        Directory(p.join(appDir.path, 'promptforge', 'attachments', outputId));
-    await attachmentsDir.create(recursive: true);
-    final attachmentDao = ref.read(lLMOutputAttachmentDaoProvider);
-
-    for (final file in _attachments) {
-      if (file.path == null) continue;
-      final targetPath = p.join(attachmentsDir.path, file.fileName);
-      await File(file.path!).copy(targetPath);
-      await attachmentDao.createAttachment(LLMOutputAttachmentsCompanion.insert(
-        id: const Uuid().v4(),
-        outputId: outputId,
-        fileName: file.fileName,
-        mimeType: file.mimeType ?? 'application/octet-stream',
-        sizeBytes: file.sizeBytes != null
-            ? drift.Value(file.sizeBytes!)
-            : const drift.Value.absent(),
-        localPath: targetPath,
-        attachmentType: drift.Value(file.attachmentType),
-        createdAt: now,
+  void _warnIfDropped(PersistResult res) {
+    if (res.failed > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+            '${res.failed} attachment(s) could not be saved and were skipped.'),
+        backgroundColor: Theme.of(context).colorScheme.error,
       ));
     }
   }
@@ -234,7 +215,7 @@ class _ManualOutputPasteDialogState
     try {
       final now = DateTime.now();
       final outputDao = ref.read(promptExampleOutputDaoProvider);
-      final attachmentDao = ref.read(lLMOutputAttachmentDaoProvider);
+      final storage = ref.read(attachmentStorageServiceProvider);
       final matchedProvider =
           _providers.where((p) => p.id == _selectedProviderId).firstOrNull;
       final modelName = _resolveModelName();
@@ -269,20 +250,16 @@ class _ManualOutputPasteDialogState
 
         // Reconcile attachments: drop removed (rows + files), add new drafts.
         for (final att in _removedAttachments) {
-          await attachmentDao.deleteAttachment(att.id);
-          try {
-            final f = File(att.localPath);
-            if (f.existsSync()) f.deleteSync();
-          } catch (_) {
-            // Best-effort local file cleanup; ignore failures.
-          }
+          await storage.deleteAttachment(att);
         }
-        await _copyDraftsInto(existing.id, now);
+        final res =
+            await storage.persistDrafts(existing.id, _attachments, now: now);
 
         if (mounted) {
           Navigator.of(context).pop(true);
           ScaffoldMessenger.of(context)
               .showSnackBar(const SnackBar(content: Text('Output updated.')));
+          _warnIfDropped(res);
         }
         return;
       }
@@ -323,12 +300,13 @@ class _ManualOutputPasteDialogState
         updatedAt: now,
       ));
 
-      await _copyDraftsInto(outputId, now);
+      final res = await storage.persistDrafts(outputId, _attachments, now: now);
 
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Output saved manually.')));
+        _warnIfDropped(res);
       }
     } catch (e) {
       if (mounted) {
