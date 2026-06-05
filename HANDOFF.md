@@ -226,10 +226,31 @@ Standing rule this stage: push to `origin/master` after every commit.
   output card shows a usage line for API outputs: real tokens or "—", and cost
   as "est. \$x" only when BOTH real token counts and a price entry exist — "—"
   otherwise (no fabricated numbers). Pricing unit tests assert the null/"—"
-  discipline. STILL TODO in Part C: multi-model concurrent run UI, comparison
-  sync-scroll/per-column logos, ratings + Best pin on the main output card
-  (ratings/Best already exist on the comparison screen), and per-prompt cost
-  total in the Saved Outputs header.
+  discipline.
+- Part C (2/2) commit 1 — ratings + Best pin + cost total + sort. The schema
+  already had `score` (1-5) and `isBest`; what was missing was the way to *set*
+  them and a single shared control. Added DAO methods `setOutputScore`,
+  `setOutputBest`, and `markOutputAsBestForPrompt`. **Best-pin scoping note (data
+  model reality):** the library "Saved Outputs" aggregates outputs from many
+  *one-output* examples (every manual paste makes a fresh `PromptExample`), so a
+  per-example best is meaningless there — its best is scoped per *prompt*
+  (`markOutputAsBestForPrompt` clears `isBest` across all the prompt's examples).
+  The comparison/run surfaces keep per-example best (`markOutputAsBest`) because a
+  single comparison example holds several outputs. Both write the same `isBest`
+  column and read it back from the row — no widget-local copies — so the surfaces
+  never diverge (satisfies "single source of truth"). New shared widget
+  `OutputRatingBar` (ember 1-5 stars + Best pin) is the one rating control; the
+  library card uses it (ember accent + "★ BEST" badge when pinned). Saved Outputs
+  header now has a sort control (Newest / Rating / Model) and a per-prompt cost
+  total: `PricingTable.summarizeCosts` sums only runs whose tokens AND price are
+  known and returns "$x" when all priced, "$x · partial" when some lack data, and
+  "—" when none — never an incomplete sum passed off as the whole. Tests:
+  `output_rating_test.dart` (score set/clear, per-prompt best clearing, prompt
+  isolation, unpin) and `summarizeCosts` cases (complete / partial / none / empty)
+  in `pricing_service_test.dart`. STILL TODO in Part C (2/2) commit 2: multi-model
+  concurrent run (isolated per-column failures + test), comparison view
+  per-column provider logos + sync-scroll toggle, comparison accessible from any
+  prompt with ≥2 outputs, and using `OutputRatingBar` on the comparison columns.
 
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.

@@ -19,6 +19,7 @@ import '../../../shared/widgets/app_feedback.dart';
 import 'prompt_body_focus_editor.dart';
 import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../prompt_examples/presentation/prompt_output_card.dart';
+import '../../execution/application/pricing_service.dart';
 
 class _VariableMetadataForm {
   final String name;
@@ -72,6 +73,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
   List<PromptExampleOutput> _outputs = [];
   StreamSubscription<List<PromptExampleOutput>>? _outputsSubscription;
+  _OutputSort _outputSort = _OutputSort.date;
 
   DateTime? _lastSavedAt;
   bool _dirty = false;
@@ -1026,6 +1028,88 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     );
   }
 
+  // Returns the saved outputs ordered by the active sort. Date is newest-first
+  // (the stream's natural order); rating is highest-first with unrated last;
+  // model groups by provider then model name.
+  List<PromptExampleOutput> _sortedOutputs() {
+    final list = [..._outputs];
+    switch (_outputSort) {
+      case _OutputSort.date:
+        break; // already createdAt desc from the query
+      case _OutputSort.rating:
+        list.sort((a, b) {
+          final byScore = (b.score ?? -1).compareTo(a.score ?? -1);
+          if (byScore != 0) return byScore;
+          return b.createdAt.compareTo(a.createdAt);
+        });
+      case _OutputSort.model:
+        list.sort((a, b) {
+          final byProvider = a.providerName
+              .toLowerCase()
+              .compareTo(b.providerName.toLowerCase());
+          if (byProvider != 0) return byProvider;
+          return (a.modelName ?? '')
+              .toLowerCase()
+              .compareTo((b.modelName ?? '').toLowerCase());
+        });
+    }
+    return list;
+  }
+
+  // Cost summary + sort control. Cost sums only the runs whose tokens AND price
+  // are known; an incomplete sum is labelled "… · partial" (never passed off as
+  // the whole), and "—" shows when nothing is computable.
+  Widget _buildOutputsToolbar(BuildContext context) {
+    final theme = Theme.of(context);
+    final pricing = ref.watch(pricingTableProvider);
+    final apiRuns = _outputs
+        .where((o) => o.sourceType == 'api')
+        .map((o) => (
+              modelId: o.modelId,
+              inputTokens: o.inputTokens,
+              outputTokens: o.outputTokens,
+            ))
+        .toList();
+    final costLabel = apiRuns.isEmpty
+        ? null
+        : pricing.maybeWhen(
+            data: (table) => table.summarizeCosts(apiRuns).label,
+            orElse: () => '—',
+          );
+
+    return Row(
+      children: [
+        if (costLabel != null) ...[
+          Icon(Icons.toll_outlined,
+              size: 15, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: AppDesign.spacingXs),
+          Text('Total est. $costLabel',
+              style: theme.textTheme.labelMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        ],
+        const Spacer(),
+        Icon(Icons.sort,
+            size: 16, color: theme.colorScheme.onSurfaceVariant),
+        const SizedBox(width: AppDesign.spacingXs),
+        DropdownButton<_OutputSort>(
+          value: _outputSort,
+          isDense: true,
+          underline: const SizedBox(),
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: theme.colorScheme.onSurface),
+          items: const [
+            DropdownMenuItem(value: _OutputSort.date, child: Text('Newest')),
+            DropdownMenuItem(value: _OutputSort.rating, child: Text('Rating')),
+            DropdownMenuItem(value: _OutputSort.model, child: Text('Model')),
+          ],
+          onChanged: (v) {
+            if (v != null) setState(() => _outputSort = v);
+          },
+        ),
+      ],
+    );
+  }
+
   // --- Right column: saved outputs ---
   List<Widget> _outputsChildren(BuildContext context) {
     final theme = Theme.of(context);
@@ -1061,6 +1145,10 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           ),
         ],
       ),
+      if (_outputs.isNotEmpty) ...[
+        const SizedBox(height: AppDesign.spacingSm),
+        _buildOutputsToolbar(context),
+      ],
       const SizedBox(height: AppDesign.spacingMd),
       if (_outputs.isEmpty)
         Container(
@@ -1090,8 +1178,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           ),
         )
       else
-        ..._outputs.map((output) => PromptOutputCard(
+        ..._sortedOutputs().map((output) => PromptOutputCard(
               output: output,
+              promptId: _existingPrompt?.id,
               onEdit: () async {
                 FocusScope.of(context).unfocus();
                 await showDialog<bool>(
@@ -1127,6 +1216,9 @@ class _Heading {
   final String text;
   const _Heading(this.level, this.text);
 }
+
+/// Sort order for the Saved Outputs list.
+enum _OutputSort { date, rating, model }
 
 List<_Heading> _extractHeadings(String body) {
   final result = <_Heading>[];

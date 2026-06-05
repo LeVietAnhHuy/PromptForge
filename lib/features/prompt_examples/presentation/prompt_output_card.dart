@@ -13,17 +13,23 @@ import '../../../app/theme/app_design.dart';
 import '../../../shared/providers/provider_identity.dart';
 import '../../../shared/attachments/attachment_viewer.dart';
 import '../../execution/application/pricing_service.dart';
+import 'output_rating_bar.dart';
 
 class PromptOutputCard extends ConsumerStatefulWidget {
   final PromptExampleOutput output;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
 
+  /// When set, the "Best" pin is scoped to the whole prompt (the library shows
+  /// one best across many one-output examples). Null falls back to per-example.
+  final String? promptId;
+
   const PromptOutputCard({
     super.key,
     required this.output,
     this.onDelete,
     this.onEdit,
+    this.promptId,
   });
 
   @override
@@ -106,6 +112,9 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
     final edited =
         widget.output.updatedAt.difference(widget.output.createdAt).inSeconds >
             2;
+    // A pinned "Best" output takes the ember accent over the provider color.
+    final accent =
+        widget.output.isBest ? AppDesign.emberPrimary : identity.accent;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovering = true),
@@ -118,9 +127,11 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
           color: colorScheme.surfaceContainerHigh,
           borderRadius: AppDesign.borderLg,
           border: Border.all(
-            color: _hovering
-                ? identity.accent.withValues(alpha: 0.55)
-                : colorScheme.outlineVariant,
+            color: widget.output.isBest
+                ? AppDesign.emberPrimary.withValues(alpha: 0.7)
+                : _hovering
+                    ? identity.accent.withValues(alpha: 0.55)
+                    : colorScheme.outlineVariant,
           ),
           boxShadow: _hovering
               ? [
@@ -142,7 +153,7 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
                 top: 0,
                 bottom: 0,
                 width: 4,
-                child: ColoredBox(color: identity.accent),
+                child: ColoredBox(color: accent),
               ),
               Padding(
                 padding: const EdgeInsets.only(left: 4),
@@ -163,6 +174,7 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
                     if (widget.output.notes != null &&
                         widget.output.notes!.isNotEmpty)
                       _buildNotes(theme, colorScheme, isLong),
+                    _buildRatingFooter(theme, colorScheme),
                   ],
                 ),
               ),
@@ -208,6 +220,9 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
                     widget.output.sourceType.toUpperCase(),
                     colorScheme.tertiaryContainer,
                     colorScheme.onTertiaryContainer),
+                if (widget.output.isBest)
+                  _buildBadge('★ BEST', AppDesign.emberContainer,
+                      AppDesign.emberOnContainer),
                 if (edited)
                   Text(
                     '· edited ${DateFormat.MMMd().add_jm().format(widget.output.updatedAt.toLocal())}',
@@ -539,6 +554,27 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
     } catch (_) {
       return '';
     }
+  }
+
+  // Footer holding the shared 1-5 star rating + Best pin. Same widget the
+  // comparison columns use, so ratings/best never diverge between surfaces.
+  Widget _buildRatingFooter(ThemeData theme, ColorScheme colorScheme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDesign.spacingSm, vertical: AppDesign.spacingXs),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: OutputRatingBar(
+          output: widget.output,
+          promptId: widget.promptId,
+          compact: true,
+        ),
+      ),
+    );
   }
 
   Widget _buildNotes(ThemeData theme, ColorScheme colorScheme, bool isLong) {

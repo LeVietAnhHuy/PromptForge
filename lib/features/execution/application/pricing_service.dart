@@ -62,6 +62,51 @@ class PricingTable {
     return inputTokens / 1e6 * price.inputPer1M +
         outputTokens / 1e6 * price.outputPer1M;
   }
+
+  /// Aggregates the estimated cost across several runs. Sums only the runs whose
+  /// cost is genuinely computable (real tokens + a price entry); never invents a
+  /// number for the rest. When some runs lack cost data the summary is marked
+  /// incomplete so the UI can show "$x · partial" rather than passing off a
+  /// short sum as the whole. See [PromptCostSummary.label].
+  PromptCostSummary summarizeCosts(
+      Iterable<({String? modelId, int? inputTokens, int? outputTokens})> runs) {
+    double total = 0;
+    int known = 0;
+    int unknown = 0;
+    for (final r in runs) {
+      final c = costFor(r.modelId, r.inputTokens, r.outputTokens);
+      if (c != null) {
+        total += c;
+        known++;
+      } else {
+        unknown++;
+      }
+    }
+    return PromptCostSummary(total: total, known: known, unknown: unknown);
+  }
+}
+
+/// Outcome of [PricingTable.summarizeCosts]: the summed cost of the runs whose
+/// cost was computable, plus how many were/weren't. The label is the only thing
+/// most callers need.
+class PromptCostSummary {
+  final double total;
+  final int known;
+  final int unknown;
+  const PromptCostSummary(
+      {required this.total, required this.known, required this.unknown});
+
+  bool get hasAny => known > 0;
+  bool get isComplete => known > 0 && unknown == 0;
+
+  /// "—" when nothing is computable, "$x" when every run was priced, and
+  /// "$x · partial" when only some were — so an incomplete sum is never shown
+  /// as if it were the total.
+  String get label {
+    if (!hasAny) return '—';
+    final money = '\$${total.toStringAsFixed(total < 0.01 ? 5 : 3)}';
+    return isComplete ? money : '$money · partial';
+  }
 }
 
 const _kPricingSettingKey = 'model_pricing_json';

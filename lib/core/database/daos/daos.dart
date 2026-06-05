@@ -379,6 +379,42 @@ class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase>
     });
   }
 
+  /// Pins a single best output across an entire prompt — i.e. every output of
+  /// every example belonging to [promptId] — clearing any previous best first.
+  /// The library "Saved Outputs" surface aggregates outputs from many one-output
+  /// examples, so its "best" is scoped per-prompt (the comparison/run surfaces
+  /// stay per-example via [markOutputAsBest]). Both write the same `isBest`
+  /// column, so the two surfaces never diverge.
+  Future<void> markOutputAsBestForPrompt(
+      String promptId, String outputId) async {
+    await transaction(() async {
+      final exampleRows = await (select(promptExamples)
+            ..where((t) => t.promptId.equals(promptId)))
+          .get();
+      final exampleIds = exampleRows.map((e) => e.id).toList();
+      if (exampleIds.isNotEmpty) {
+        await (update(promptExampleOutputs)
+              ..where((t) => t.exampleId.isIn(exampleIds)))
+            .write(const PromptExampleOutputsCompanion(isBest: Value(false)));
+      }
+      await (update(promptExampleOutputs)..where((t) => t.id.equals(outputId)))
+          .write(const PromptExampleOutputsCompanion(isBest: Value(true)));
+    });
+  }
+
+  /// Sets (or, with [isBest] false, unpins) the best flag on a single output
+  /// without touching siblings — used to toggle an already-pinned output off.
+  Future<void> setOutputBest(String outputId, bool isBest) =>
+      (update(promptExampleOutputs)..where((t) => t.id.equals(outputId)))
+          .write(PromptExampleOutputsCompanion(isBest: Value(isBest)));
+
+  /// Sets a 1-5 star rating on an output, or clears it with null. Ratings are
+  /// per-output (no sibling clearing) and shared by every surface that shows
+  /// outputs, so there is one source of truth for the value.
+  Future<void> setOutputScore(String outputId, int? score) =>
+      (update(promptExampleOutputs)..where((t) => t.id.equals(outputId)))
+          .write(PromptExampleOutputsCompanion(score: Value(score)));
+
   /// Searches outputs by text / provider / model, returning each match with the
   /// owning example's prompt id (when any) for navigation. Value is bound by
   /// drift, so the query is parameterized.
