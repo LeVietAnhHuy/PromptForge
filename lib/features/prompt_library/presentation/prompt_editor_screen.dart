@@ -1014,6 +1014,17 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       else
         ..._outputs.map((output) => PromptOutputCard(
               output: output,
+              onEdit: () async {
+                FocusScope.of(context).unfocus();
+                await showDialog<bool>(
+                  context: context,
+                  builder: (context) => ManualOutputPasteDialog(
+                    promptId: _existingPrompt!.id,
+                    compiledPromptSnapshot: _bodyController.text,
+                    existingOutput: output,
+                  ),
+                );
+              },
               onDelete: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
