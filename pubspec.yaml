@@ -43,6 +43,7 @@ dev_dependencies:
   drift_dev: ^2.16.0
   flutter_launcher_icons: ^0.14.4
   msix: ^3.16.13
+  stream_channel: ^2.1.4
 
 flutter:
   uses-material-design: true
