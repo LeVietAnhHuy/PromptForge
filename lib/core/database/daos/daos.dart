@@ -59,6 +59,23 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
                   OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)
             ]))
           .get();
+  Future<int> getPromptVersionCount(String promptId) async {
+    final rows = await (select(promptVersions)
+          ..where((t) => t.promptId.equals(promptId)))
+        .get();
+    return rows.length;
+  }
+
+  Future<PromptVersion?> getPromptVersionById(String id) =>
+      (select(promptVersions)..where((t) => t.id.equals(id))).getSingleOrNull();
+  // Keeps only the [cap] newest versions for [promptId], deleting older ones.
+  Future<void> prunePromptVersions(String promptId, int cap) async {
+    if (cap <= 0) return;
+    final all = await getPromptVersions(promptId); // newest first
+    if (all.length <= cap) return;
+    final toDelete = all.skip(cap).map((v) => v.id).toList();
+    await (delete(promptVersions)..where((t) => t.id.isIn(toDelete))).go();
+  }
 }
 
 @DriftAccessor(

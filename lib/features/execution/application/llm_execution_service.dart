@@ -86,6 +86,8 @@ class LlmExecutionService {
     String? notes,
     int? score,
     bool isBest = false,
+    String? promptVersionId,
+    String? runParamsJson,
   }) async {
     if (response.error != null) {
       throw StateError('Cannot save a failed execution response.');
@@ -114,6 +116,12 @@ class LlmExecutionService {
             ? drift.Value(notes.trim())
             : const drift.Value.absent(),
         isBest: drift.Value(isBest),
+        promptVersionId: promptVersionId != null
+            ? drift.Value(promptVersionId)
+            : const drift.Value.absent(),
+        runParamsJson: runParamsJson != null
+            ? drift.Value(runParamsJson)
+            : const drift.Value.absent(),
         createdAt: createdAt,
         updatedAt: createdAt,
       ),
@@ -134,6 +142,8 @@ class LlmExecutionService {
     String? notes,
     int? score,
     bool isBest = false,
+    String? promptVersionId,
+    String? runParamsJson,
   }) async {
     final response = await execute(
       compiledPrompt: compiledPrompt,
@@ -164,6 +174,8 @@ class LlmExecutionService {
       notes: notes,
       score: score,
       isBest: isBest,
+      promptVersionId: promptVersionId,
+      runParamsJson: runParamsJson,
     );
 
     return SavedLlmExecutionResult(

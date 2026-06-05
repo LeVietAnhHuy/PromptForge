@@ -201,6 +201,45 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     super.dispose();
   }
 
+  // Skippable one-line note for the version snapshot. Returns the note text,
+  // or null when the user skips (the version is still created either way).
+  Future<String?> _promptForVersionNote() async {
+    final controller = TextEditingController();
+    final note = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Version note (optional)'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            hintText: 'What changed? (optional)',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (v) => Navigator.of(ctx).pop(v.trim()),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: const Text('Skip')),
+          FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              child: const Text('Save note')),
+        ],
+      ),
+    );
+    controller.dispose();
+    return note;
+  }
+
+  Future<int> _versionRetentionCap() async {
+    final setting = await ref
+        .read(userSettingsDaoProvider)
+        .getSetting('version_retention_cap');
+    return int.tryParse(setting?.value ?? '') ?? 0;
+  }
+
   Future<void> _savePrompt() async {
     // Body validation: in Preview mode the TextFormField validator isn't mounted
     if (_bodyController.text.trim().isEmpty) {
@@ -255,7 +294,11 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
             _detectedVariables.join(',');
 
         if (titleChanged || bodyChanged || tagsChanged || varsChanged) {
-          // Create snapshot of the existing state before we overwrite it
+          // Optionally collect a one-line note (skippable) before snapshotting.
+          final note = await _promptForVersionNote();
+          if (!mounted) return;
+
+          // Create snapshot of the existing state before we overwrite it.
           final tagsJson = dart_convert.jsonEncode(currentTagNames);
           final varsJson = dart_convert.jsonEncode(existingVars
               .map((v) => {
@@ -268,6 +311,8 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                   })
               .toList());
 
+          final versionNumber =
+              (await promptDao.getPromptVersionCount(currentPromptId)) + 1;
           await promptDao.createPromptVersion(PromptVersionsCompanion.insert(
             id: const Uuid().v4(),
             promptId: currentPromptId,
@@ -275,8 +320,18 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
             body: _existingPrompt!.body,
             tagsJson: drift.Value(tagsJson),
             variableMetadataJson: drift.Value(varsJson),
+            note: note != null && note.isNotEmpty
+                ? drift.Value(note)
+                : const drift.Value.absent(),
+            versionNumber: drift.Value(versionNumber),
             createdAt: now,
           ));
+
+          // Retention: prune oldest beyond the per-prompt cap (0 = keep all).
+          final cap = await _versionRetentionCap();
+          if (cap > 0) {
+            await promptDao.prunePromptVersions(currentPromptId, cap);
+          }
         }
 
         await promptDao.updatePrompt(PromptsCompanion.insert(

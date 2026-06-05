@@ -9,26 +9,26 @@ class ImportedPrompt {
   final List<PromptVariable> variables;
   final List<PromptVersion> versions;
   final List<PromptExample> examples;
-  final Map<String, List<PromptExampleOutput>> exampleOutputs; // exampleId -> outputs
-  final Map<String, List<LLMOutputAttachment>> outputAttachments; // outputId -> attachments
+  final Map<String, List<PromptExampleOutput>>
+      exampleOutputs; // exampleId -> outputs
+  final Map<String, List<LLMOutputAttachment>>
+      outputAttachments; // outputId -> attachments
 
   ImportedPrompt(
-    this.prompt, 
-    this.tags, 
-    [
-      this.variables = const [],
-      this.versions = const [],
-      this.examples = const [],
-      this.exampleOutputs = const {},
-      this.outputAttachments = const {},
-    ]
-  );
+    this.prompt,
+    this.tags, [
+    this.variables = const [],
+    this.versions = const [],
+    this.examples = const [],
+    this.exampleOutputs = const {},
+    this.outputAttachments = const {},
+  ]);
 }
 
 class ImportedContextPack {
   final ContextPack pack;
   final List<ContextPackVersion> versions;
-  
+
   ImportedContextPack(this.pack, [this.versions = const []]);
 }
 
@@ -40,7 +40,7 @@ class ImportPreview {
   final int exampleCount;
   final int comparisonCount;
   final int inboxCount;
-  
+
   final List<ImportedPrompt> validPrompts;
   final List<ImportedContextPack> validContextPacks;
   final List<InboxItem> validInboxItems;
@@ -64,9 +64,9 @@ class ImportExportCodec {
   static const String expectedAppId = 'PromptForge';
 
   static String encodeExport(
-    List<Prompt> prompts, 
-    Map<String, List<String>> promptTags, 
-    Map<String, List<PromptVariable>> promptVariables, 
+    List<Prompt> prompts,
+    Map<String, List<String>> promptTags,
+    Map<String, List<PromptVariable>> promptVariables,
     Map<String, List<PromptVersion>> promptVersions,
     Map<String, List<PromptExample>> promptExamples,
     Map<String, List<PromptExampleOutput>> exampleOutputs,
@@ -79,93 +79,113 @@ class ImportExportCodec {
       'schemaVersion': currentSchemaVersion,
       'app': expectedAppId,
       'exportedAt': DateTime.now().toIso8601String(),
-      'inboxItems': inboxItems.map((i) => {
-        'id': i.id,
-        'title': i.title,
-        'rawText': i.rawText,
-        'source': i.source,
-        'status': i.status,
-        'convertedPromptId': i.convertedPromptId,
-        'createdAt': i.createdAt.toIso8601String(),
-        'updatedAt': i.updatedAt.toIso8601String(),
-      }).toList(),
-      'prompts': prompts.map((p) => {
-        'id': p.id,
-        'title': p.title,
-        'body': p.body,
-        'purpose': p.purpose,
-        'createdAt': p.createdAt.toIso8601String(),
-        'updatedAt': p.updatedAt.toIso8601String(),
-        'isArchived': p.isArchived,
-        'isFavorite': p.isFavorite,
-        'usageCount': p.usageCount,
-        'tags': promptTags[p.id] ?? [],
-        'variables': (promptVariables[p.id] ?? []).map((v) => {
-          'name': v.name,
-          'label': v.label,
-          'description': v.description,
-          'defaultValue': v.defaultValue,
-          'exampleValue': v.exampleValue,
-          'isRequired': v.isRequired,
-        }).toList(),
-        'versions': (promptVersions[p.id] ?? []).map((v) => {
-          'title': v.title,
-          'body': v.body,
-          'tagsJson': v.tagsJson,
-          'variableMetadataJson': v.variableMetadataJson,
-          'note': v.note,
-          'createdAt': v.createdAt.toIso8601String(),
-        }).toList(),
-        'examples': (promptExamples[p.id] ?? []).map((e) => {
-          'id': e.id,
-          'projectId': e.projectId,
-          'title': e.title,
-          'compiledPrompt': e.compiledPrompt,
-          'contextPackId': e.contextPackId,
-          'variableValuesJson': e.variableValuesJson,
-          'notes': e.notes,
-          'refinementNote': e.refinementNote,
-          'createdAt': e.createdAt.toIso8601String(),
-          'updatedAt': e.updatedAt.toIso8601String(),
-          'isArchived': e.isArchived,
-          'outputs': (exampleOutputs[e.id] ?? []).map((o) => {
-            'providerId': o.providerId,
-            'modelId': o.modelId,
-            'providerName': o.providerName,
-            'modelName': o.modelName,
-            'outputType': o.outputType,
-            'sourceType': o.sourceType,
-            'outputText': o.outputText,
-            'score': o.score,
-            'notes': o.notes,
-            'isBest': o.isBest,
-            'createdAt': o.createdAt.toIso8601String(),
-            'updatedAt': o.updatedAt.toIso8601String(),
-            'attachments': (attachments[o.id] ?? []).map((a) => {
-              'fileName': a.fileName,
-              'mimeType': a.mimeType,
-              'sizeBytes': a.sizeBytes,
-              'attachmentType': a.attachmentType,
-            }).toList(),
-          }).toList(),
-        }).toList(),
-      }).toList(),
-      'contextPacks': contextPacks.map((c) => {
-        'id': c.id,
-        'name': c.name,
-        'description': c.description,
-        'content': c.content,
-        'createdAt': c.createdAt.toIso8601String(),
-        'updatedAt': c.updatedAt.toIso8601String(),
-        'isArchived': c.isArchived,
-        'versions': (packVersions[c.id] ?? []).map((v) => {
-          'name': v.name,
-          'description': v.description,
-          'content': v.content,
-          'note': v.note,
-          'createdAt': v.createdAt.toIso8601String(),
-        }).toList(),
-      }).toList(),
+      'inboxItems': inboxItems
+          .map((i) => {
+                'id': i.id,
+                'title': i.title,
+                'rawText': i.rawText,
+                'source': i.source,
+                'status': i.status,
+                'convertedPromptId': i.convertedPromptId,
+                'createdAt': i.createdAt.toIso8601String(),
+                'updatedAt': i.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'prompts': prompts
+          .map((p) => {
+                'id': p.id,
+                'title': p.title,
+                'body': p.body,
+                'purpose': p.purpose,
+                'createdAt': p.createdAt.toIso8601String(),
+                'updatedAt': p.updatedAt.toIso8601String(),
+                'isArchived': p.isArchived,
+                'isFavorite': p.isFavorite,
+                'usageCount': p.usageCount,
+                'tags': promptTags[p.id] ?? [],
+                'variables': (promptVariables[p.id] ?? [])
+                    .map((v) => {
+                          'name': v.name,
+                          'label': v.label,
+                          'description': v.description,
+                          'defaultValue': v.defaultValue,
+                          'exampleValue': v.exampleValue,
+                          'isRequired': v.isRequired,
+                        })
+                    .toList(),
+                'versions': (promptVersions[p.id] ?? [])
+                    .map((v) => {
+                          'title': v.title,
+                          'body': v.body,
+                          'tagsJson': v.tagsJson,
+                          'variableMetadataJson': v.variableMetadataJson,
+                          'note': v.note,
+                          'versionNumber': v.versionNumber,
+                          'createdAt': v.createdAt.toIso8601String(),
+                        })
+                    .toList(),
+                'examples': (promptExamples[p.id] ?? [])
+                    .map((e) => {
+                          'id': e.id,
+                          'projectId': e.projectId,
+                          'title': e.title,
+                          'compiledPrompt': e.compiledPrompt,
+                          'contextPackId': e.contextPackId,
+                          'variableValuesJson': e.variableValuesJson,
+                          'notes': e.notes,
+                          'refinementNote': e.refinementNote,
+                          'createdAt': e.createdAt.toIso8601String(),
+                          'updatedAt': e.updatedAt.toIso8601String(),
+                          'isArchived': e.isArchived,
+                          'outputs': (exampleOutputs[e.id] ?? [])
+                              .map((o) => {
+                                    'providerId': o.providerId,
+                                    'modelId': o.modelId,
+                                    'providerName': o.providerName,
+                                    'modelName': o.modelName,
+                                    'outputType': o.outputType,
+                                    'sourceType': o.sourceType,
+                                    'outputText': o.outputText,
+                                    'score': o.score,
+                                    'notes': o.notes,
+                                    'isBest': o.isBest,
+                                    'createdAt': o.createdAt.toIso8601String(),
+                                    'updatedAt': o.updatedAt.toIso8601String(),
+                                    'attachments': (attachments[o.id] ?? [])
+                                        .map((a) => {
+                                              'fileName': a.fileName,
+                                              'mimeType': a.mimeType,
+                                              'sizeBytes': a.sizeBytes,
+                                              'attachmentType':
+                                                  a.attachmentType,
+                                            })
+                                        .toList(),
+                                  })
+                              .toList(),
+                        })
+                    .toList(),
+              })
+          .toList(),
+      'contextPacks': contextPacks
+          .map((c) => {
+                'id': c.id,
+                'name': c.name,
+                'description': c.description,
+                'content': c.content,
+                'createdAt': c.createdAt.toIso8601String(),
+                'updatedAt': c.updatedAt.toIso8601String(),
+                'isArchived': c.isArchived,
+                'versions': (packVersions[c.id] ?? [])
+                    .map((v) => {
+                          'name': v.name,
+                          'description': v.description,
+                          'content': v.content,
+                          'note': v.note,
+                          'createdAt': v.createdAt.toIso8601String(),
+                        })
+                    .toList(),
+              })
+          .toList(),
     };
 
     return const JsonEncoder.withIndent('  ').convert(payload);
@@ -188,7 +208,8 @@ class ImportExportCodec {
       throw const FormatException('Missing schemaVersion.');
     }
     if (schemaVersion > currentSchemaVersion) {
-      throw const FormatException('Unsupported schema version. Please update the app.');
+      throw const FormatException(
+          'Unsupported schema version. Please update the app.');
     }
 
     int invalidRecordsCount = 0;
@@ -246,6 +267,7 @@ class ImportExportCodec {
               tagsJson: v['tagsJson'] as String?,
               variableMetadataJson: v['variableMetadataJson'] as String?,
               note: v['note'] as String?,
+              versionNumber: v['versionNumber'] as int? ?? 0,
               createdAt: DateTime.parse(v['createdAt'] as String),
             ));
           }
@@ -255,7 +277,7 @@ class ImportExportCodec {
         final examples = <PromptExample>[];
         final exampleOutputs = <String, List<PromptExampleOutput>>{};
         final outputAttachments = <String, List<LLMOutputAttachment>>{};
-        
+
         for (final e in examplesRaw) {
           if (e is Map<String, dynamic>) {
             final exampleId = e['id'] as String;
@@ -273,7 +295,7 @@ class ImportExportCodec {
               updatedAt: DateTime.parse(e['updatedAt'] as String),
               isArchived: e['isArchived'] as bool? ?? false,
             ));
-            
+
             final outputsRaw = e['outputs'] as List<dynamic>? ?? [];
             final outputs = <PromptExampleOutput>[];
             for (final o in outputsRaw) {
@@ -306,7 +328,8 @@ class ImportExportCodec {
                       outputId: oId, // Will link temporarily here
                       fileName: a['fileName'] as String,
                       mimeType: a['mimeType'] as String,
-                      localPath: '', // Cannot know local path during import until resolved
+                      localPath:
+                          '', // Cannot know local path during import until resolved
                       sizeBytes: a['sizeBytes'] as int?,
                       attachmentType: a['attachmentType'] as String?,
                       createdAt: DateTime.parse(o['createdAt'] as String),
@@ -395,11 +418,11 @@ class ImportExportCodec {
         invalidRecordsCount++;
       }
     }
-    
+
     int totalVersions = 0;
     int totalExamples = 0;
     int totalComparisons = 0;
-    
+
     for (final p in validPrompts) {
       totalVersions += p.versions.length;
       totalExamples += p.examples.length;
@@ -407,7 +430,7 @@ class ImportExportCodec {
         totalComparisons += outputs.length;
       }
     }
-    
+
     for (final c in validContextPacks) {
       totalVersions += c.versions.length;
     }

@@ -49,7 +49,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase({QueryExecutor? e}) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -109,6 +109,12 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 6) {
           try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.sourceType); } catch (_) {}
+        }
+        if (from < 7) {
+          // Stage 25: output provenance + prompt version ordinals
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.promptVersionId); } catch (_) {}
+          try { await m.addColumn(promptExampleOutputs, promptExampleOutputs.runParamsJson); } catch (_) {}
+          try { await m.addColumn(promptVersions, promptVersions.versionNumber); } catch (_) {}
         }
       },
     );

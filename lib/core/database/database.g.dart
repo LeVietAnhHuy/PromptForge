@@ -744,6 +744,14 @@ class $PromptVersionsTable extends PromptVersions
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
       'note', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _versionNumberMeta =
+      const VerificationMeta('versionNumber');
+  @override
+  late final GeneratedColumn<int> versionNumber = GeneratedColumn<int>(
+      'version_number', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -759,6 +767,7 @@ class $PromptVersionsTable extends PromptVersions
         tagsJson,
         variableMetadataJson,
         note,
+        versionNumber,
         createdAt
       ];
   @override
@@ -808,6 +817,12 @@ class $PromptVersionsTable extends PromptVersions
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
     }
+    if (data.containsKey('version_number')) {
+      context.handle(
+          _versionNumberMeta,
+          versionNumber.isAcceptableOrUnknown(
+              data['version_number']!, _versionNumberMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -838,6 +853,8 @@ class $PromptVersionsTable extends PromptVersions
           data['${effectivePrefix}variable_metadata_json']),
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      versionNumber: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}version_number'])!,
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -857,6 +874,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
   final String? tagsJson;
   final String? variableMetadataJson;
   final String? note;
+  final int versionNumber;
   final DateTime createdAt;
   const PromptVersion(
       {required this.id,
@@ -866,6 +884,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
       this.tagsJson,
       this.variableMetadataJson,
       this.note,
+      required this.versionNumber,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -883,6 +902,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
+    map['version_number'] = Variable<int>(versionNumber);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -900,6 +920,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
           ? const Value.absent()
           : Value(variableMetadataJson),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      versionNumber: Value(versionNumber),
       createdAt: Value(createdAt),
     );
   }
@@ -916,6 +937,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
       variableMetadataJson:
           serializer.fromJson<String?>(json['variableMetadataJson']),
       note: serializer.fromJson<String?>(json['note']),
+      versionNumber: serializer.fromJson<int>(json['versionNumber']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -930,6 +952,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
       'tagsJson': serializer.toJson<String?>(tagsJson),
       'variableMetadataJson': serializer.toJson<String?>(variableMetadataJson),
       'note': serializer.toJson<String?>(note),
+      'versionNumber': serializer.toJson<int>(versionNumber),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -942,6 +965,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
           Value<String?> tagsJson = const Value.absent(),
           Value<String?> variableMetadataJson = const Value.absent(),
           Value<String?> note = const Value.absent(),
+          int? versionNumber,
           DateTime? createdAt}) =>
       PromptVersion(
         id: id ?? this.id,
@@ -953,6 +977,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
             ? variableMetadataJson.value
             : this.variableMetadataJson,
         note: note.present ? note.value : this.note,
+        versionNumber: versionNumber ?? this.versionNumber,
         createdAt: createdAt ?? this.createdAt,
       );
   PromptVersion copyWithCompanion(PromptVersionsCompanion data) {
@@ -966,6 +991,9 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
           ? data.variableMetadataJson.value
           : this.variableMetadataJson,
       note: data.note.present ? data.note.value : this.note,
+      versionNumber: data.versionNumber.present
+          ? data.versionNumber.value
+          : this.versionNumber,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -980,6 +1008,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
           ..write('tagsJson: $tagsJson, ')
           ..write('variableMetadataJson: $variableMetadataJson, ')
           ..write('note: $note, ')
+          ..write('versionNumber: $versionNumber, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -987,7 +1016,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
 
   @override
   int get hashCode => Object.hash(id, promptId, title, body, tagsJson,
-      variableMetadataJson, note, createdAt);
+      variableMetadataJson, note, versionNumber, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -999,6 +1028,7 @@ class PromptVersion extends DataClass implements Insertable<PromptVersion> {
           other.tagsJson == this.tagsJson &&
           other.variableMetadataJson == this.variableMetadataJson &&
           other.note == this.note &&
+          other.versionNumber == this.versionNumber &&
           other.createdAt == this.createdAt);
 }
 
@@ -1010,6 +1040,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
   final Value<String?> tagsJson;
   final Value<String?> variableMetadataJson;
   final Value<String?> note;
+  final Value<int> versionNumber;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const PromptVersionsCompanion({
@@ -1020,6 +1051,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     this.tagsJson = const Value.absent(),
     this.variableMetadataJson = const Value.absent(),
     this.note = const Value.absent(),
+    this.versionNumber = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -1031,6 +1063,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     this.tagsJson = const Value.absent(),
     this.variableMetadataJson = const Value.absent(),
     this.note = const Value.absent(),
+    this.versionNumber = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   })  : id = Value(id),
@@ -1046,6 +1079,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     Expression<String>? tagsJson,
     Expression<String>? variableMetadataJson,
     Expression<String>? note,
+    Expression<int>? versionNumber,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1058,6 +1092,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
       if (variableMetadataJson != null)
         'variable_metadata_json': variableMetadataJson,
       if (note != null) 'note': note,
+      if (versionNumber != null) 'version_number': versionNumber,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1071,6 +1106,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
       Value<String?>? tagsJson,
       Value<String?>? variableMetadataJson,
       Value<String?>? note,
+      Value<int>? versionNumber,
       Value<DateTime>? createdAt,
       Value<int>? rowid}) {
     return PromptVersionsCompanion(
@@ -1081,6 +1117,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
       tagsJson: tagsJson ?? this.tagsJson,
       variableMetadataJson: variableMetadataJson ?? this.variableMetadataJson,
       note: note ?? this.note,
+      versionNumber: versionNumber ?? this.versionNumber,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1111,6 +1148,9 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (versionNumber.present) {
+      map['version_number'] = Variable<int>(versionNumber.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1130,6 +1170,7 @@ class PromptVersionsCompanion extends UpdateCompanion<PromptVersion> {
           ..write('tagsJson: $tagsJson, ')
           ..write('variableMetadataJson: $variableMetadataJson, ')
           ..write('note: $note, ')
+          ..write('versionNumber: $versionNumber, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -5491,6 +5532,18 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("is_best" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _promptVersionIdMeta =
+      const VerificationMeta('promptVersionId');
+  @override
+  late final GeneratedColumn<String> promptVersionId = GeneratedColumn<String>(
+      'prompt_version_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _runParamsJsonMeta =
+      const VerificationMeta('runParamsJson');
+  @override
+  late final GeneratedColumn<String> runParamsJson = GeneratedColumn<String>(
+      'run_params_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -5517,6 +5570,8 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
         score,
         notes,
         isBest,
+        promptVersionId,
+        runParamsJson,
         createdAt,
         updatedAt
       ];
@@ -5596,6 +5651,18 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
       context.handle(_isBestMeta,
           isBest.isAcceptableOrUnknown(data['is_best']!, _isBestMeta));
     }
+    if (data.containsKey('prompt_version_id')) {
+      context.handle(
+          _promptVersionIdMeta,
+          promptVersionId.isAcceptableOrUnknown(
+              data['prompt_version_id']!, _promptVersionIdMeta));
+    }
+    if (data.containsKey('run_params_json')) {
+      context.handle(
+          _runParamsJsonMeta,
+          runParamsJson.isAcceptableOrUnknown(
+              data['run_params_json']!, _runParamsJsonMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -5641,6 +5708,10 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
           .read(DriftSqlType.string, data['${effectivePrefix}notes']),
       isBest: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_best'])!,
+      promptVersionId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}prompt_version_id']),
+      runParamsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}run_params_json']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -5668,6 +5739,8 @@ class PromptExampleOutput extends DataClass
   final int? score;
   final String? notes;
   final bool isBest;
+  final String? promptVersionId;
+  final String? runParamsJson;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PromptExampleOutput(
@@ -5683,6 +5756,8 @@ class PromptExampleOutput extends DataClass
       this.score,
       this.notes,
       required this.isBest,
+      this.promptVersionId,
+      this.runParamsJson,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -5710,6 +5785,12 @@ class PromptExampleOutput extends DataClass
       map['notes'] = Variable<String>(notes);
     }
     map['is_best'] = Variable<bool>(isBest);
+    if (!nullToAbsent || promptVersionId != null) {
+      map['prompt_version_id'] = Variable<String>(promptVersionId);
+    }
+    if (!nullToAbsent || runParamsJson != null) {
+      map['run_params_json'] = Variable<String>(runParamsJson);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -5737,6 +5818,12 @@ class PromptExampleOutput extends DataClass
       notes:
           notes == null && nullToAbsent ? const Value.absent() : Value(notes),
       isBest: Value(isBest),
+      promptVersionId: promptVersionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptVersionId),
+      runParamsJson: runParamsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(runParamsJson),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -5758,6 +5845,8 @@ class PromptExampleOutput extends DataClass
       score: serializer.fromJson<int?>(json['score']),
       notes: serializer.fromJson<String?>(json['notes']),
       isBest: serializer.fromJson<bool>(json['isBest']),
+      promptVersionId: serializer.fromJson<String?>(json['promptVersionId']),
+      runParamsJson: serializer.fromJson<String?>(json['runParamsJson']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -5778,6 +5867,8 @@ class PromptExampleOutput extends DataClass
       'score': serializer.toJson<int?>(score),
       'notes': serializer.toJson<String?>(notes),
       'isBest': serializer.toJson<bool>(isBest),
+      'promptVersionId': serializer.toJson<String?>(promptVersionId),
+      'runParamsJson': serializer.toJson<String?>(runParamsJson),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -5796,6 +5887,8 @@ class PromptExampleOutput extends DataClass
           Value<int?> score = const Value.absent(),
           Value<String?> notes = const Value.absent(),
           bool? isBest,
+          Value<String?> promptVersionId = const Value.absent(),
+          Value<String?> runParamsJson = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       PromptExampleOutput(
@@ -5811,6 +5904,11 @@ class PromptExampleOutput extends DataClass
         score: score.present ? score.value : this.score,
         notes: notes.present ? notes.value : this.notes,
         isBest: isBest ?? this.isBest,
+        promptVersionId: promptVersionId.present
+            ? promptVersionId.value
+            : this.promptVersionId,
+        runParamsJson:
+            runParamsJson.present ? runParamsJson.value : this.runParamsJson,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -5834,6 +5932,12 @@ class PromptExampleOutput extends DataClass
       score: data.score.present ? data.score.value : this.score,
       notes: data.notes.present ? data.notes.value : this.notes,
       isBest: data.isBest.present ? data.isBest.value : this.isBest,
+      promptVersionId: data.promptVersionId.present
+          ? data.promptVersionId.value
+          : this.promptVersionId,
+      runParamsJson: data.runParamsJson.present
+          ? data.runParamsJson.value
+          : this.runParamsJson,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -5854,6 +5958,8 @@ class PromptExampleOutput extends DataClass
           ..write('score: $score, ')
           ..write('notes: $notes, ')
           ..write('isBest: $isBest, ')
+          ..write('promptVersionId: $promptVersionId, ')
+          ..write('runParamsJson: $runParamsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -5874,6 +5980,8 @@ class PromptExampleOutput extends DataClass
       score,
       notes,
       isBest,
+      promptVersionId,
+      runParamsJson,
       createdAt,
       updatedAt);
   @override
@@ -5892,6 +6000,8 @@ class PromptExampleOutput extends DataClass
           other.score == this.score &&
           other.notes == this.notes &&
           other.isBest == this.isBest &&
+          other.promptVersionId == this.promptVersionId &&
+          other.runParamsJson == this.runParamsJson &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -5910,6 +6020,8 @@ class PromptExampleOutputsCompanion
   final Value<int?> score;
   final Value<String?> notes;
   final Value<bool> isBest;
+  final Value<String?> promptVersionId;
+  final Value<String?> runParamsJson;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -5926,6 +6038,8 @@ class PromptExampleOutputsCompanion
     this.score = const Value.absent(),
     this.notes = const Value.absent(),
     this.isBest = const Value.absent(),
+    this.promptVersionId = const Value.absent(),
+    this.runParamsJson = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -5943,6 +6057,8 @@ class PromptExampleOutputsCompanion
     this.score = const Value.absent(),
     this.notes = const Value.absent(),
     this.isBest = const Value.absent(),
+    this.promptVersionId = const Value.absent(),
+    this.runParamsJson = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -5965,6 +6081,8 @@ class PromptExampleOutputsCompanion
     Expression<int>? score,
     Expression<String>? notes,
     Expression<bool>? isBest,
+    Expression<String>? promptVersionId,
+    Expression<String>? runParamsJson,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -5982,6 +6100,8 @@ class PromptExampleOutputsCompanion
       if (score != null) 'score': score,
       if (notes != null) 'notes': notes,
       if (isBest != null) 'is_best': isBest,
+      if (promptVersionId != null) 'prompt_version_id': promptVersionId,
+      if (runParamsJson != null) 'run_params_json': runParamsJson,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -6001,6 +6121,8 @@ class PromptExampleOutputsCompanion
       Value<int?>? score,
       Value<String?>? notes,
       Value<bool>? isBest,
+      Value<String?>? promptVersionId,
+      Value<String?>? runParamsJson,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -6017,6 +6139,8 @@ class PromptExampleOutputsCompanion
       score: score ?? this.score,
       notes: notes ?? this.notes,
       isBest: isBest ?? this.isBest,
+      promptVersionId: promptVersionId ?? this.promptVersionId,
+      runParamsJson: runParamsJson ?? this.runParamsJson,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -6062,6 +6186,12 @@ class PromptExampleOutputsCompanion
     if (isBest.present) {
       map['is_best'] = Variable<bool>(isBest.value);
     }
+    if (promptVersionId.present) {
+      map['prompt_version_id'] = Variable<String>(promptVersionId.value);
+    }
+    if (runParamsJson.present) {
+      map['run_params_json'] = Variable<String>(runParamsJson.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6089,6 +6219,8 @@ class PromptExampleOutputsCompanion
           ..write('score: $score, ')
           ..write('notes: $notes, ')
           ..write('isBest: $isBest, ')
+          ..write('promptVersionId: $promptVersionId, ')
+          ..write('runParamsJson: $runParamsJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -7932,6 +8064,7 @@ typedef $$PromptVersionsTableCreateCompanionBuilder = PromptVersionsCompanion
   Value<String?> tagsJson,
   Value<String?> variableMetadataJson,
   Value<String?> note,
+  Value<int> versionNumber,
   required DateTime createdAt,
   Value<int> rowid,
 });
@@ -7944,6 +8077,7 @@ typedef $$PromptVersionsTableUpdateCompanionBuilder = PromptVersionsCompanion
   Value<String?> tagsJson,
   Value<String?> variableMetadataJson,
   Value<String?> note,
+  Value<int> versionNumber,
   Value<DateTime> createdAt,
   Value<int> rowid,
 });
@@ -7978,6 +8112,9 @@ class $$PromptVersionsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get versionNumber => $composableBuilder(
+      column: $table.versionNumber, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -8014,6 +8151,10 @@ class $$PromptVersionsTableOrderingComposer
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get versionNumber => $composableBuilder(
+      column: $table.versionNumber,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 }
@@ -8047,6 +8188,9 @@ class $$PromptVersionsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get versionNumber => $composableBuilder(
+      column: $table.versionNumber, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -8086,6 +8230,7 @@ class $$PromptVersionsTableTableManager extends RootTableManager<
             Value<String?> tagsJson = const Value.absent(),
             Value<String?> variableMetadataJson = const Value.absent(),
             Value<String?> note = const Value.absent(),
+            Value<int> versionNumber = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -8097,6 +8242,7 @@ class $$PromptVersionsTableTableManager extends RootTableManager<
             tagsJson: tagsJson,
             variableMetadataJson: variableMetadataJson,
             note: note,
+            versionNumber: versionNumber,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -8108,6 +8254,7 @@ class $$PromptVersionsTableTableManager extends RootTableManager<
             Value<String?> tagsJson = const Value.absent(),
             Value<String?> variableMetadataJson = const Value.absent(),
             Value<String?> note = const Value.absent(),
+            Value<int> versionNumber = const Value.absent(),
             required DateTime createdAt,
             Value<int> rowid = const Value.absent(),
           }) =>
@@ -8119,6 +8266,7 @@ class $$PromptVersionsTableTableManager extends RootTableManager<
             tagsJson: tagsJson,
             variableMetadataJson: variableMetadataJson,
             note: note,
+            versionNumber: versionNumber,
             createdAt: createdAt,
             rowid: rowid,
           ),
@@ -10364,6 +10512,8 @@ typedef $$PromptExampleOutputsTableCreateCompanionBuilder
   Value<int?> score,
   Value<String?> notes,
   Value<bool> isBest,
+  Value<String?> promptVersionId,
+  Value<String?> runParamsJson,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -10382,6 +10532,8 @@ typedef $$PromptExampleOutputsTableUpdateCompanionBuilder
   Value<int?> score,
   Value<String?> notes,
   Value<bool> isBest,
+  Value<String?> promptVersionId,
+  Value<String?> runParamsJson,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -10431,6 +10583,13 @@ class $$PromptExampleOutputsTableFilterComposer
 
   ColumnFilters<bool> get isBest => $composableBuilder(
       column: $table.isBest, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get promptVersionId => $composableBuilder(
+      column: $table.promptVersionId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get runParamsJson => $composableBuilder(
+      column: $table.runParamsJson, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -10485,6 +10644,14 @@ class $$PromptExampleOutputsTableOrderingComposer
   ColumnOrderings<bool> get isBest => $composableBuilder(
       column: $table.isBest, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get promptVersionId => $composableBuilder(
+      column: $table.promptVersionId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get runParamsJson => $composableBuilder(
+      column: $table.runParamsJson,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -10537,6 +10704,12 @@ class $$PromptExampleOutputsTableAnnotationComposer
   GeneratedColumn<bool> get isBest =>
       $composableBuilder(column: $table.isBest, builder: (column) => column);
 
+  GeneratedColumn<String> get promptVersionId => $composableBuilder(
+      column: $table.promptVersionId, builder: (column) => column);
+
+  GeneratedColumn<String> get runParamsJson => $composableBuilder(
+      column: $table.runParamsJson, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -10586,6 +10759,8 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             Value<int?> score = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<bool> isBest = const Value.absent(),
+            Value<String?> promptVersionId = const Value.absent(),
+            Value<String?> runParamsJson = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -10603,6 +10778,8 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             score: score,
             notes: notes,
             isBest: isBest,
+            promptVersionId: promptVersionId,
+            runParamsJson: runParamsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -10620,6 +10797,8 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             Value<int?> score = const Value.absent(),
             Value<String?> notes = const Value.absent(),
             Value<bool> isBest = const Value.absent(),
+            Value<String?> promptVersionId = const Value.absent(),
+            Value<String?> runParamsJson = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -10637,6 +10816,8 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             score: score,
             notes: notes,
             isBest: isBest,
+            promptVersionId: promptVersionId,
+            runParamsJson: runParamsJson,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,

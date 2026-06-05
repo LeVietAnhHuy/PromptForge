@@ -184,6 +184,24 @@ Standing rule this stage: push to `origin/master` after every commit.
   own list). The editor watches outputs, the library watches prompts — both
   already reactive.
 
+- Part A — prompt version history + provenance. The codebase already snapshotted
+  on save and had a restore-with-pre-snapshot history screen (Stage 13). Added:
+  a skippable one-line **version note** prompt on save; stable per-prompt
+  `versionNumber` (schema v7); **line-level diff view** (LCS, `text_diff.dart`,
+  semantic-colored, with +/- stats) reachable from the history list, which now
+  shows version numbers + note previews; **retention cap** setting in Settings
+  (`version_retention_cap`) with oldest-pruned enforcement on save. **Provenance:**
+  new `promptVersionId` + `runParamsJson` columns on outputs (schema v7); the
+  execution service accepts and stores them; the output card shows a subtle
+  provenance line ("v{n} · {model} · t=…") for BYOK-run outputs and nothing for
+  manual ones. Restore is still non-destructive (snapshots current first).
+  Migration v6→v7 adds the three columns; existing prompts read unchanged and
+  their old versions get `versionNumber` 0. Export/import codec carries
+  `versionNumber`. **Deviation (A.6):** versions are stored as full snapshots,
+  not deltas/compressed — a non-functional storage optimization deferred; the
+  retention cap bounds growth. The run UI that *populates* provenance is wired in
+  Part C (multi-model run); Part A provides the schema + plumbing + display.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

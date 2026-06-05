@@ -28,6 +28,8 @@ class PromptVersions extends Table {
   TextColumn get tagsJson => text().nullable()();
   TextColumn get variableMetadataJson => text().nullable()();
   TextColumn get note => text().nullable()();
+  // Stable per-prompt ordinal (v1, v2, ...) for display + provenance links.
+  IntColumn get versionNumber => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
 
   @override
@@ -237,6 +239,10 @@ class PromptExampleOutputs extends Table {
   IntColumn get score => integer().nullable()();
   TextColumn get notes => text().nullable()();
   BoolColumn get isBest => boolean().withDefault(const Constant(false))();
+  // Provenance: the prompt version that produced this output (BYOK runs only;
+  // null for manually pasted outputs) and the run parameters used (JSON).
+  TextColumn get promptVersionId => text().nullable()();
+  TextColumn get runParamsJson => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

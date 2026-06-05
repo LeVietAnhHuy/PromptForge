@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -148,6 +149,8 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildHeader(theme, colorScheme, identity, edited),
+                    if (widget.output.promptVersionId != null)
+                      _buildProvenance(theme, colorScheme),
                     if (widget.output.outputText.isNotEmpty)
                       _buildBody(theme, colorScheme, formattedText, isLong),
                     if (isLong && widget.output.outputText.isNotEmpty)
@@ -438,6 +441,62 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
         ],
       ),
     );
+  }
+
+  // BYOK-run provenance: which prompt version + run params produced this output.
+  Widget _buildProvenance(ThemeData theme, ColorScheme scheme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingXs),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: FutureBuilder<PromptVersion?>(
+        future: ref
+            .read(promptDaoProvider)
+            .getPromptVersionById(widget.output.promptVersionId!),
+        builder: (context, snap) {
+          final v = snap.data;
+          final vLabel = v != null && v.versionNumber > 0
+              ? 'v${v.versionNumber}'
+              : 'versioned run';
+          final params = _paramsSummary(widget.output.runParamsJson);
+          final model = widget.output.modelName;
+          final parts = <String>[
+            vLabel,
+            if (model != null && model.isNotEmpty) model,
+            if (params.isNotEmpty) params,
+          ];
+          return Row(
+            children: [
+              Icon(Icons.commit, size: 13, color: scheme.onSurfaceVariant),
+              const SizedBox(width: AppDesign.spacingXs),
+              Expanded(
+                child: Text(parts.join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: scheme.onSurfaceVariant)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _paramsSummary(String? json) {
+    if (json == null || json.isEmpty) return '';
+    try {
+      final m = jsonDecode(json) as Map<String, dynamic>;
+      final parts = <String>[];
+      if (m['temperature'] != null) parts.add('t=${m['temperature']}');
+      if (m['maxTokens'] != null) parts.add('max=${m['maxTokens']}');
+      return parts.join(' · ');
+    } catch (_) {
+      return '';
+    }
   }
 
   Widget _buildNotes(ThemeData theme, ColorScheme colorScheme, bool isLong) {
