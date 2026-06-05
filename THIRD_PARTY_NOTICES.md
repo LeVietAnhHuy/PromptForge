@@ -35,16 +35,27 @@ Most marks come from **Simple Icons** (licensed **CC0 1.0**; see
 | baidu | `baidu.svg` | baidu |
 | xai | `xai.svg` | x |
 
-The following marks are **not** in the CC0 set and are handled separately:
+Additional marks come from the **LobeHub icon set** (`@lobehub/icons`,
+licensed **MIT**; see `assets/provider_icons/LICENSE-lobehub-icons.txt`):
+
+| App provider id | File | LobeHub icon |
+| --- | --- | --- |
+| openai | `openai.svg` | openai |
+| cohere | `cohere.svg` | cohere |
+| zhipu-ai | `zhipu-ai.svg` | zhipu |
+
+The following mark is authored in-repo:
 
 - `microsoft.svg` — an authored four-square mark (simple geometric
   representation) for identification only.
-- **OpenAI, Cohere, Zhipu AI, and any other provider without a bundled SVG**
-  fall back to a generated monogram badge (first letter on the provider's
-  accent color) rendered in-app — see
-  `lib/shared/providers/provider_identity.dart`. No copyrighted logo is
-  reproduced for these.
+
+Any provider **without** a bundled SVG falls back to a generated monogram badge
+(first letter on the provider's accent color) rendered in-app — see
+`lib/shared/providers/provider_identity.dart`. No copyrighted logo is reproduced
+for those.
 
 To add a logo for a new provider: drop a permissively licensed SVG into
 `assets/provider_icons/<provider-id>.svg` and add a one-line entry to the
-provider registry in `lib/shared/providers/provider_identity.dart`.
+provider registry in `lib/shared/providers/provider_identity.dart`. (The Stage 24
+brief suggested `assets/provider_logos/`; the codebase already uses
+`assets/provider_icons/`, so that path is kept — deviation noted in HANDOFF.)

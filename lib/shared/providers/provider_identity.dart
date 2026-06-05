@@ -30,7 +30,9 @@ class ProviderIdentity {
     this.tintable = true,
   });
 
-  String get _assetPath => 'assets/provider_icons/$asset';
+  /// Full asset path of the bundled logo (null when [asset] is null).
+  String? get assetPath =>
+      asset == null ? null : 'assets/provider_icons/$asset';
 }
 
 // One row per provider. `accent` uses the provider's brand color, chosen to sit
@@ -38,7 +40,10 @@ class ProviderIdentity {
 // exists (see THIRD_PARTY_NOTICES); the rest fall back to a monogram badge.
 const Map<String, ProviderIdentity> _registry = {
   'openai': ProviderIdentity(
-      id: 'openai', displayName: 'OpenAI', accent: Color(0xFF10A37F)),
+      id: 'openai',
+      displayName: 'OpenAI',
+      accent: Color(0xFF10A37F),
+      asset: 'openai.svg'),
   'anthropic': ProviderIdentity(
       id: 'anthropic',
       displayName: 'Anthropic',
@@ -91,14 +96,20 @@ const Map<String, ProviderIdentity> _registry = {
       accent: Color(0xFF615CED),
       asset: 'alibaba.svg'),
   'zhipu-ai': ProviderIdentity(
-      id: 'zhipu-ai', displayName: 'Zhipu AI', accent: Color(0xFF3859FF)),
+      id: 'zhipu-ai',
+      displayName: 'Zhipu AI',
+      accent: Color(0xFF3859FF),
+      asset: 'zhipu-ai.svg'),
   'baidu': ProviderIdentity(
       id: 'baidu',
       displayName: 'Baidu',
       accent: Color(0xFF2932E1),
       asset: 'baidu.svg'),
   'cohere': ProviderIdentity(
-      id: 'cohere', displayName: 'Cohere', accent: Color(0xFFFF7759)),
+      id: 'cohere',
+      displayName: 'Cohere',
+      accent: Color(0xFFFF7759),
+      asset: 'cohere.svg'),
   'local': ProviderIdentity(
       id: 'local', displayName: 'Local', accent: Color(0xFF8C9A8E)),
   'other': ProviderIdentity(
@@ -114,6 +125,13 @@ const ProviderIdentity _unknownIdentity = ProviderIdentity(
 
 class ProviderRegistry {
   ProviderRegistry._();
+
+  /// All registered provider identities (excludes the unknown fallback).
+  static Iterable<ProviderIdentity> get knownIdentities => _registry.values;
+
+  /// Known identities that ship a bundled SVG logo.
+  static Iterable<ProviderIdentity> get identitiesWithAsset =>
+      _registry.values.where((i) => i.asset != null);
 
   /// Resolve an identity from a provider id (preferred) or display name.
   /// Always returns a usable identity — falling back to a neutral monogram
@@ -158,7 +176,7 @@ class ProviderLogo extends StatelessWidget {
         width: size,
         height: size,
         child: SvgPicture.asset(
-          identity._assetPath,
+          identity.assetPath!,
           width: size,
           height: size,
           colorFilter: identity.tintable

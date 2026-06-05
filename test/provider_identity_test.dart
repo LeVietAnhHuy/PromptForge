@@ -21,7 +21,7 @@ void main() {
     test('resolves by display name when id is absent', () {
       final id = ProviderRegistry.resolve(providerName: 'OpenAI');
       expect(id.id, 'openai');
-      expect(id.asset, isNull); // OpenAI uses a monogram fallback
+      expect(id.asset, 'openai.svg'); // OpenAI now ships a real logo (Stage 24)
     });
 
     test('falls back to a neutral identity keeping the unknown name', () {
