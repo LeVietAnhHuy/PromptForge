@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../execution/application/pricing_service.dart';
+import 'mcp_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -181,6 +182,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 'Edit community-maintained prices used for cost estimates.'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _editPricing,
+          ),
+          ListTile(
+            leading: const Icon(Icons.hub_outlined),
+            title: const Text('MCP Server'),
+            subtitle: const Text(
+                'Expose your prompt library (read-only) to MCP clients. '
+                'Off by default.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const McpSettingsScreen())),
           ),
           ListTile(
             leading: const Icon(Icons.upload_file),
