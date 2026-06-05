@@ -215,6 +215,22 @@ Standing rule this stage: push to `origin/master` after every commit.
   ARE detected (the compiler substitutes everywhere by design) — documented in
   the tests rather than changing established behavior.
 
+- Part C (in progress) — token usage, cost, and the pricing data file landed
+  first (the correctness-critical, no-fabrication piece). `LlmExecutionResponse`
+  now carries real `inputTokens`/`outputTokens` (wired from Gemini's
+  `usageMetadata`; mock = null). Schema v8 adds `inputTokens`/`outputTokens`/
+  `latencyMs` to outputs; the execution service records them + run latency. A
+  community-maintained `assets/pricing/model_pricing.json` (schemaVersion + note,
+  per-1M prices) is loaded by `PricingService` (user override persisted in
+  UserSettings, editable via Settings → Model pricing, reset-to-bundled). The
+  output card shows a usage line for API outputs: real tokens or "—", and cost
+  as "est. \$x" only when BOTH real token counts and a price entry exist — "—"
+  otherwise (no fabricated numbers). Pricing unit tests assert the null/"—"
+  discipline. STILL TODO in Part C: multi-model concurrent run UI, comparison
+  sync-scroll/per-column logos, ratings + Best pin on the main output card
+  (ratings/Best already exist on the comparison screen), and per-prompt cost
+  total in the Saved Outputs header.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

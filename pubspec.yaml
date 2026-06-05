@@ -43,6 +43,7 @@ flutter:
 
   assets:
     - assets/provider_icons/
+    - assets/pricing/
 
   fonts:
     # Display / brand — Space Grotesk (OFL). Variable weight axis.

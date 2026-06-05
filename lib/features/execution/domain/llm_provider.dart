@@ -26,6 +26,10 @@ class LlmExecutionResponse {
   final String modelName;
   final DateTime createdAt;
   final String? error;
+  // Real token usage reported by the provider, or null when not provided.
+  // Never estimated — downstream UI shows "—" when these are null.
+  final int? inputTokens;
+  final int? outputTokens;
 
   LlmExecutionResponse({
     required this.outputText,
@@ -34,6 +38,8 @@ class LlmExecutionResponse {
     required this.modelName,
     required this.createdAt,
     this.error,
+    this.inputTokens,
+    this.outputTokens,
   });
 }
 
@@ -42,9 +48,9 @@ abstract class LlmExecutionProvider {
   String get providerName;
   bool get requiresApiKey;
   String get credentialProviderId;
-  
+
   Future<List<Map<String, String>>> listAvailableModels();
-  
+
   Future<LlmExecutionResponse> execute(LlmExecutionRequest request);
 }
 
@@ -86,7 +92,8 @@ class MockExecutionProvider implements LlmExecutionProvider {
     }
 
     return LlmExecutionResponse(
-      outputText: 'This is a deterministic mock output from ${request.modelName}.\n\nYour prompt was ${request.compiledPrompt.length} characters long.',
+      outputText:
+          'This is a deterministic mock output from ${request.modelName}.\n\nYour prompt was ${request.compiledPrompt.length} characters long.',
       providerId: providerId,
       modelId: request.modelId,
       modelName: request.modelName,
@@ -126,7 +133,8 @@ class GeminiExecutionProvider implements LlmExecutionProvider {
   Future<List<Map<String, String>>> listAvailableModels() async {
     final catalog = defaultModelCatalog[providerId];
     return _supportedModelIds.map((id) {
-      final option = catalog?.models.where((model) => model.id == id).firstOrNull;
+      final option =
+          catalog?.models.where((model) => model.id == id).firstOrNull;
       return {
         'id': id,
         'name': option?.displayName ?? id,
@@ -162,21 +170,26 @@ class GeminiExecutionProvider implements LlmExecutionProvider {
         return _errorResponse(request, 'Provider returned empty output.');
       }
 
+      final usage = response.usageMetadata;
       return LlmExecutionResponse(
         outputText: response.text!,
         providerId: providerId,
         modelId: request.modelId,
         modelName: request.modelName,
         createdAt: DateTime.now(),
+        inputTokens: usage?.promptTokenCount,
+        outputTokens: usage?.candidatesTokenCount,
       );
     } on GenerativeAIException catch (e) {
       return _errorResponse(request, 'Google API error: ${e.message}');
     } catch (_) {
-      return _errorResponse(request, 'Google execution failed. Check the selected model and try again.');
+      return _errorResponse(request,
+          'Google execution failed. Check the selected model and try again.');
     }
   }
 
-  LlmExecutionResponse _errorResponse(LlmExecutionRequest request, String error) {
+  LlmExecutionResponse _errorResponse(
+      LlmExecutionRequest request, String error) {
     return LlmExecutionResponse(
       outputText: '',
       providerId: providerId,

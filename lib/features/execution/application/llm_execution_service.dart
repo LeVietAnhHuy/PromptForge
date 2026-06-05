@@ -88,6 +88,7 @@ class LlmExecutionService {
     bool isBest = false,
     String? promptVersionId,
     String? runParamsJson,
+    int? latencyMs,
   }) async {
     if (response.error != null) {
       throw StateError('Cannot save a failed execution response.');
@@ -122,6 +123,15 @@ class LlmExecutionService {
         runParamsJson: runParamsJson != null
             ? drift.Value(runParamsJson)
             : const drift.Value.absent(),
+        inputTokens: response.inputTokens != null
+            ? drift.Value(response.inputTokens)
+            : const drift.Value.absent(),
+        outputTokens: response.outputTokens != null
+            ? drift.Value(response.outputTokens)
+            : const drift.Value.absent(),
+        latencyMs: latencyMs != null
+            ? drift.Value(latencyMs)
+            : const drift.Value.absent(),
         createdAt: createdAt,
         updatedAt: createdAt,
       ),
@@ -145,6 +155,7 @@ class LlmExecutionService {
     String? promptVersionId,
     String? runParamsJson,
   }) async {
+    final sw = Stopwatch()..start();
     final response = await execute(
       compiledPrompt: compiledPrompt,
       providerId: providerId,
@@ -152,6 +163,7 @@ class LlmExecutionService {
       modelName: modelName,
       targetProfileId: targetProfileId,
     );
+    sw.stop();
 
     if (response.error != null) {
       return SavedLlmExecutionResult(
@@ -176,6 +188,7 @@ class LlmExecutionService {
       isBest: isBest,
       promptVersionId: promptVersionId,
       runParamsJson: runParamsJson,
+      latencyMs: sw.elapsedMilliseconds,
     );
 
     return SavedLlmExecutionResult(

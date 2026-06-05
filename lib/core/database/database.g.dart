@@ -5544,6 +5544,24 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
   late final GeneratedColumn<String> runParamsJson = GeneratedColumn<String>(
       'run_params_json', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _inputTokensMeta =
+      const VerificationMeta('inputTokens');
+  @override
+  late final GeneratedColumn<int> inputTokens = GeneratedColumn<int>(
+      'input_tokens', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _outputTokensMeta =
+      const VerificationMeta('outputTokens');
+  @override
+  late final GeneratedColumn<int> outputTokens = GeneratedColumn<int>(
+      'output_tokens', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _latencyMsMeta =
+      const VerificationMeta('latencyMs');
+  @override
+  late final GeneratedColumn<int> latencyMs = GeneratedColumn<int>(
+      'latency_ms', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -5572,6 +5590,9 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
         isBest,
         promptVersionId,
         runParamsJson,
+        inputTokens,
+        outputTokens,
+        latencyMs,
         createdAt,
         updatedAt
       ];
@@ -5663,6 +5684,22 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
           runParamsJson.isAcceptableOrUnknown(
               data['run_params_json']!, _runParamsJsonMeta));
     }
+    if (data.containsKey('input_tokens')) {
+      context.handle(
+          _inputTokensMeta,
+          inputTokens.isAcceptableOrUnknown(
+              data['input_tokens']!, _inputTokensMeta));
+    }
+    if (data.containsKey('output_tokens')) {
+      context.handle(
+          _outputTokensMeta,
+          outputTokens.isAcceptableOrUnknown(
+              data['output_tokens']!, _outputTokensMeta));
+    }
+    if (data.containsKey('latency_ms')) {
+      context.handle(_latencyMsMeta,
+          latencyMs.isAcceptableOrUnknown(data['latency_ms']!, _latencyMsMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -5712,6 +5749,12 @@ class $PromptExampleOutputsTable extends PromptExampleOutputs
           DriftSqlType.string, data['${effectivePrefix}prompt_version_id']),
       runParamsJson: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}run_params_json']),
+      inputTokens: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}input_tokens']),
+      outputTokens: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}output_tokens']),
+      latencyMs: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}latency_ms']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -5741,6 +5784,9 @@ class PromptExampleOutput extends DataClass
   final bool isBest;
   final String? promptVersionId;
   final String? runParamsJson;
+  final int? inputTokens;
+  final int? outputTokens;
+  final int? latencyMs;
   final DateTime createdAt;
   final DateTime updatedAt;
   const PromptExampleOutput(
@@ -5758,6 +5804,9 @@ class PromptExampleOutput extends DataClass
       required this.isBest,
       this.promptVersionId,
       this.runParamsJson,
+      this.inputTokens,
+      this.outputTokens,
+      this.latencyMs,
       required this.createdAt,
       required this.updatedAt});
   @override
@@ -5790,6 +5839,15 @@ class PromptExampleOutput extends DataClass
     }
     if (!nullToAbsent || runParamsJson != null) {
       map['run_params_json'] = Variable<String>(runParamsJson);
+    }
+    if (!nullToAbsent || inputTokens != null) {
+      map['input_tokens'] = Variable<int>(inputTokens);
+    }
+    if (!nullToAbsent || outputTokens != null) {
+      map['output_tokens'] = Variable<int>(outputTokens);
+    }
+    if (!nullToAbsent || latencyMs != null) {
+      map['latency_ms'] = Variable<int>(latencyMs);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -5824,6 +5882,15 @@ class PromptExampleOutput extends DataClass
       runParamsJson: runParamsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(runParamsJson),
+      inputTokens: inputTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inputTokens),
+      outputTokens: outputTokens == null && nullToAbsent
+          ? const Value.absent()
+          : Value(outputTokens),
+      latencyMs: latencyMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(latencyMs),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -5847,6 +5914,9 @@ class PromptExampleOutput extends DataClass
       isBest: serializer.fromJson<bool>(json['isBest']),
       promptVersionId: serializer.fromJson<String?>(json['promptVersionId']),
       runParamsJson: serializer.fromJson<String?>(json['runParamsJson']),
+      inputTokens: serializer.fromJson<int?>(json['inputTokens']),
+      outputTokens: serializer.fromJson<int?>(json['outputTokens']),
+      latencyMs: serializer.fromJson<int?>(json['latencyMs']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -5869,6 +5939,9 @@ class PromptExampleOutput extends DataClass
       'isBest': serializer.toJson<bool>(isBest),
       'promptVersionId': serializer.toJson<String?>(promptVersionId),
       'runParamsJson': serializer.toJson<String?>(runParamsJson),
+      'inputTokens': serializer.toJson<int?>(inputTokens),
+      'outputTokens': serializer.toJson<int?>(outputTokens),
+      'latencyMs': serializer.toJson<int?>(latencyMs),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -5889,6 +5962,9 @@ class PromptExampleOutput extends DataClass
           bool? isBest,
           Value<String?> promptVersionId = const Value.absent(),
           Value<String?> runParamsJson = const Value.absent(),
+          Value<int?> inputTokens = const Value.absent(),
+          Value<int?> outputTokens = const Value.absent(),
+          Value<int?> latencyMs = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
       PromptExampleOutput(
@@ -5909,6 +5985,10 @@ class PromptExampleOutput extends DataClass
             : this.promptVersionId,
         runParamsJson:
             runParamsJson.present ? runParamsJson.value : this.runParamsJson,
+        inputTokens: inputTokens.present ? inputTokens.value : this.inputTokens,
+        outputTokens:
+            outputTokens.present ? outputTokens.value : this.outputTokens,
+        latencyMs: latencyMs.present ? latencyMs.value : this.latencyMs,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
@@ -5938,6 +6018,12 @@ class PromptExampleOutput extends DataClass
       runParamsJson: data.runParamsJson.present
           ? data.runParamsJson.value
           : this.runParamsJson,
+      inputTokens:
+          data.inputTokens.present ? data.inputTokens.value : this.inputTokens,
+      outputTokens: data.outputTokens.present
+          ? data.outputTokens.value
+          : this.outputTokens,
+      latencyMs: data.latencyMs.present ? data.latencyMs.value : this.latencyMs,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -5960,6 +6046,9 @@ class PromptExampleOutput extends DataClass
           ..write('isBest: $isBest, ')
           ..write('promptVersionId: $promptVersionId, ')
           ..write('runParamsJson: $runParamsJson, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('latencyMs: $latencyMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -5982,6 +6071,9 @@ class PromptExampleOutput extends DataClass
       isBest,
       promptVersionId,
       runParamsJson,
+      inputTokens,
+      outputTokens,
+      latencyMs,
       createdAt,
       updatedAt);
   @override
@@ -6002,6 +6094,9 @@ class PromptExampleOutput extends DataClass
           other.isBest == this.isBest &&
           other.promptVersionId == this.promptVersionId &&
           other.runParamsJson == this.runParamsJson &&
+          other.inputTokens == this.inputTokens &&
+          other.outputTokens == this.outputTokens &&
+          other.latencyMs == this.latencyMs &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -6022,6 +6117,9 @@ class PromptExampleOutputsCompanion
   final Value<bool> isBest;
   final Value<String?> promptVersionId;
   final Value<String?> runParamsJson;
+  final Value<int?> inputTokens;
+  final Value<int?> outputTokens;
+  final Value<int?> latencyMs;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -6040,6 +6138,9 @@ class PromptExampleOutputsCompanion
     this.isBest = const Value.absent(),
     this.promptVersionId = const Value.absent(),
     this.runParamsJson = const Value.absent(),
+    this.inputTokens = const Value.absent(),
+    this.outputTokens = const Value.absent(),
+    this.latencyMs = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -6059,6 +6160,9 @@ class PromptExampleOutputsCompanion
     this.isBest = const Value.absent(),
     this.promptVersionId = const Value.absent(),
     this.runParamsJson = const Value.absent(),
+    this.inputTokens = const Value.absent(),
+    this.outputTokens = const Value.absent(),
+    this.latencyMs = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -6083,6 +6187,9 @@ class PromptExampleOutputsCompanion
     Expression<bool>? isBest,
     Expression<String>? promptVersionId,
     Expression<String>? runParamsJson,
+    Expression<int>? inputTokens,
+    Expression<int>? outputTokens,
+    Expression<int>? latencyMs,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -6102,6 +6209,9 @@ class PromptExampleOutputsCompanion
       if (isBest != null) 'is_best': isBest,
       if (promptVersionId != null) 'prompt_version_id': promptVersionId,
       if (runParamsJson != null) 'run_params_json': runParamsJson,
+      if (inputTokens != null) 'input_tokens': inputTokens,
+      if (outputTokens != null) 'output_tokens': outputTokens,
+      if (latencyMs != null) 'latency_ms': latencyMs,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -6123,6 +6233,9 @@ class PromptExampleOutputsCompanion
       Value<bool>? isBest,
       Value<String?>? promptVersionId,
       Value<String?>? runParamsJson,
+      Value<int?>? inputTokens,
+      Value<int?>? outputTokens,
+      Value<int?>? latencyMs,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<int>? rowid}) {
@@ -6141,6 +6254,9 @@ class PromptExampleOutputsCompanion
       isBest: isBest ?? this.isBest,
       promptVersionId: promptVersionId ?? this.promptVersionId,
       runParamsJson: runParamsJson ?? this.runParamsJson,
+      inputTokens: inputTokens ?? this.inputTokens,
+      outputTokens: outputTokens ?? this.outputTokens,
+      latencyMs: latencyMs ?? this.latencyMs,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -6192,6 +6308,15 @@ class PromptExampleOutputsCompanion
     if (runParamsJson.present) {
       map['run_params_json'] = Variable<String>(runParamsJson.value);
     }
+    if (inputTokens.present) {
+      map['input_tokens'] = Variable<int>(inputTokens.value);
+    }
+    if (outputTokens.present) {
+      map['output_tokens'] = Variable<int>(outputTokens.value);
+    }
+    if (latencyMs.present) {
+      map['latency_ms'] = Variable<int>(latencyMs.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -6221,6 +6346,9 @@ class PromptExampleOutputsCompanion
           ..write('isBest: $isBest, ')
           ..write('promptVersionId: $promptVersionId, ')
           ..write('runParamsJson: $runParamsJson, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('latencyMs: $latencyMs, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -10514,6 +10642,9 @@ typedef $$PromptExampleOutputsTableCreateCompanionBuilder
   Value<bool> isBest,
   Value<String?> promptVersionId,
   Value<String?> runParamsJson,
+  Value<int?> inputTokens,
+  Value<int?> outputTokens,
+  Value<int?> latencyMs,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -10534,6 +10665,9 @@ typedef $$PromptExampleOutputsTableUpdateCompanionBuilder
   Value<bool> isBest,
   Value<String?> promptVersionId,
   Value<String?> runParamsJson,
+  Value<int?> inputTokens,
+  Value<int?> outputTokens,
+  Value<int?> latencyMs,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -10590,6 +10724,15 @@ class $$PromptExampleOutputsTableFilterComposer
 
   ColumnFilters<String> get runParamsJson => $composableBuilder(
       column: $table.runParamsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get inputTokens => $composableBuilder(
+      column: $table.inputTokens, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get outputTokens => $composableBuilder(
+      column: $table.outputTokens, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get latencyMs => $composableBuilder(
+      column: $table.latencyMs, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -10652,6 +10795,16 @@ class $$PromptExampleOutputsTableOrderingComposer
       column: $table.runParamsJson,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get inputTokens => $composableBuilder(
+      column: $table.inputTokens, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get outputTokens => $composableBuilder(
+      column: $table.outputTokens,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get latencyMs => $composableBuilder(
+      column: $table.latencyMs, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -10710,6 +10863,15 @@ class $$PromptExampleOutputsTableAnnotationComposer
   GeneratedColumn<String> get runParamsJson => $composableBuilder(
       column: $table.runParamsJson, builder: (column) => column);
 
+  GeneratedColumn<int> get inputTokens => $composableBuilder(
+      column: $table.inputTokens, builder: (column) => column);
+
+  GeneratedColumn<int> get outputTokens => $composableBuilder(
+      column: $table.outputTokens, builder: (column) => column);
+
+  GeneratedColumn<int> get latencyMs =>
+      $composableBuilder(column: $table.latencyMs, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -10761,6 +10923,9 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             Value<bool> isBest = const Value.absent(),
             Value<String?> promptVersionId = const Value.absent(),
             Value<String?> runParamsJson = const Value.absent(),
+            Value<int?> inputTokens = const Value.absent(),
+            Value<int?> outputTokens = const Value.absent(),
+            Value<int?> latencyMs = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<int> rowid = const Value.absent(),
@@ -10780,6 +10945,9 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             isBest: isBest,
             promptVersionId: promptVersionId,
             runParamsJson: runParamsJson,
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            latencyMs: latencyMs,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,
@@ -10799,6 +10967,9 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             Value<bool> isBest = const Value.absent(),
             Value<String?> promptVersionId = const Value.absent(),
             Value<String?> runParamsJson = const Value.absent(),
+            Value<int?> inputTokens = const Value.absent(),
+            Value<int?> outputTokens = const Value.absent(),
+            Value<int?> latencyMs = const Value.absent(),
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<int> rowid = const Value.absent(),
@@ -10818,6 +10989,9 @@ class $$PromptExampleOutputsTableTableManager extends RootTableManager<
             isBest: isBest,
             promptVersionId: promptVersionId,
             runParamsJson: runParamsJson,
+            inputTokens: inputTokens,
+            outputTokens: outputTokens,
+            latencyMs: latencyMs,
             createdAt: createdAt,
             updatedAt: updatedAt,
             rowid: rowid,

@@ -12,6 +12,7 @@ import '../../../core/database/database_providers.dart';
 import '../../../app/theme/app_design.dart';
 import '../../../shared/providers/provider_identity.dart';
 import '../../../shared/attachments/attachment_viewer.dart';
+import '../../execution/application/pricing_service.dart';
 
 class PromptOutputCard extends ConsumerStatefulWidget {
   final PromptExampleOutput output;
@@ -151,6 +152,8 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
                     _buildHeader(theme, colorScheme, identity, edited),
                     if (widget.output.promptVersionId != null)
                       _buildProvenance(theme, colorScheme),
+                    if (widget.output.sourceType == 'api')
+                      _buildUsage(theme, colorScheme),
                     if (widget.output.outputText.isNotEmpty)
                       _buildBody(theme, colorScheme, formattedText, isLong),
                     if (isLong && widget.output.outputText.isNotEmpty)
@@ -482,6 +485,45 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  // Real token usage + estimated cost (from the editable pricing table). Shows
+  // "—" whenever a real number isn't available; cost is labelled "est.".
+  Widget _buildUsage(ThemeData theme, ColorScheme scheme) {
+    final inTok = widget.output.inputTokens;
+    final outTok = widget.output.outputTokens;
+    final tokenStr = (inTok != null || outTok != null)
+        ? '${inTok ?? '—'} in / ${outTok ?? '—'} out'
+        : '— tokens';
+    final pricing = ref.watch(pricingTableProvider);
+    final cost = pricing.maybeWhen(
+      data: (table) => table.costFor(widget.output.modelId, inTok, outTok),
+      orElse: () => null,
+    );
+    final costStr = cost != null
+        ? 'est. \$${cost.toStringAsFixed(cost < 0.01 ? 5 : 3)}'
+        : '—';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingXs),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.toll_outlined, size: 13, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppDesign.spacingXs),
+          Expanded(
+            child: Text('$tokenStr · $costStr',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: scheme.onSurfaceVariant)),
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../execution/application/pricing_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -32,6 +33,70 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _loaded = true;
       });
     }
+  }
+
+  Future<void> _editPricing() async {
+    final service = ref.read(pricingServiceProvider);
+    final raw = await service.rawJson();
+    if (!mounted) return;
+    final controller = TextEditingController(text: raw);
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: const Text('Model pricing (community-maintained)'),
+          content: SizedBox(
+            width: 560,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Approximate per-1M-token prices used only for cost '
+                    'estimates. Verify against the provider; costs are shown as '
+                    '"est." and only when real token counts are available.'),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  maxLines: 14,
+                  style: const TextStyle(
+                      fontFamily: 'JetBrainsMono', fontSize: 12),
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    errorText: error,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                final bundled = await service.bundledJson();
+                controller.text = bundled;
+                setLocal(() => error = null);
+              },
+              child: const Text('Reset to bundled'),
+            ),
+            TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () async {
+                try {
+                  await service.save(controller.text);
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                } catch (e) {
+                  setLocal(() => error = 'Invalid JSON: $e');
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
   }
 
   Future<void> _editRetention() async {
@@ -108,6 +173,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     : 'Keep all versions (unlimited)'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _editRetention,
+          ),
+          ListTile(
+            leading: const Icon(Icons.toll_outlined),
+            title: const Text('Model pricing'),
+            subtitle: const Text(
+                'Edit community-maintained prices used for cost estimates.'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _editPricing,
           ),
           ListTile(
             leading: const Icon(Icons.upload_file),

@@ -243,6 +243,11 @@ class PromptExampleOutputs extends Table {
   // null for manually pasted outputs) and the run parameters used (JSON).
   TextColumn get promptVersionId => text().nullable()();
   TextColumn get runParamsJson => text().nullable()();
+  // Real token usage + latency reported by the provider (null when not given;
+  // never estimated). Cost is derived at display time from the pricing table.
+  IntColumn get inputTokens => integer().nullable()();
+  IntColumn get outputTokens => integer().nullable()();
+  IntColumn get latencyMs => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
