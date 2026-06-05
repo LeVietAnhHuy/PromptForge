@@ -796,6 +796,29 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       _buildOutline(context),
       if (_detectedVariables.isNotEmpty) ...[
         const SizedBox(height: AppDesign.spacingLg),
+        // Highlight the detected {{variables}} with an ember accent style.
+        Wrap(
+          spacing: AppDesign.spacingSm,
+          runSpacing: AppDesign.spacingSm,
+          children: [
+            for (final v in _detectedVariables)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppDesign.spacingSm, vertical: 3),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.14),
+                  borderRadius: AppDesign.borderSm,
+                  border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+                ),
+                child: Text('{{$v}}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                        fontFamily: AppDesign.fontMono,
+                        color: theme.colorScheme.primary)),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppDesign.spacingLg),
         Text('Variable Metadata', style: theme.textTheme.titleLarge),
         const SizedBox(height: AppDesign.spacingSm),
         ..._detectedVariables.map((vName) {

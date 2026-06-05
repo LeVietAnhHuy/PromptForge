@@ -202,6 +202,19 @@ Standing rule this stage: push to `origin/master` after every commit.
   retention cap bounds growth. The run UI that *populates* provenance is wired in
   Part C (multi-model run); Part A provides the schema + plumbing + display.
 
+- Part B — template variables. Most of this already existed: detection
+  (`PromptCompilerService.extractVariables`), the per-prompt Variable Metadata
+  panel (label/description/default/example, persisted), and the compiler screen
+  for fill-and-use (form pre-filled with defaults → resolved prompt → copy with a
+  "Copy Anyway" warning on missing-required, or BYOK run) with a missing-required
+  banner. Added: an ember-accent highlight chip row for detected `{{variables}}`
+  in the editor, and edge-case detection unit tests (order, dedup, doubled
+  braces, malformed, underscores/digits, code fences). **Deviation:** the app's
+  variable convention is single-brace `{var}` (the compiler regex + seed
+  prompts); `{{var}}` resolves to the inner name. Variables inside code fences
+  ARE detected (the compiler substitutes everywhere by design) — documented in
+  the tests rather than changing established behavior.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

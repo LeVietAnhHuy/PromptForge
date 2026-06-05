@@ -82,7 +82,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Variable Metadata'), findsOneWidget);
-    expect(find.text('{{name}}'), findsOneWidget);
+    // {{name}} now appears in both the highlight chip and the metadata card.
+    expect(find.text('{{name}}'), findsWidgets);
 
     // Enter metadata
     await tester.enterText(
