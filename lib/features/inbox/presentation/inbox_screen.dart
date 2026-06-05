@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../application/inbox_providers.dart';
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../shared/widgets/empty_state.dart';
 import 'inbox_to_prompt_card_dialog.dart';
 import 'inbox_to_workspace_run_dialog.dart';
 
@@ -21,8 +22,12 @@ class InboxScreen extends ConsumerWidget {
       body: inboxItemsAsync.when(
         data: (items) {
           if (items.isEmpty) {
-            return const Center(
-              child: Text('Your inbox is empty. Capture a new idea!'),
+            return EmptyState(
+              icon: Icons.inbox_outlined,
+              title: 'Nothing in your inbox',
+              message: 'Your inbox is empty. Capture a new idea!',
+              actionLabel: 'New Note',
+              onAction: () => context.go('/inbox/new'),
             );
           }
           return ListView.builder(
@@ -42,12 +47,15 @@ class InboxScreen extends ConsumerWidget {
                   final dao = ref.read(inboxItemDaoProvider);
                   await dao.archiveInboxItem(item.id);
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item archived')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Item archived')));
                   }
                 },
                 child: ListTile(
                   title: Text(
-                    item.title?.isNotEmpty == true ? item.title! : 'Untitled Idea',
+                    item.title?.isNotEmpty == true
+                        ? item.title!
+                        : 'Untitled Idea',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -114,7 +122,8 @@ class InboxScreen extends ConsumerWidget {
     } else {
       showGeneralDialog(
         context: context,
-        pageBuilder: (context, anim1, anim2) => InboxToPromptCardDialog(item: item),
+        pageBuilder: (context, anim1, anim2) =>
+            InboxToPromptCardDialog(item: item),
       );
     }
   }
@@ -129,7 +138,8 @@ class InboxScreen extends ConsumerWidget {
     } else {
       showGeneralDialog(
         context: context,
-        pageBuilder: (context, anim1, anim2) => InboxToWorkspaceRunDialog(item: item),
+        pageBuilder: (context, anim1, anim2) =>
+            InboxToWorkspaceRunDialog(item: item),
       );
     }
   }

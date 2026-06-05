@@ -141,6 +141,23 @@ Translating the Stage 24 brief into the Flutter stack. One commit per part,
     need libmpv/pdfium init), so routing is covered by `detectAttachmentKind`
     unit tests; manual playback verification on a display is still recommended.
 
+- Part F — visual polish (focused pass within the forge system). Added a
+  navigation-rail brand mark (ember-gradient anvil-spark glyph + "Forge"
+  wordmark, the signature touch). New shared widgets: `EmptyState`
+  (`lib/shared/widgets/empty_state.dart`, ember radial-glow mark + title +
+  message + optional action) applied to the Library, Inbox, Workspaces and
+  Context-Packs empty screens (tested strings preserved); `AppFeedback`
+  (`lib/shared/widgets/app_feedback.dart`) with a styled snackbar/toast helper,
+  a uniform confirm dialog (secondary-left / primary-right, destructive style),
+  and `SkeletonBox`/`SkeletonList` loaders. Wired the confirm dialog into the
+  prompt/output delete flows. Cards/inputs/dialogs already share the Stage 23
+  theme recipe; reduced-motion is honored via `AppDesign.motion`. NOTE: the
+  brief's "Settings pinned to the rail bottom" was not done because the desktop
+  nav test requires a `NavigationRail` with all five destinations in one list
+  (index-mapped to the shell branches); true bottom-pinning needs a custom rail
+  — deferred to avoid breaking that contract. Remaining polish (per-screen
+  header audit, stagger-fade list entrances) is iterative.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

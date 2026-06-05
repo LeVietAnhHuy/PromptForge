@@ -7,6 +7,7 @@ import 'package:drift/drift.dart' as drift;
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../shared/widgets/empty_state.dart';
 
 class ProjectListScreen extends ConsumerWidget {
   const ProjectListScreen({super.key});
@@ -30,7 +31,11 @@ class ProjectListScreen extends ConsumerWidget {
           }
           final projects = snapshot.data ?? [];
           if (projects.isEmpty) {
-            return const Center(child: Text('No projects yet. Create one!'));
+            return const EmptyState(
+              icon: Icons.workspaces_outlined,
+              title: 'No workspaces yet',
+              message: 'No projects yet. Create one!',
+            );
           }
 
           return ListView.builder(
@@ -90,7 +95,8 @@ class ProjectListScreen extends ConsumerWidget {
             await projectDao.createProject(ProjectsCompanion.insert(
               id: id,
               name: titleController.text,
-              description: drift.Value(descController.text.isNotEmpty ? descController.text : null),
+              description: drift.Value(
+                  descController.text.isNotEmpty ? descController.text : null),
               createdAt: now,
               updatedAt: now,
             ));

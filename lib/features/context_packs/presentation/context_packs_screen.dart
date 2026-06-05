@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../application/context_pack_providers.dart';
 
 class ContextPacksScreen extends ConsumerWidget {
@@ -17,8 +18,10 @@ class ContextPacksScreen extends ConsumerWidget {
       body: packsAsync.when(
         data: (packs) {
           if (packs.isEmpty) {
-            return const Center(
-              child: Text('No context packs found. Create one!'),
+            return const EmptyState(
+              icon: Icons.extension_outlined,
+              title: 'No context packs',
+              message: 'No context packs found. Create one!',
             );
           }
 
@@ -27,9 +30,11 @@ class ContextPacksScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final pack = packs[index];
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                 child: ListTile(
-                  title: Text(pack.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  title: Text(pack.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   subtitle: Text(
                     pack.description ?? pack.content,
                     maxLines: 2,

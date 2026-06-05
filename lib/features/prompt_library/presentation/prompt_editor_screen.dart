@@ -15,6 +15,7 @@ import '../../prompt_compiler/domain/prompt_compiler_service.dart';
 import '../../../shared/markdown/inline_markdown_editor.dart';
 import '../../../shared/markdown/markdown_reader_style.dart';
 import '../../../app/theme/app_design.dart';
+import '../../../shared/widgets/app_feedback.dart';
 import 'prompt_body_focus_editor.dart';
 import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../prompt_examples/presentation/prompt_output_card.dart';
@@ -431,26 +432,15 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   Future<void> _deletePrompt() async {
     if (_existingPrompt == null) return;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Prompt'),
-        content: const Text('Are you sure you want to delete this prompt?'),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => context.pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final confirmed = await AppFeedback.confirm(
+      context,
+      title: 'Delete Prompt',
+      message: 'Are you sure you want to delete this prompt?',
+      confirmLabel: 'Delete',
+      destructive: true,
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
       final promptDao = ref.read(promptDaoProvider);
       await promptDao.archivePrompt(_existingPrompt!.id);
 
@@ -1036,25 +1026,14 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 );
               },
               onDelete: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Delete output?'),
-                    content: const Text(
-                        'Are you sure you want to delete this output?'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Cancel')),
-                      TextButton(
-                          onPressed: () => Navigator.of(context).pop(true),
-                          style: TextButton.styleFrom(
-                              foregroundColor: theme.colorScheme.error),
-                          child: const Text('Delete')),
-                    ],
-                  ),
+                final confirm = await AppFeedback.confirm(
+                  context,
+                  title: 'Delete output?',
+                  message: 'Are you sure you want to delete this output?',
+                  confirmLabel: 'Delete',
+                  destructive: true,
                 );
-                if (confirm == true && mounted) {
+                if (confirm && mounted) {
                   await ref
                       .read(promptExampleOutputDaoProvider)
                       .deleteOutput(output.id);

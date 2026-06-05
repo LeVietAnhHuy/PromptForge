@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/database_providers.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../application/prompt_providers.dart';
 
 class PromptLibraryScreen extends ConsumerWidget {
@@ -32,8 +33,9 @@ class PromptLibraryScreen extends ConsumerWidget {
                     filled: true,
                     contentPadding: EdgeInsets.symmetric(vertical: 0),
                   ),
-                  onChanged: (value) =>
-                      ref.read(promptSearchQueryProvider.notifier).state = value,
+                  onChanged: (value) => ref
+                      .read(promptSearchQueryProvider.notifier)
+                      .state = value,
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -50,10 +52,18 @@ class PromptLibraryScreen extends ConsumerWidget {
                         }
                       },
                       items: const [
-                        DropdownMenuItem(value: PromptSortOption.recentlyUpdated, child: Text('Recently Updated')),
-                        DropdownMenuItem(value: PromptSortOption.recentlyCreated, child: Text('Recently Created')),
-                        DropdownMenuItem(value: PromptSortOption.titleAZ, child: Text('Title A-Z')),
-                        DropdownMenuItem(value: PromptSortOption.mostUsed, child: Text('Most Used')),
+                        DropdownMenuItem(
+                            value: PromptSortOption.recentlyUpdated,
+                            child: Text('Recently Updated')),
+                        DropdownMenuItem(
+                            value: PromptSortOption.recentlyCreated,
+                            child: Text('Recently Created')),
+                        DropdownMenuItem(
+                            value: PromptSortOption.titleAZ,
+                            child: Text('Title A-Z')),
+                        DropdownMenuItem(
+                            value: PromptSortOption.mostUsed,
+                            child: Text('Most Used')),
                       ],
                     ),
                     // Tag Filter Dropdown
@@ -64,7 +74,8 @@ class PromptLibraryScreen extends ConsumerWidget {
                           value: currentTagId,
                           hint: const Text('Filter by Tag'),
                           onChanged: (val) {
-                            ref.read(promptFilterTagProvider.notifier).state = val;
+                            ref.read(promptFilterTagProvider.notifier).state =
+                                val;
                           },
                           items: [
                             const DropdownMenuItem<String?>(
@@ -78,7 +89,8 @@ class PromptLibraryScreen extends ConsumerWidget {
                           ],
                         );
                       },
-                      loading: () => const SizedBox(width: 100, child: LinearProgressIndicator()),
+                      loading: () => const SizedBox(
+                          width: 100, child: LinearProgressIndicator()),
                       error: (_, __) => const Text('Error loading tags'),
                     ),
                     // Favorite Filter Toggle
@@ -86,7 +98,8 @@ class PromptLibraryScreen extends ConsumerWidget {
                       label: const Text('Favorites'),
                       selected: ref.watch(promptFavoriteFilterProvider),
                       onSelected: (val) {
-                        ref.read(promptFavoriteFilterProvider.notifier).state = val;
+                        ref.read(promptFavoriteFilterProvider.notifier).state =
+                            val;
                       },
                       avatar: const Icon(Icons.star, size: 16),
                     ),
@@ -99,8 +112,12 @@ class PromptLibraryScreen extends ConsumerWidget {
             child: promptsAsync.when(
               data: (promptsWithTags) {
                 if (promptsWithTags.isEmpty) {
-                  return const Center(
-                    child: Text('No prompts found. Create one!'),
+                  return EmptyState(
+                    icon: Icons.auto_awesome_outlined,
+                    title: 'Your prompt library is empty',
+                    message: 'No prompts found. Create one!',
+                    actionLabel: 'New Prompt',
+                    onAction: () => context.go('/library/editor'),
                   );
                 }
 
@@ -112,7 +129,8 @@ class PromptLibraryScreen extends ConsumerWidget {
                     final tags = pwt.tags;
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 8.0, vertical: 4.0),
                       child: InkWell(
                         onTap: () => context.go('/library/editor/${prompt.id}'),
                         child: Padding(
@@ -125,16 +143,25 @@ class PromptLibraryScreen extends ConsumerWidget {
                                   Expanded(
                                     child: Text(
                                       prompt.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
                                     ),
                                   ),
                                   IconButton(
                                     icon: Icon(
-                                      prompt.isFavorite ? Icons.star : Icons.star_border,
-                                      color: prompt.isFavorite ? Colors.amber : null,
+                                      prompt.isFavorite
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      color: prompt.isFavorite
+                                          ? Colors.amber
+                                          : null,
                                     ),
                                     onPressed: () {
-                                      ref.read(promptDaoProvider).toggleFavorite(prompt.id, !prompt.isFavorite);
+                                      ref
+                                          .read(promptDaoProvider)
+                                          .toggleFavorite(
+                                              prompt.id, !prompt.isFavorite);
                                     },
                                   ),
                                 ],
@@ -145,12 +172,16 @@ class PromptLibraryScreen extends ConsumerWidget {
                                   child: Wrap(
                                     spacing: 4.0,
                                     runSpacing: 4.0,
-                                    children: tags.map((t) => Chip(
-                                      label: Text(t.name),
-                                      padding: EdgeInsets.zero,
-                                      labelStyle: const TextStyle(fontSize: 12),
-                                      visualDensity: VisualDensity.compact,
-                                    )).toList(),
+                                    children: tags
+                                        .map((t) => Chip(
+                                              label: Text(t.name),
+                                              padding: EdgeInsets.zero,
+                                              labelStyle:
+                                                  const TextStyle(fontSize: 12),
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                            ))
+                                        .toList(),
                                   ),
                                 ),
                               Text(
