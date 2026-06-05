@@ -13,16 +13,24 @@ PromptForge is a local-first Flutter workspace for prompt engineering. It helps 
 - LLM execution v0: `google_generative_ai` for Google/Gemini plus a mock provider for tests
 - Import/export: `archive` for `.promptforge` zip bundles and `file_selector` for file picking
 - Markdown UI: `flutter_markdown_plus`
+- Vector logos: `flutter_svg` (provider brand marks)
+- Attachment previews: `flutter_highlight` (code syntax highlighting), `url_launcher` (open files in a system app); CSV/TSV parsed with a small in-repo RFC-4180 parser
+- Self-hosted fonts (OFL): Space Grotesk (display), Atkinson Hyperlegible (body), JetBrains Mono (mono) under `assets/fonts/`
 - Package manager: Flutter/Dart pub (`pubspec.lock` is committed)
 
 ## Repository layout
 ```text
 lib/
-  app/                 App shell, router, responsive navigation, theme tokens
+  app/theme/           Design tokens (app_design.dart) + the "forge" ThemeData (theme.dart)
+  app/                 App shell, router, responsive navigation, command-palette shortcut
   core/database/       Drift database, tables, DAOs, generated database code
   core/security/       Secure storage wrapper for BYOK API keys
-  features/            Feature-first modules: inbox, projects, library, compiler, examples, settings
+  features/            Feature-first modules: inbox, projects, library, compiler, examples, search, settings
   shared/markdown/     Shared markdown reader/editor helpers
+  shared/providers/    provider_identity.dart — provider→logo/accent registry
+  shared/attachments/  attachment_viewer.dart — modal attachment preview
+assets/fonts/          Self-hosted OFL fonts
+assets/provider_icons/ Bundled provider brand SVGs (Simple Icons CC0 + authored marks)
 test/                  Unit and widget tests for DAOs, services, screens, and layouts
 docs/                  Historical stage handoffs, validation notes, known limitations
 android/ ios/ linux/   Flutter platform folders
@@ -46,6 +54,10 @@ android/ ios/ linux/   Flutter platform folders
 - Preserve manual output capture as the fallback for API execution failures or missing keys.
 - Keep responsive fixes targeted. Prefer stacking controls and scrollable text areas over large redesigns.
 - Match existing Material widget style and concise code comments.
+- Use design tokens from `lib/app/theme/app_design.dart` (spacing, radii, motion, the forge color ramp, font-family names) and the derived `ThemeData`; do not hardcode colors or magic spacing. Extra semantic colors live on the `ForgeTokens` theme extension (`context.forge`). Wrap non-essential animations in `AppDesign.motion(context, ...)` to respect reduced motion.
+- Provider visual identity (display name, brand accent, logo) is data-driven in `lib/shared/providers/provider_identity.dart`; add a provider with a one-line registry entry (and optionally drop `assets/provider_icons/<id>.svg`). Render with the `ProviderLogo` widget.
+- The LLM model catalog is a single data source in `lib/features/prompt_examples/application/llm_model_catalog.dart` (`isLegacy`/`isPreview` are metadata booleans); the `ModelPickerField` renders the grouped/legacy/recent picker. Adding models requires no widget changes.
+- Bundle any new fonts/logos locally with their license, and note them in `THIRD_PARTY_NOTICES.md`; use provider logos only to identify the provider, unmodified.
 
 ## Architecture decisions
 - Drift is the source of truth for local persistence because PromptForge is designed as a local-first workspace with portable backup bundles.
@@ -55,3 +67,9 @@ android/ ios/ linux/   Flutter platform folders
 - Google/Gemini is the only real API execution provider currently wired. The provider id is `google`; legacy secure-storage key id `gemini` is still read for compatibility.
 - Import/export serializes local app data but excludes secure-storage API keys by design.
 - Responsive navigation uses a bottom `NavigationBar` below 700 px width and a `NavigationRail` at wider widths.
+- The UI uses a dark-first "forge" design system (deep warm charcoal + ember accent). The dark `ColorScheme` fills the Material 3 surface-container slots, so screens adopt it without per-widget changes; the app pins `ThemeMode.dark`.
+- The Edit Prompt screen splits into two independently scrolling columns at ≥1100 px (body editor | saved outputs) and collapses to one scroll view below; saving stays in place so the "Saved ·" indicator can update.
+- Saved-output edits reuse `ManualOutputPasteDialog` in edit mode (it updates the output in place and stamps `updatedAt`); the per-card "edited" indicator is derived from `updatedAt` vs `createdAt` — no schema change was needed.
+- Attachment previews render in-app for image/SVG/text/code/JSON/Markdown/CSV/ZIP; PDF/video/audio intentionally fall back to "open externally" because reliable Linux-desktop AV/PDF rendering needs native backends (libmpv/pdfium) that aren't bundled. HTML is shown as escaped text; attachment bytes are treated as untrusted data and never executed.
+- There is no Search tab; per-tab search plus a global Ctrl/Cmd+K command palette (`lib/features/search/`) are the search surfaces. The palette queries existing DAOs rather than a separate index.
+

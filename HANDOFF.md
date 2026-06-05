@@ -33,6 +33,50 @@
 4. Improve import/export attachment handling if backup fidelity becomes a priority.
 5. Consider richer evaluation support for prompt examples, such as assertions or structured scoring.
 
+## Stage 23 — UI/UX overhaul (Claude Code)
+Delivered the Stage 23 brief. The brief was written in web/CSS terms (CSS
+variables, DOM, HTML5 players, pdf.js); this is a Flutter app, so every concept
+was translated to Flutter idioms (ThemeData + tokens, `ThemeExtension`,
+`flutter_svg`, `Shortcuts`/`OverlayPortal`, etc.). One commit per part, all
+prefixed `stage23:`.
+
+- Part F — Forge design system. `lib/app/theme/app_design.dart` holds the token
+  set (4px spacing scale, radii, motion durations/easings, the forge color ramp,
+  font families) plus a `ForgeTokens` theme extension; `theme.dart` builds a
+  dark-first `ThemeData` whose `ColorScheme` fills the M3 surface slots existing
+  screens already use, so the palette + typography apply app-wide. Self-hosted
+  OFL fonts (Space Grotesk / Atkinson Hyperlegible / JetBrains Mono).
+  `AppDesign.motion(context, ...)` respects `prefers-reduced-motion`.
+- Part A — Edit Prompt two-column layout (≥1100 px: body editor + Contents
+  outline | saved outputs, independent scroll; single column below). Added live
+  char/token counts and a "Saved · / Unsaved changes" indicator. Save now stays
+  in place (transitions a new prompt into edit mode) instead of popping.
+- Part B — Provider identity registry (`lib/shared/providers/provider_identity.dart`)
+  with bundled SVG logos or monogram fallback; output cards show logo + accent
+  left border + tinted model badge, an "edited" indicator, and an Edit action
+  (hover pencil + kebab) reusing the paste dialog in edit mode.
+- Part C — `ModelPickerField`: grouped-by-family combobox with sticky headers,
+  collapsed Legacy expanders, a pinned Recent group (persisted per provider in
+  `UserSettings`), and type-to-filter with full keyboard nav.
+- Part D — `AttachmentViewer`: modal preview with prev/next, image zoom, SVG,
+  code/text/JSON/HTML highlighting, Markdown (raw toggle), CSV/TSV tables, ZIP
+  listing; PDF/video/audio fall back to open-externally (see deviation below).
+- Part E — Removed the Search tab; added a global Ctrl/Cmd+K command palette
+  querying existing DAOs (prompts/tags/outputs) with Enter-to-navigate.
+
+### Deviations from the brief (codebase wins per the rules)
+- Web→Flutter translation throughout (no CSS/DOM/HTML).
+- Provider logos: Simple Icons (CC0) where available; OpenAI/Cohere/Zhipu use an
+  authored monogram badge and Microsoft an authored 4-square mark, because their
+  marks aren't in the CC0 set. All licenses noted in `THIRD_PARTY_NOTICES.md`.
+- PDF/video/audio are not rendered inline. Reliable Linux-desktop AV/PDF
+  rendering needs native backends (libmpv/pdfium) that can't be verified in this
+  environment and would add system dependencies; the viewer offers an
+  "Open externally" action plus metadata instead. Revisit with `media_kit` /
+  `pdfrx` if in-app playback becomes a priority.
+- A few existing tests that asserted the old pop-on-save navigation were updated
+  to the new in-place-save flow; data assertions are unchanged.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.
