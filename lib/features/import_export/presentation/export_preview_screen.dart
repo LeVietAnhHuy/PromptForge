@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import '../application/import_export_service.dart';
-import '../domain/import_export_codec.dart';
 
 class ExportPreviewScreen extends ConsumerStatefulWidget {
   const ExportPreviewScreen({super.key});
@@ -26,8 +25,7 @@ class _ExportPreviewScreenState extends ConsumerState<ExportPreviewScreen> {
   Future<void> _generateExport() async {
     try {
       final service = ref.read(importExportServiceProvider);
-      final json = await service.exportActiveData();
-      final zip = ImportExportCodec.encodeBackupBundle(json);
+      final zip = await service.exportBundle();
       setState(() {
         _zipBytes = zip;
         _isLoading = false;

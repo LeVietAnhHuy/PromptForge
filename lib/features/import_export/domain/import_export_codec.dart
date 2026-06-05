@@ -3,6 +3,14 @@ import 'package:archive/archive.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/database.dart';
 
+/// The contents of a decoded backup bundle: the workspace JSON plus any
+/// embedded attachment files, keyed by their in-bundle path (`attachments/<id>`).
+class BundleContents {
+  final String json;
+  final Map<String, List<int>> files;
+  const BundleContents(this.json, this.files);
+}
+
 class ImportedPrompt {
   final Prompt prompt;
   final List<String> tags;
@@ -161,11 +169,15 @@ class ImportExportCodec {
                                     'updatedAt': o.updatedAt.toIso8601String(),
                                     'attachments': (attachments[o.id] ?? [])
                                         .map((a) => {
+                                              'id': a.id,
                                               'fileName': a.fileName,
                                               'mimeType': a.mimeType,
                                               'sizeBytes': a.sizeBytes,
                                               'attachmentType':
                                                   a.attachmentType,
+                                              // Where the file bytes live inside
+                                              // the bundle zip (see exportBundle).
+                                              'bundlePath': 'attachments/${a.id}',
                                             })
                                         .toList(),
                                   })
@@ -339,12 +351,14 @@ class ImportExportCodec {
                 for (final a in attsRaw) {
                   if (a is Map<String, dynamic>) {
                     atts.add(LLMOutputAttachment(
-                      id: '',
+                      id: a['id'] as String? ?? '',
                       outputId: oId, // Will link temporarily here
                       fileName: a['fileName'] as String,
                       mimeType: a['mimeType'] as String,
-                      localPath:
-                          '', // Cannot know local path during import until resolved
+                      // localPath carries the in-bundle path until the import
+                      // service resolves it to a real on-disk file (or '' when
+                      // the bundle has no bytes, e.g. a metadata-only export).
+                      localPath: a['bundlePath'] as String? ?? '',
                       sizeBytes: a['sizeBytes'] as int?,
                       attachmentType: a['attachmentType'] as String?,
                       createdAt: DateTime.parse(o['createdAt'] as String),
@@ -553,6 +567,45 @@ class ImportExportCodec {
     final file = ArchiveFile('backup.json', bytes.length, bytes);
     archive.addFile(file);
     return ZipEncoder().encode(archive);
+  }
+
+  /// Like [encodeBackupBundle] but also embeds attachment file bytes under their
+  /// `attachments/<id>` paths (keyed by the `bundlePath` the JSON references).
+  static List<int> encodeBackupBundleWithFiles(
+      String jsonString, Map<String, List<int>> files) {
+    final archive = Archive();
+    final bytes = utf8.encode(jsonString);
+    archive.addFile(ArchiveFile('backup.json', bytes.length, bytes));
+    files.forEach((path, data) {
+      archive.addFile(ArchiveFile(path, data.length, data));
+    });
+    return ZipEncoder().encode(archive);
+  }
+
+  /// Decodes a bundle into its JSON plus any embedded attachment files (by
+  /// in-bundle path). Falls back to treating raw bytes as a legacy JSON export.
+  static BundleContents decodeBundleWithFiles(List<int> zipBytes) {
+    try {
+      final archive = ZipDecoder().decodeBytes(zipBytes);
+      String? json;
+      final files = <String, List<int>>{};
+      for (final f in archive) {
+        if (!f.isFile) continue;
+        if (f.name == 'backup.json') {
+          json = utf8.decode(f.content as List<int>);
+        } else if (f.name.startsWith('attachments/')) {
+          files[f.name] = List<int>.from(f.content as List<int>);
+        }
+      }
+      if (json != null) return BundleContents(json, files);
+    } catch (_) {
+      // Not a zip — fall through to the legacy raw-JSON path below.
+    }
+    try {
+      return BundleContents(utf8.decode(zipBytes), const {});
+    } catch (_) {
+      throw const FormatException('Not a valid PromptForge backup bundle.');
+    }
   }
 
   static String decodeBackupBundle(List<int> zipBytes) {

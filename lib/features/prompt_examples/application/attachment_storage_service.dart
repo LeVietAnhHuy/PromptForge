@@ -84,6 +84,26 @@ class AttachmentStorageService {
     return PersistResult(saved, failed);
   }
 
+  /// Writes raw [bytes] for an imported attachment into [outputId]'s storage
+  /// directory under a unique name, returning the new local path (or null on
+  /// failure so the caller can still insert the row with an empty path).
+  Future<String?> writeImportedBytes({
+    required String outputId,
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    try {
+      final dir = await _attachmentsDirFor(outputId);
+      final id = _uuid.v4();
+      final safeName = '${id}__${_sanitize(fileName)}';
+      final target = p.join(dir.path, safeName);
+      await File(target).writeAsBytes(bytes);
+      return target;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Removes an attachment's DB row and best-effort deletes its stored file.
   Future<void> deleteAttachment(LLMOutputAttachment att) async {
     await _attachmentDao.deleteAttachment(att.id);

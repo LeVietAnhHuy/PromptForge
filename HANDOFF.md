@@ -314,8 +314,24 @@ Standing rule this stage: push to `origin/master` after every commit.
   full export→import-into-fresh-DB equality across every entity (the acceptance
   gate); an explicit no-keys test that plants a secret in secure storage and
   asserts neither the secret nor key-bearing field names appear in the export;
-  and a Markdown front-matter/body test. STILL TODO in Part E (2/2): attachment
-  **file bytes** in the bundle (today attachments export as metadata only).
+  and a Markdown front-matter/body test.
+- Part E (2/2) — attachment FILE BYTES in the bundle. The bundle zip now carries
+  each attachment's bytes under `attachments/<id>` alongside `backup.json`; the
+  JSON references them via a `bundlePath`. New: `encodeBackupBundleWithFiles` /
+  `decodeBundleWithFiles` (returns `BundleContents{json, files}`),
+  `service.exportBundle()` (reads each attachment's on-disk bytes), and
+  `AttachmentStorageService.writeImportedBytes` (writes restored bytes under the
+  target output's dir). `importData` gained an optional `attachmentFiles` map and
+  restores files when present (else inserts metadata-only rows, as before). The
+  export/import screens use the new bundle paths. **Second import bug fixed:**
+  imported attachments were inserted with `outputId: o.id` (the decoded id),
+  while the output row was inserted under a freshly-generated id — so every
+  imported attachment was orphaned. The new output id is now hoisted and used for
+  both. Test (`import_export_roundtrip_test.dart`): a real on-disk attachment is
+  exported, found in the zip with identical bytes, then imported into a fresh DB
+  with its own storage root and verified byte-for-byte on disk. Round-trip is now
+  lossless including attachment files (still excluding `promptVersionId`, by
+  design). Both import flows are exercised end-to-end.
 
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.

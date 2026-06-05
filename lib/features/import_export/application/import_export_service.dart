@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
@@ -5,6 +7,7 @@ import 'package:drift/drift.dart' as drift;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../core/database/daos/daos.dart';
+import '../../prompt_examples/application/attachment_storage_service.dart';
 import '../domain/import_export_codec.dart';
 
 enum MergeStrategy {
@@ -23,6 +26,7 @@ final importExportServiceProvider = Provider<ImportExportService>((ref) {
     exampleDao: ref.watch(promptExampleDaoProvider),
     outputDao: ref.watch(promptExampleOutputDaoProvider),
     attachmentDao: ref.watch(lLMOutputAttachmentDaoProvider),
+    attachmentStorage: ref.watch(attachmentStorageServiceProvider),
   );
 });
 
@@ -36,6 +40,10 @@ class ImportExportService {
   final PromptExampleOutputDao outputDao;
   final LLMOutputAttachmentDao attachmentDao;
 
+  /// Optional — when present, a bundle import restores attachment file bytes to
+  /// disk. Null callers fall back to inserting attachment rows with no file.
+  final AttachmentStorageService? attachmentStorage;
+
   ImportExportService({
     required this.db,
     required this.promptDao,
@@ -45,6 +53,7 @@ class ImportExportService {
     required this.exampleDao,
     required this.outputDao,
     required this.attachmentDao,
+    this.attachmentStorage,
   });
 
   Future<String> exportActiveData() async {
@@ -109,6 +118,45 @@ class ImportExportService {
     return jsonStr;
   }
 
+  /// Reads every active attachment's bytes from disk, keyed by the in-bundle
+  /// path (`attachments/<id>`) the JSON references. Missing/unreadable files are
+  /// skipped (their row still exports as metadata).
+  Future<Map<String, List<int>>> _collectAttachmentFiles() async {
+    final files = <String, List<int>>{};
+    final activePrompts = await (promptDao.select(promptDao.prompts)
+          ..where((t) => t.isArchived.not()))
+        .get();
+    for (final prompt in activePrompts) {
+      final examples = await exampleDao.getExamplesForPrompt(prompt.id);
+      for (final ex in examples) {
+        final outputs = await outputDao.getOutputsForExample(ex.id);
+        for (final o in outputs) {
+          final atts = await attachmentDao.getAttachmentsForOutput(o.id);
+          for (final a in atts) {
+            if (a.localPath.isEmpty) continue;
+            try {
+              final f = File(a.localPath);
+              if (await f.exists()) {
+                files['attachments/${a.id}'] = await f.readAsBytes();
+              }
+            } catch (_) {
+              // Best-effort; skip unreadable files.
+            }
+          }
+        }
+      }
+    }
+    return files;
+  }
+
+  /// Full workspace backup as a zip bundle: the versioned JSON plus attachment
+  /// file bytes. This is the preferred export — never contains key material.
+  Future<List<int>> exportBundle() async {
+    final json = await exportActiveData();
+    final files = await _collectAttachmentFiles();
+    return ImportExportCodec.encodeBackupBundleWithFiles(json, files);
+  }
+
   /// Builds a shareable Markdown document (YAML front-matter + body) for one
   /// prompt, pulling its tags and variables. Contains no key material.
   Future<String> exportPromptMarkdown(String promptId) async {
@@ -122,7 +170,9 @@ class ImportExportService {
     );
   }
 
-  Future<void> importData(ImportPreview preview, {MergeStrategy strategy = MergeStrategy.duplicate}) async {
+  Future<void> importData(ImportPreview preview,
+      {MergeStrategy strategy = MergeStrategy.duplicate,
+      Map<String, List<int>>? attachmentFiles}) async {
     await db.transaction(() async {
       for (final imported in preview.validPrompts) {
         final prompt = imported.prompt;
@@ -223,8 +273,11 @@ class ImportExportService {
           
           final outputs = imported.exampleOutputs[ex.id] ?? [];
           for (final o in outputs) {
+            // Hoisted so attachments link to the NEW output row (previously they
+            // were inserted against the original/decoded id and were orphaned).
+            final newOutputId = const Uuid().v4();
             await outputDao.into(outputDao.promptExampleOutputs).insert(PromptExampleOutputsCompanion.insert(
-              id: const Uuid().v4(),
+              id: newOutputId,
               exampleId: newExampleId,
               providerId: o.providerId != null ? drift.Value(o.providerId) : const drift.Value.absent(),
               modelId: o.modelId != null ? drift.Value(o.modelId) : const drift.Value.absent(),
@@ -246,14 +299,27 @@ class ImportExportService {
 
             final atts = imported.outputAttachments[o.id] ?? [];
             for (final a in atts) {
+              // a.localPath carries the in-bundle path (set by decode). If the
+              // bundle shipped the bytes and we have storage, restore the file;
+              // otherwise insert the row with an empty path (metadata only).
+              String localPath = '';
+              final bytes = attachmentFiles?[a.localPath];
+              if (bytes != null && attachmentStorage != null) {
+                localPath = await attachmentStorage!.writeImportedBytes(
+                      outputId: newOutputId,
+                      fileName: a.fileName,
+                      bytes: bytes,
+                    ) ??
+                    '';
+              }
               await attachmentDao.createAttachment(LLMOutputAttachmentsCompanion.insert(
                 id: const Uuid().v4(),
-                outputId: o.id,
+                outputId: newOutputId,
                 fileName: a.fileName,
                 mimeType: a.mimeType,
                 sizeBytes: a.sizeBytes != null ? drift.Value(a.sizeBytes!) : const drift.Value.absent(),
                 attachmentType: a.attachmentType != null ? drift.Value(a.attachmentType!) : const drift.Value.absent(),
-                localPath: '', // Cannot resolve local path, file data is not in export
+                localPath: localPath,
                 createdAt: a.createdAt,
               ));
             }

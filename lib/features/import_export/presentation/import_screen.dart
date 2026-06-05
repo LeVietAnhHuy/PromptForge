@@ -15,6 +15,7 @@ class ImportScreen extends ConsumerStatefulWidget {
 class _ImportScreenState extends ConsumerState<ImportScreen> {
   String? _selectedFilePath;
   ImportPreview? _preview;
+  Map<String, List<int>>? _attachmentFiles;
   String? _error;
   bool _isImporting = false;
   MergeStrategy _strategy = MergeStrategy.skip;
@@ -52,10 +53,11 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
     }
 
     try {
-      final jsonText = ImportExportCodec.decodeBackupBundle(bytes);
-      final preview = ImportExportCodec.decodeImport(jsonText);
+      final bundle = ImportExportCodec.decodeBundleWithFiles(bytes);
+      final preview = ImportExportCodec.decodeImport(bundle.json);
       setState(() {
         _preview = preview;
+        _attachmentFiles = bundle.files;
       });
     } catch (e) {
       setState(() {
@@ -72,7 +74,8 @@ class _ImportScreenState extends ConsumerState<ImportScreen> {
 
     try {
       final service = ref.read(importExportServiceProvider);
-      await service.importData(_preview!, strategy: _strategy);
+      await service.importData(_preview!,
+          strategy: _strategy, attachmentFiles: _attachmentFiles);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

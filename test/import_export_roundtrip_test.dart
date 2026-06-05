@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,8 +10,11 @@ import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/security/secure_storage_service.dart';
 import 'package:promptforge/features/import_export/application/import_export_service.dart';
 import 'package:promptforge/features/import_export/domain/import_export_codec.dart';
+import 'package:promptforge/features/prompt_examples/application/attachment_storage_service.dart';
 
-ImportExportService buildService(AppDatabase db) => ImportExportService(
+ImportExportService buildService(AppDatabase db,
+        [AttachmentStorageService? storage]) =>
+    ImportExportService(
       db: db,
       promptDao: db.promptDao,
       contextPackDao: db.contextPackDao,
@@ -18,6 +23,7 @@ ImportExportService buildService(AppDatabase db) => ImportExportService(
       exampleDao: db.promptExampleDao,
       outputDao: db.promptExampleOutputDao,
       attachmentDao: db.lLMOutputAttachmentDao,
+      attachmentStorage: storage,
     );
 
 void main() {
@@ -205,6 +211,76 @@ void main() {
     ]) {
       expect(lower.contains(field), isFalse, reason: 'export leaked "$field"');
     }
+  });
+
+  test('bundle round-trips attachment FILE BYTES, not just metadata', () async {
+    final srcRoot = await Directory.systemTemp.createTemp('pf_src_');
+    final dstRoot = await Directory.systemTemp.createTemp('pf_dst_');
+    final src = AppDatabase(e: NativeDatabase.memory());
+    final dst = AppDatabase(e: NativeDatabase.memory());
+    addTearDown(() async {
+      await src.close();
+      await dst.close();
+      await srcRoot.delete(recursive: true);
+      await dstRoot.delete(recursive: true);
+    });
+
+    // A prompt → example → output with one attachment whose bytes live on disk.
+    await src.promptDao.createPrompt(PromptsCompanion.insert(
+        id: 'p1', title: 'P', body: 'b', createdAt: now, updatedAt: now));
+    await src.promptExampleDao.createExample(PromptExamplesCompanion.insert(
+        id: 'ex1',
+        promptId: const drift.Value('p1'),
+        title: 'R',
+        compiledPrompt: 'c',
+        createdAt: now,
+        updatedAt: now));
+    await src.promptExampleOutputDao.addOutput(PromptExampleOutputsCompanion.insert(
+        id: 'o1',
+        exampleId: 'ex1',
+        providerName: 'Google',
+        outputText: 'has file',
+        createdAt: now,
+        updatedAt: now));
+
+    final fileBytes = List<int>.generate(256, (i) => i % 256);
+    final srcFile = File('${srcRoot.path}/report.bin');
+    await srcFile.writeAsBytes(fileBytes);
+    await src.lLMOutputAttachmentDao.createAttachment(
+        LLMOutputAttachmentsCompanion.insert(
+      id: 'att1',
+      outputId: 'o1',
+      fileName: 'report.bin',
+      mimeType: 'application/octet-stream',
+      localPath: srcFile.path,
+      sizeBytes: const drift.Value(256),
+      createdAt: now,
+    ));
+
+    // Export the bundle (zip with backup.json + attachment bytes).
+    final zip = await buildService(src).exportBundle();
+    final bundle = ImportExportCodec.decodeBundleWithFiles(zip);
+    expect(bundle.files.containsKey('attachments/att1'), isTrue);
+    expect(bundle.files['attachments/att1'], fileBytes);
+
+    // Import into a fresh DB with its own storage root; the file is restored.
+    final dstStorage =
+        AttachmentStorageService(dst.lLMOutputAttachmentDao, storageRoot: dstRoot);
+    final preview = ImportExportCodec.decodeImport(bundle.json);
+    await buildService(dst, dstStorage).importData(preview,
+        strategy: MergeStrategy.duplicate, attachmentFiles: bundle.files);
+
+    final examples = await dst.promptExampleDao.getExamplesForPrompt('p1');
+    final outputs =
+        await dst.promptExampleOutputDao.getOutputsForExample(examples.single.id);
+    final atts =
+        await dst.lLMOutputAttachmentDao.getAttachmentsForOutput(outputs.single.id);
+    expect(atts, hasLength(1));
+    expect(atts.single.fileName, 'report.bin');
+    // The restored file exists under the new storage root with identical bytes.
+    expect(atts.single.localPath, isNotEmpty);
+    expect(atts.single.localPath.startsWith(dstRoot.path), isTrue);
+    expect(await File(atts.single.localPath).readAsBytes(), fileBytes);
   });
 
   test('single-prompt Markdown export has front-matter + body, no keys',
