@@ -173,30 +173,59 @@ List<List<String>> parseDelimited(String text, String delimiter, int maxRows) {
   return rows;
 }
 
+/// A file the viewer can render: either a `persisted` attachment (already in app
+/// storage) or a `pending` one (a just-picked source file, not yet copied). Both
+/// expose a local file path on desktop, so the same renderers handle both —
+/// enabling preview-before-save.
+class ViewerSource {
+  final String fileName;
+  final String mimeType;
+  final int? sizeBytes;
+  final String? localPath;
+  final bool pending;
+
+  const ViewerSource({
+    required this.fileName,
+    required this.mimeType,
+    this.sizeBytes,
+    this.localPath,
+    this.pending = false,
+  });
+
+  factory ViewerSource.fromAttachment(LLMOutputAttachment a) => ViewerSource(
+        fileName: a.fileName,
+        mimeType: a.mimeType,
+        sizeBytes: a.sizeBytes,
+        localPath: a.localPath,
+        pending: false,
+      );
+}
+
 /// A modal viewer overlay for output attachments. Renders supported types
 /// inline and offers prev/next navigation plus an "open externally" action for
-/// every attachment. All attachment bytes are treated as untrusted data and are
-/// only ever rendered — never executed.
+/// every attachment. Accepts both persisted and pending [ViewerSource]s. All
+/// attachment bytes are treated as untrusted data and are only ever rendered —
+/// never executed.
 class AttachmentViewer extends StatefulWidget {
-  final List<LLMOutputAttachment> attachments;
+  final List<ViewerSource> sources;
   final int initialIndex;
 
   const AttachmentViewer({
     super.key,
-    required this.attachments,
+    required this.sources,
     this.initialIndex = 0,
   });
 
   static Future<void> open(
     BuildContext context, {
-    required List<LLMOutputAttachment> attachments,
+    required List<ViewerSource> sources,
     int initialIndex = 0,
   }) {
     return showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.7),
-      builder: (_) => AttachmentViewer(
-          attachments: attachments, initialIndex: initialIndex),
+      builder: (_) =>
+          AttachmentViewer(sources: sources, initialIndex: initialIndex),
     );
   }
 
@@ -223,7 +252,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex.clamp(0, widget.attachments.length - 1);
+    _index = widget.initialIndex.clamp(0, widget.sources.length - 1);
     _prepareLoaders();
   }
 
@@ -234,14 +263,16 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
     super.dispose();
   }
 
-  LLMOutputAttachment get _current => widget.attachments[_index];
+  ViewerSource get _current => widget.sources[_index];
 
   void _prepareLoaders() {
     _textFuture = null;
     _csvFuture = null;
     _zipFuture = null;
     final att = _current;
-    final file = File(att.localPath);
+    final path = att.localPath;
+    if (path == null) return;
+    final file = File(path);
     if (!file.existsSync()) return;
     final kind = detectAttachmentKind(att.fileName, att.mimeType);
     switch (kind) {
@@ -264,7 +295,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
 
   void _go(int delta) {
     final next = _index + delta;
-    if (next < 0 || next >= widget.attachments.length) return;
+    if (next < 0 || next >= widget.sources.length) return;
     setState(() {
       _index = next;
       _imageTransform.value = Matrix4.identity();
@@ -274,8 +305,16 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
   }
 
   Future<void> _openExternally() async {
+    final path = _current.localPath;
+    if (path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('This file is not available on disk.')));
+      }
+      return;
+    }
     try {
-      final ok = await launchUrl(Uri.file(_current.localPath));
+      final ok = await launchUrl(Uri.file(path));
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text('No app available to open this file.')));
@@ -310,7 +349,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
     final theme = Theme.of(context);
     final att = _current;
     final kind = detectAttachmentKind(att.fileName, att.mimeType);
-    final hasMultiple = widget.attachments.length > 1;
+    final hasMultiple = widget.sources.length > 1;
 
     return Focus(
       focusNode: _focusNode,
@@ -335,7 +374,8 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
                   children: [
                     Positioned.fill(
                       child: KeyedSubtree(
-                        key: ValueKey(att.id),
+                        key: ValueKey(
+                            '$_index:${att.localPath ?? att.fileName}'),
                         child: _buildRenderer(theme, att, kind),
                       ),
                     ),
@@ -351,8 +391,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
     );
   }
 
-  Widget _buildHeader(
-      ThemeData theme, LLMOutputAttachment att, AttachmentKind kind) {
+  Widget _buildHeader(ThemeData theme, ViewerSource att, AttachmentKind kind) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppDesign.spacingMd,
           AppDesign.spacingSm, AppDesign.spacingSm, AppDesign.spacingSm),
@@ -430,7 +469,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
     return [
       arrow(Icons.chevron_left, -1, Alignment.centerLeft, _index > 0),
       arrow(Icons.chevron_right, 1, Alignment.centerRight,
-          _index < widget.attachments.length - 1),
+          _index < widget.sources.length - 1),
     ];
   }
 
@@ -442,7 +481,7 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
             Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
       ),
       child: Text(
-        '${_index + 1} of ${widget.attachments.length}',
+        '${_index + 1} of ${widget.sources.length}',
         textAlign: TextAlign.center,
         style: theme.textTheme.labelMedium
             ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -451,12 +490,13 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
   }
 
   Widget _buildRenderer(
-      ThemeData theme, LLMOutputAttachment att, AttachmentKind kind) {
-    final file = File(att.localPath);
-    if (!file.existsSync()) {
+      ThemeData theme, ViewerSource att, AttachmentKind kind) {
+    final path = att.localPath;
+    if (path == null || !File(path).existsSync()) {
       return _fallback(theme, kind,
           message: 'The original file is no longer available on disk.');
     }
+    final file = File(path);
 
     switch (kind) {
       case AttachmentKind.image:

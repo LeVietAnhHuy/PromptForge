@@ -2,25 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:promptforge/app/theme/theme.dart';
-import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/shared/attachments/attachment_viewer.dart';
 
-LLMOutputAttachment _att({
+ViewerSource _att({
   required String id,
   required String fileName,
   required String mime,
   required String path,
   int? size,
 }) {
-  return LLMOutputAttachment(
-    id: id,
-    outputId: 'o1',
+  return ViewerSource(
     fileName: fileName,
     mimeType: mime,
     sizeBytes: size,
     localPath: path,
-    attachmentType: null,
-    createdAt: DateTime(2026, 1, 1),
   );
 }
 
@@ -115,7 +110,7 @@ void main() {
           body: Center(
             child: ElevatedButton(
               onPressed: () =>
-                  AttachmentViewer.open(context, attachments: attachments),
+                  AttachmentViewer.open(context, sources: attachments),
               child: const Text('open'),
             ),
           ),
@@ -147,5 +142,53 @@ void main() {
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
     expect(find.text('second.pdf'), findsNothing);
+  });
+
+  testWidgets('pending (pre-save) sources open in the viewer', (tester) async {
+    // Part D: a just-picked file (pending, source path) previews before save.
+    // Open on the PDF entry which routes to the synchronous fallback panel.
+    final sources = [
+      const ViewerSource(
+          fileName: 'photo.png',
+          mimeType: 'image/png',
+          localPath: '/pending/photo.png',
+          pending: true),
+      const ViewerSource(
+          fileName: 'report.pdf',
+          mimeType: 'application/pdf',
+          localPath: '/pending/report.pdf',
+          pending: true),
+      const ViewerSource(
+          fileName: 'data.csv',
+          mimeType: 'text/csv',
+          localPath: '/pending/data.csv',
+          pending: true),
+    ];
+
+    await tester.pumpWidget(MaterialApp(
+      theme: AppTheme.darkTheme,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ElevatedButton(
+              onPressed: () => AttachmentViewer.open(context,
+                  sources: sources, initialIndex: 1),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('report.pdf'), findsWidgets);
+    expect(find.text('2 of 3'), findsOneWidget);
+    expect(
+        find.widgetWithText(FilledButton, 'Open externally'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
   });
 }

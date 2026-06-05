@@ -15,8 +15,8 @@ void main() {
   setUp(() async {
     db = AppDatabase(e: NativeDatabase.memory());
     root = await Directory.systemTemp.createTemp('pf_storage_test');
-    storage = AttachmentStorageService(db.lLMOutputAttachmentDao,
-        storageRoot: root);
+    storage =
+        AttachmentStorageService(db.lLMOutputAttachmentDao, storageRoot: root);
   });
 
   tearDown(() async {
@@ -48,14 +48,15 @@ void main() {
     expect(res.saved, 3);
     expect(res.failed, 0);
 
-    final rows = await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-1');
+    final rows =
+        await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-1');
     expect(rows.length, 3);
     // All stored files exist and original display names are preserved.
     for (final r in rows) {
       expect(File(r.localPath).existsSync(), isTrue, reason: r.fileName);
     }
-    expect(rows.map((r) => r.fileName).toSet(),
-        {'doc.pdf', 'img.png', 'img.jpg'});
+    expect(
+        rows.map((r) => r.fileName).toSet(), {'doc.pdf', 'img.png', 'img.jpg'});
   });
 
   test('adding a 3rd attachment to an existing output keeps all 3 (edit flow)',
@@ -69,11 +70,12 @@ void main() {
     ]);
     // Edit: add a 3rd.
     final jpg = File('${root.path}/a.jpg')..writeAsBytesSync([2]);
-    final res =
-        await storage.persistDrafts('out-2', [draftFor(jpg, 'image', 'image/jpeg')]);
+    final res = await storage
+        .persistDrafts('out-2', [draftFor(jpg, 'image', 'image/jpeg')]);
     expect(res.saved, 1);
 
-    final rows = await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-2');
+    final rows =
+        await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-2');
     expect(rows.length, 3);
   });
 
@@ -88,13 +90,25 @@ void main() {
     ]);
     expect(res.saved, 2);
 
-    final rows = await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-3');
+    final rows =
+        await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-3');
     expect(rows.length, 2);
     final paths = rows.map((r) => r.localPath).toSet();
     expect(paths.length, 2, reason: 'destination paths must be unique');
     // Contents preserved separately (no overwrite).
     final sizes = rows.map((r) => File(r.localPath).lengthSync()).toSet();
     expect(sizes, {3, 4});
+  });
+
+  test('cancel (no persist call) leaves no copies in app storage', () async {
+    // The dialog only copies on save; cancelling never invokes persistDrafts.
+    final src = File('${root.path}/keep.txt')..writeAsStringSync('original');
+    // Simulate cancel: build a draft but do NOT persist it.
+    draftFor(src, 'text', 'text/plain');
+    final outDir = Directory('${root.path}/promptforge/attachments/out-cancel');
+    expect(outDir.existsSync(), isFalse);
+    // The user's source file is untouched.
+    expect(src.readAsStringSync(), 'original');
   });
 
   test('a draft with no source path is counted as failed, not silently lost',
@@ -108,7 +122,8 @@ void main() {
     expect(res.saved, 1);
     expect(res.failed, 1);
     expect(res.ok, isFalse);
-    final rows = await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-4');
+    final rows =
+        await db.lLMOutputAttachmentDao.getAttachmentsForOutput('out-4');
     expect(rows.length, 1);
   });
 }

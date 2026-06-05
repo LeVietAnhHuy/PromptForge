@@ -189,6 +189,23 @@ class _ManualOutputPasteDialogState
     return '';
   }
 
+  /// Opens the viewer over all current attachments (persisted first, then
+  /// pending drafts) so any chip can be previewed immediately — before save.
+  void _openViewerAt(int index) {
+    final sources = <ViewerSource>[
+      ..._existingAttachments.map(ViewerSource.fromAttachment),
+      ..._attachments.map((d) => ViewerSource(
+            fileName: d.fileName,
+            mimeType: d.mimeType ?? 'application/octet-stream',
+            sizeBytes: d.sizeBytes,
+            localPath: d.path,
+            pending: true,
+          )),
+    ];
+    if (sources.isEmpty) return;
+    AttachmentViewer.open(context, sources: sources, initialIndex: index);
+  }
+
   void _warnIfDropped(PersistResult res) {
     if (res.failed > 0 && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -455,6 +472,7 @@ class _ManualOutputPasteDialogState
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      // Persisted attachments — eye opens the viewer.
                       ..._existingAttachments
                           .asMap()
                           .entries
@@ -463,16 +481,19 @@ class _ManualOutputPasteDialogState
                                 label: Text(e.value.fileName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis),
-                                onPressed: () => AttachmentViewer.open(context,
-                                    attachments: _existingAttachments,
-                                    initialIndex: e.key),
+                                tooltip: 'Preview ${e.value.fileName}',
+                                onPressed: () => _openViewerAt(e.key),
                                 onDeleted: () =>
                                     _removeExistingAttachment(e.value),
                               )),
-                      ..._attachments.asMap().entries.map((e) => Chip(
-                            avatar: const Icon(Icons.fiber_new, size: 16),
+                      // Pending (just-attached) — also previewable before save.
+                      ..._attachments.asMap().entries.map((e) => InputChip(
+                            avatar: const Icon(Icons.visibility, size: 16),
                             label: Text(e.value.fileName,
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
+                            tooltip: 'Preview ${e.value.fileName} (pending)',
+                            onPressed: () => _openViewerAt(
+                                _existingAttachments.length + e.key),
                             onDeleted: () => _removeDraftAttachment(e.key),
                           )),
                     ],

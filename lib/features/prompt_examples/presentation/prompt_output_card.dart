@@ -515,8 +515,11 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
   }
 
   void _onAttachmentTap(int index) {
-    AttachmentViewer.open(context,
-        attachments: _attachments, initialIndex: index);
+    AttachmentViewer.open(
+      context,
+      sources: _attachments.map(ViewerSource.fromAttachment).toList(),
+      initialIndex: index,
+    );
   }
 
   String _formatBytes(int bytes) {
