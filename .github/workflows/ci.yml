@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save runner minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: macos
+    defaults:
+      run:
+        shell: bash # Git Bash on Windows — one script per step across all OSes.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux desktop + media/secure-storage deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libmpv-dev mpv libsecret-1-dev
+
+      # Drift's NativeDatabase needs a system sqlite3 in `flutter test`. Linux and
+      # macOS have one; Windows does not — drop a pinned sqlite3.dll into the repo
+      # root (the test CWD) so the loader finds it.
+      - name: Provide sqlite3 for Windows unit tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://www.sqlite.org/2024/sqlite-dll-win-x64-3460100.zip" -OutFile sqlite.zip
+          Expand-Archive sqlite.zip -DestinationPath sqlite-dll -Force
+          Copy-Item sqlite-dll/sqlite3.dll -Destination sqlite3.dll -Force
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+      - name: Build ${{ matrix.platform }} (release)
+        run: flutter build ${{ matrix.platform }} --release
+
+      - name: Bundle libmpv into the Linux release bundle
+        if: runner.os == 'Linux'
+        run: bash scripts/bundle_linux_libmpv.sh
+
+      # Verify the media (libmpv) and PDF (pdfium) native libraries actually
+      # shipped in the build output — a missing backend would mean broken
+      # audio/video/PDF on that platform.
+      - name: Assert native media/PDF libraries are present
+        run: |
+          set -euo pipefail
+          echo "== build/ contents (mpv / pdfium) =="
+          mpv="$(find build -iname '*mpv*' 2>/dev/null || true)"
+          pdfium="$(find build -iname '*pdfium*' 2>/dev/null || true)"
+          echo "libmpv matches:"; echo "${mpv:-<none>}"
+          echo "pdfium matches:"; echo "${pdfium:-<none>}"
+          if [ -z "$mpv" ]; then echo "::error::libmpv not found in build output"; exit 1; fi
+          if [ -z "$pdfium" ]; then echo "::error::pdfium not found in build output"; exit 1; fi
+          echo "OK: media + PDF native libraries are present."

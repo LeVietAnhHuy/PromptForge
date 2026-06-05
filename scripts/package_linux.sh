@@ -74,7 +74,9 @@ EOF
 
   export OUTPUT="PromptForge-$VERSION-$arch.AppImage"
   export PATH="$ROOT/$tools:$PATH"
-  # --appimage-extract-and-run avoids needing FUSE on CI runners.
+  # Run all AppImage tooling (linuxdeploy AND the appimagetool it invokes) by
+  # extracting rather than mounting, so no FUSE is required on CI runners.
+  export APPIMAGE_EXTRACT_AND_RUN=1
   "$ld" --appimage-extract-and-run \
     --appdir "$appdir" \
     --executable "$appdir/usr/bin/promptforge" \
