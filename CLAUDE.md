@@ -15,6 +15,7 @@ PromptForge is a local-first Flutter workspace for prompt engineering. It helps 
 - Markdown UI: `flutter_markdown_plus`
 - Vector logos: `flutter_svg` (provider brand marks)
 - Attachment previews: `flutter_highlight` (code syntax highlighting), `url_launcher` (open files in a system app); CSV/TSV parsed with a small in-repo RFC-4180 parser
+- Inline media: `pdfrx` (PDF, bundles `libpdfium.so`), `media_kit` + `media_kit_video` + `media_kit_libs_video` (audio/video via libmpv). `MediaKit.ensureInitialized()` runs in `main.dart`. NOTE: on Linux, media_kit links the **system** `libmpv.so.2` (package `libmpv2`/`mpv`); it is not bundled — see HANDOFF for the packaging copy step. PDF (pdfium) is bundled.
 - Self-hosted fonts (OFL): Space Grotesk (display), Atkinson Hyperlegible (body), JetBrains Mono (mono) under `assets/fonts/`
 - Package manager: Flutter/Dart pub (`pubspec.lock` is committed)
 

@@ -109,6 +109,38 @@ Translating the Stage 24 brief into the Flutter stack. One commit per part,
   one file). Nothing was deleted as part of this fix; users who hit the bug
   should re-attach the missing files. No silent cleanup performed.
 
+- Part D — preview attachments before saving. Added `ViewerSource` (persisted
+  or pending) and made the viewer accept `List<ViewerSource>`. Every chip in the
+  Paste/Edit dialog — existing or just-attached — now has the eye affordance and
+  opens the full viewer immediately over the combined set. Pending drafts persist
+  only on Save; Cancel copies nothing and never deletes the user's source files.
+- Part C — inline PDF / video / audio. Added `pdfrx` (PDF) and
+  `media_kit` + `media_kit_video` + `media_kit_libs_video` (A/V). New
+  `lib/shared/attachments/media_renderers.dart` provides `PdfRenderer`
+  (continuous scroll, page indicator + jump, zoom), `VideoRenderer` (media_kit
+  default controls: play/pause/seek/volume/fullscreen) and `AudioRenderer`
+  (compact transport). The viewer routes pdf/video/audio to these inline; "Open
+  externally" stays as a secondary header action for every type; backend
+  failures show an in-viewer `MediaErrorPanel` (never crash). `main.dart` calls
+  `MediaKit.ensureInitialized()`.
+  - **Native deps / packaging (deviation from Part C.2):** `flutter build linux
+    --release` succeeds and **bundles `libpdfium.so`** (PDF is fully
+    self-contained). However `media_kit_libs_video` on **Linux links the system
+    `libmpv.so.2`** and does **not** bundle libmpv (confirmed via `ldd`). So
+    audio/video have a runtime dependency on system libmpv (package `libmpv2` /
+    `mpv`), which is present on this dev machine. To make A/V self-contained,
+    packaging should copy `libmpv.so.2` into the release bundle's `lib/`
+    (the exe rpath `$ORIGIN/lib` resolves it first), e.g.
+    `cp /usr/lib/libmpv.so.2 build/linux/x64/release/bundle/lib/`. Not baked into
+    the repo build because the source path varies per distro.
+  - **Verification limit:** this environment is headless (no display), so actual
+    rendering/playback of a PDF/mp4/mp3 could not be visually confirmed. What is
+    verified: the release build compiles and links the backends, type-routing
+    sends pdf/video/audio to the inline renderers, and the graceful-failure path
+    exists. The native renderer widgets can't be pumped in `flutter test` (they
+    need libmpv/pdfium init), so routing is covered by `detectAttachmentKind`
+    unit tests; manual playback verification on a display is still recommended.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

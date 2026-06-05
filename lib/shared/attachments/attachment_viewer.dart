@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/app_design.dart';
 import '../../core/database/database.dart';
+import 'media_renderers.dart';
 
 /// Detected rendering category for an attachment.
 enum AttachmentKind {
@@ -515,8 +516,14 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
       case AttachmentKind.zip:
         return _buildZip(theme);
       case AttachmentKind.pdf:
+        return PdfRenderer(path: path, onOpenExternally: _openExternally);
       case AttachmentKind.video:
+        return VideoRenderer(path: path, onOpenExternally: _openExternally);
       case AttachmentKind.audio:
+        return AudioRenderer(
+            path: path,
+            fileName: att.fileName,
+            onOpenExternally: _openExternally);
       case AttachmentKind.unknown:
         return _fallback(theme, kind);
     }
