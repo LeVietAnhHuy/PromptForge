@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../shared/providers/provider_identity.dart';
+import '../../../shared/attachments/attachment_viewer.dart';
 import '../application/llm_model_catalog.dart';
 import '../application/attachment_picker_service.dart';
 import 'model_picker_field.dart';
@@ -488,12 +489,20 @@ class _ManualOutputPasteDialogState
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      ..._existingAttachments.map((att) => Chip(
-                            avatar: const Icon(Icons.attachment, size: 16),
-                            label: Text(att.fileName,
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                            onDeleted: () => _removeExistingAttachment(att),
-                          )),
+                      ..._existingAttachments
+                          .asMap()
+                          .entries
+                          .map((e) => InputChip(
+                                avatar: const Icon(Icons.visibility, size: 16),
+                                label: Text(e.value.fileName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
+                                onPressed: () => AttachmentViewer.open(context,
+                                    attachments: _existingAttachments,
+                                    initialIndex: e.key),
+                                onDeleted: () =>
+                                    _removeExistingAttachment(e.value),
+                              )),
                       ..._attachments.asMap().entries.map((e) => Chip(
                             avatar: const Icon(Icons.fiber_new, size: 16),
                             label: Text(e.value.fileName,

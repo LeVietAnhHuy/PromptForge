@@ -9,6 +9,7 @@ import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
 import '../../../app/theme/app_design.dart';
 import '../../../shared/providers/provider_identity.dart';
+import '../../../shared/attachments/attachment_viewer.dart';
 
 class PromptOutputCard extends ConsumerStatefulWidget {
   final PromptExampleOutput output;
@@ -512,11 +513,9 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
     return Icons.insert_drive_file_outlined;
   }
 
-  // Placeholder until the full attachment viewer lands in Part D.
   void _onAttachmentTap(int index) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Attachment preview coming soon.')),
-    );
+    AttachmentViewer.open(context,
+        attachments: _attachments, initialIndex: index);
   }
 
   String _formatBytes(int bytes) {
