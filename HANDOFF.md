@@ -77,10 +77,13 @@ prefixed `stage23:`.
 - A few existing tests that asserted the old pop-on-save navigation were updated
   to the new in-place-save flow; data assertions are unchanged.
 
-## Stage 24 (Claude Code) — in progress
+## Stage 24 (Claude Code) — complete
 
-Translating the Stage 24 brief into the Flutter stack. One commit per part,
-`stage24:` prefix. Parts completed so far:
+Translated the Stage 24 brief into the Flutter stack. One commit per part,
+`stage24:` prefix. **Verification:** `flutter analyze` clean; `flutter test`
+142/142 pass; `flutter build linux --release` succeeds (bundles `libpdfium.so`;
+media_kit links system `libmpv.so.2` — see Part C note). Stage 25 not yet
+started. All parts:
 
 - Part B — real provider logos. Root cause: OpenAI/Cohere/Zhipu had no bundled
   SVG so the registry fell back to a monogram. Vendored real marks from the
