@@ -15,6 +15,8 @@ class PromptDao extends DatabaseAccessor<AppDatabase> with _$PromptDaoMixin {
       (select(prompts)..where((t) => t.id.equals(id))).getSingle();
   Stream<List<Prompt>> watchAllPrompts() =>
       (select(prompts)..where((t) => t.isArchived.not())).watch();
+  Future<List<Prompt>> getAllPrompts() =>
+      (select(prompts)..where((t) => t.isArchived.not())).get();
   Future<bool> updatePrompt(PromptsCompanion entry) =>
       update(prompts).replace(entry);
   Future<int> archivePrompt(String id) =>
@@ -164,6 +166,7 @@ class TagDao extends DatabaseAccessor<AppDatabase> with _$TagDaoMixin {
 
   Future<void> createTag(TagsCompanion entry) => into(tags).insert(entry);
   Stream<List<Tag>> watchAllTags() => select(tags).watch();
+  Future<List<Tag>> getAllTags() => select(tags).get();
   Stream<List<PromptTag>> watchAllPromptTags() => select(promptTags).watch();
   Future<void> linkTagToPrompt(PromptTagsCompanion entry) =>
       into(promptTags).insert(entry);
@@ -357,6 +360,34 @@ class PromptExampleOutputDao extends DatabaseAccessor<AppDatabase>
       await (update(promptExampleOutputs)..where((t) => t.id.equals(outputId)))
           .write(const PromptExampleOutputsCompanion(isBest: Value(true)));
     });
+  }
+
+  /// Searches outputs by text / provider / model, returning each match with the
+  /// owning example's prompt id (when any) for navigation. Value is bound by
+  /// drift, so the query is parameterized.
+  Future<List<(PromptExampleOutput, String?)>> searchOutputs(String query,
+      {int limit = 12}) async {
+    final like = '%$query%';
+    final rows = await (select(promptExampleOutputs).join([
+      leftOuterJoin(promptExamples,
+          promptExamples.id.equalsExp(promptExampleOutputs.exampleId)),
+    ])
+          ..where(promptExampleOutputs.outputText.like(like) |
+              promptExampleOutputs.providerName.like(like) |
+              promptExampleOutputs.modelName.like(like))
+          ..orderBy([
+            OrderingTerm(
+                expression: promptExampleOutputs.createdAt,
+                mode: OrderingMode.desc)
+          ])
+          ..limit(limit))
+        .get();
+    return rows
+        .map((r) => (
+              r.readTable(promptExampleOutputs),
+              r.readTableOrNull(promptExamples)?.promptId,
+            ))
+        .toList();
   }
 }
 

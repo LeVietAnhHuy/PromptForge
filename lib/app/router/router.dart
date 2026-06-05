@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-
 import '../../features/prompt_library/presentation/prompt_library_screen.dart';
 import '../../features/prompt_library/presentation/prompt_editor_screen.dart';
 import '../../features/prompt_compiler/presentation/prompt_compiler_screen.dart';
@@ -9,7 +8,6 @@ import '../../features/prompt_examples/presentation/prompt_examples_screen.dart'
 import '../../features/prompt_examples/presentation/example_comparison_screen.dart';
 import '../../features/context_packs/presentation/context_packs_screen.dart';
 import '../../features/context_packs/presentation/context_pack_editor_screen.dart';
-import '../../features/search/presentation/search_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/settings/presentation/api_keys_screen.dart';
 import '../../features/import_export/presentation/export_preview_screen.dart';
@@ -135,7 +133,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(
                     path: 'editor',
-                    builder: (context, state) => const ContextPackEditorScreen(),
+                    builder: (context, state) =>
+                        const ContextPackEditorScreen(),
                   ),
                   GoRoute(
                     path: 'editor/:id',
@@ -145,20 +144,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                   GoRoute(
                     path: 'versions/:id',
-                    builder: (context, state) => ContextPackVersionHistoryScreen(
+                    builder: (context, state) =>
+                        ContextPackVersionHistoryScreen(
                       packId: state.pathParameters['id']!,
                     ),
                   ),
                 ],
-              ),
-            ],
-          ),
-
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/search',
-                builder: (context, state) => const SearchScreen(),
               ),
             ],
           ),
