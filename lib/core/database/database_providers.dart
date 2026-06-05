@@ -5,10 +5,10 @@ import 'seed_data.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
-  
+
   // Seed the database if it's empty
   SeedData.seedIfEmpty(db);
-  
+
   ref.onDispose(db.close);
   return db;
 });
