@@ -61,12 +61,12 @@ No screenshots captured. I launched the app using the Linux desktop target in th
 **YES**. The database foundation is stable, code generation is functional, all tests are passing, and the shell routing works. Stage 3 (Prompt Library) can safely begin!
 
 ## 18. Exact commands run
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && flutter create . --platforms android,ios,windows,linux`
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && flutter pub get`
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && dart run build_runner build --delete-conflicting-outputs`
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && flutter analyze`
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && flutter test`
-- `export PATH=$PATH:/home/huylva473627/flutter/bin && flutter run -d linux`
+- `export PATH=$PATH:$HOME/flutter/bin && flutter create . --platforms android,ios,windows,linux`
+- `export PATH=$PATH:$HOME/flutter/bin && flutter pub get`
+- `export PATH=$PATH:$HOME/flutter/bin && dart run build_runner build --delete-conflicting-outputs`
+- `export PATH=$PATH:$HOME/flutter/bin && flutter analyze`
+- `export PATH=$PATH:$HOME/flutter/bin && flutter test`
+- `export PATH=$PATH:$HOME/flutter/bin && flutter run -d linux`
 
 ## 19. What was intentionally not implemented
 - Prompt Library real CRUD UI

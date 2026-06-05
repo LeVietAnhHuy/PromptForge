@@ -134,7 +134,7 @@ The application utilizes Drift for SQLite local persistence. Key relationships i
 Codex must run these commands before and after implementation to ensure the codebase remains healthy:
 
 ```bash
-export PATH=$PATH:/home/huylva473627/flutter/bin
+export PATH=$PATH:$HOME/flutter/bin
 git status --short
 git branch --show-current
 git remote -v
@@ -203,7 +203,7 @@ When you make changes, follow the existing Riverpod + Drift architecture. If you
 
 Validation Commands:
 Run these commands locally to ensure your code is clean and functional:
-export PATH=$PATH:/home/huylva473627/flutter/bin
+export PATH=$PATH:$HOME/flutter/bin
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter analyze

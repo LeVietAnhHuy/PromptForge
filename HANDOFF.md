@@ -377,3 +377,40 @@ IDs, so the cross-reference can't survive a round-trip).
 - `flutter build linux --release`: passed and produced `build/linux/x64/release/bundle/promptforge`.
 - `dart run build_runner build`: not needed in Stage 25 — no table/column changes were made beyond Part C (1/2)'s already-generated v8 schema; the new DAO methods live in the hand-written DAO classes.
 - `flutter run -d linux` / Android / iOS: not run this stage (headless environment).
+
+## Stage 26 (Claude Code) — in progress
+
+Goal: add Windows + macOS desktop targets and a CI build/test matrix so all
+three desktops are platform-ready and CI-verified. Linux remains the only host
+this dev environment can build/run; Windows/macOS are verified via GitHub
+Actions (the repo is being made public so the matrix runs on free runners), and
+final visual sign-off is the owner's hands-on checklist.
+
+Standing rule continues: push after every commit.
+
+### Pre-public prep (before the owner flips the repo to public)
+- **Secret-history scan — CLEAN.** No scanner binaries available (gitleaks/
+  trufflehog absent), so scanned all 65 commits with redacted regex over
+  `git log -p --all`: zero hits for OpenAI/Anthropic/Google/GitHub/AWS/Slack
+  tokens, private keys, or JWTs. No `.env`/`.pem`/`.key`/credential files ever
+  committed. The only key-like string is a deliberately **fake** test fixture
+  (`sk-PLANTED-SECRET-…` in `test/import_export_roundtrip_test.dart`, used by the
+  no-keys export test). Commit author identity is generic (`Test User
+  <test@example.com>`) — no personal email in history. No history rewrite needed
+  or performed.
+- **Sanitized** the personal build path `/home/<user>/flutter/bin` → `$HOME/
+  flutter/bin` in `CODEX_HANDOFF_PROMPTFORGE.md` and `STAGE_1_2_REAL_VALIDATION.md`
+  (the only tracked files carrying a personal path at HEAD; it remains only in
+  history, low-sensitivity — a local username, not a secret).
+- **LICENSE** added: Apache-2.0 (copyright 2026 Le Viet Anh Huy). Chosen over MIT
+  for the explicit patent grant + contribution terms; no countervailing reason to
+  prefer MIT for this project (Apache-2.0 is GPLv3-compatible and the Flutter
+  ecosystem is permissive-friendly).
+- **README** rewritten for public consumption: what the app is, per-platform
+  build instructions (Linux system deps, Windows VS C++, macOS Xcode+CocoaPods),
+  honest platform-status table (Linux built/tested/released; Win/macOS "target
+  added, CI being brought up" — not overclaimed), CI + license badges, roadmap
+  link, license section.
+- **Decisions locked in:** bundle/application id = `io.github.levietanhhuy.promptforge`
+  across all platforms (owner's choice). Repo goes public → full 3-OS matrix on
+  free runners.

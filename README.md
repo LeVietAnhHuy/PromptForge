@@ -1,56 +1,125 @@
 # PromptForge
 
-A local-first Flutter application for advanced prompt engineering, context pack management, and multi-LLM output comparison.
+[![CI](https://github.com/LeVietAnhHuy/PromptForge/actions/workflows/ci.yml/badge.svg)](https://github.com/LeVietAnhHuy/PromptForge/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-## Overview
+A **local-first**, cross-platform Flutter workspace for prompt engineering:
+capture ideas, organize reusable prompt cards and context packs, compile prompts
+with variables, and compare outputs from multiple LLM providers — all on your own
+machine. No cloud sync, no account, no telemetry.
 
-PromptForge is designed to support the entire prompt engineering workflow entirely on your local machine. From capturing raw ideas in the inbox, to managing dynamic variables and metadata, compiling prompts with context packs, and finally comparing outputs from multiple LLMs, PromptForge provides a cohesive local-first experience.
+## Highlights
 
-### Local-First Design
-All data is stored locally on your device. There is no mandatory cloud synchronization, ensuring your prompts, sensitive context, and API configurations remain private.
+- **Prompt library** — CRUD with tags, favorites, search, sort, and full
+  **version history** with line-level diffs and one-click restore.
+- **Inbox & quick capture** — jot raw ideas (Ctrl/Cmd+Shift+N) and convert them
+  into prompts later.
+- **Context packs** — reusable knowledge injected into prompts at compile time.
+- **Template variables** — `{{variable}}` detection, defaults, and fill-and-use.
+- **Multi-model comparison** — run 2–4 models concurrently (BYOK) and compare
+  outputs side-by-side with ratings, a Best pin, and provider branding.
+- **Real token & cost** — usage captured from the provider; cost estimated from a
+  community-maintained, user-editable pricing file (never fabricated).
+- **Attachments** — inline preview for images, code, JSON, Markdown, CSV, PDF,
+  audio, and video.
+- **Import / export** — single-prompt Markdown export plus a lossless, versioned
+  workspace bundle (with attachment files). **API keys are never exported.**
 
-## Core Features
+Your BYOK API keys are stored only in the OS secure store (Keychain / DPAPI /
+Secret Service) — never in the database, exports, or logs.
 
-- **Prompt Library**: Full CRUD operations with tags, favorites, searching, filtering, and sorting.
-- **Prompt Inbox**: Quickly capture prompt ideas and later convert them into full prompts.
-- **Context Packs**: Manage reusable contextual knowledge that can be injected into any prompt.
-- **Prompt Variables & Metadata**: Define dynamic variables inside your prompts and attach structured metadata.
-- **Prompt Compiler**: Combine prompts with context packs and variable substitutions to generate the final output.
-- **Prompt Examples**: Save and manage test cases and examples for specific prompts.
-- **Multi-LLM Output Comparison**: Compare generated outputs side-by-side using different LLM models.
-- **Import/Export v0**: Export your entire vault data to a JSON file or import it to sync between local instances.
+## Platform status
 
-## Validation and Supported Platforms
+PromptForge is built to run on Linux, Windows, and macOS desktops.
 
-- **Linux Desktop**: Actively validated and supported.
-- **Other Platforms (Android, iOS, Windows, macOS)**: Architecturally compatible but pending explicit device/emulator validation.
+| Platform | Status |
+| --- | --- |
+| Linux   | Built, tested, and released; actively developed on |
+| Windows | Target added; CI build matrix being brought up |
+| macOS   | Target added; CI build matrix being brought up |
 
-## Known Limitations
+Once green, CI proves each platform **builds, analyzes, and passes tests** (the
+badge above reflects the live status). Hands-on visual verification on real
+Windows/macOS machines is tracked in
+[`docs/VERIFICATION-STAGE26.md`](docs/VERIFICATION-STAGE26.md) and is the final
+acceptance gate — we don't claim a platform "works" beyond what CI demonstrates
+until that checklist is run.
 
-Please see [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for details on current missing features or design limitations.
+## Tech stack
 
-## Getting Started
+Flutter (Material 3) · Riverpod · go_router · Drift over SQLite ·
+flutter_secure_storage · media_kit (audio/video) · pdfrx (PDF) ·
+google_generative_ai (BYOK execution). Dart `>=3.2.0 <4.0.0`, Flutter `>=3.44`.
 
-### Prerequisites
-- Flutter SDK (latest stable)
-- Dart SDK
-- Linux build requirements (if running on Linux)
+## Building from source
 
-### Setup Commands
+### Prerequisites (all platforms)
+
+- Flutter **3.44+** (stable) — see <https://docs.flutter.dev/get-started/install>
+- Generated Drift sources are committed, so a plain build needs no codegen. After
+  changing database tables, regenerate with
+  `dart run build_runner build --delete-conflicting-outputs`.
 
 ```bash
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### Validation Commands
-
-```bash
 flutter analyze
 flutter test
-flutter run -d linux
 ```
+
+### Linux
+
+System packages are required for media playback (media_kit links the system
+libmpv) and secure storage:
+
+```bash
+sudo apt-get install -y libmpv-dev mpv libsecret-1-dev   # Debian/Ubuntu
+flutter run -d linux           # debug
+flutter build linux --release  # release bundle
+```
+
+### Windows
+
+Install **Visual Studio** with the *Desktop development with C++* workload, then:
+
+```powershell
+flutter run -d windows
+flutter build windows --release
+```
+
+Native media (libmpv) and PDF (pdfium) libraries are bundled automatically — no
+system install required.
+
+### macOS
+
+Install **Xcode** (+ command-line tools) and **CocoaPods** (`sudo gem install
+cocoapods`), then:
+
+```bash
+flutter run -d macos
+flutter build macos --release
+```
+
+## Releasing
+
+Tagging `v*` triggers a CI workflow that builds version-stamped artifacts
+(Windows MSIX + zip, macOS dmg/zip, Linux AppImage). See
+[`docs/RELEASING.md`](docs/RELEASING.md) for the full process, including the
+code-signing / notarization steps the maintainer performs.
 
 ## Roadmap
 
-Upcoming features include prompt and context pack version history, polished file-based import/export, exported comparisons, saved filter views, and AI-assisted prompt improvement.
+See [`ROADMAP.md`](ROADMAP.md) for the staged plan (cross-platform desktop, web,
+sync, mobile, community gallery, and an MCP server).
+
+## Contributing
+
+Contributions are welcome on any OS. Please run `flutter analyze` and
+`flutter test` before opening a PR; CI runs the full matrix on Linux, Windows,
+and macOS.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE). Copyright 2026 Le Viet Anh Huy.
+
+Third-party fonts, provider logos, and libraries are credited in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
