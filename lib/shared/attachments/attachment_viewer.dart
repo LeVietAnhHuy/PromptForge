@@ -740,13 +740,24 @@ class _AttachmentViewerState extends State<AttachmentViewer> {
 
   Future<_CsvLoad> _loadCsv(File file, bool isTsv) async {
     try {
-      final text = await file.readAsString();
+      // Bound the read so a huge file can't exhaust memory (mirrors _loadText).
+      final length = await file.length();
+      final byteTruncated = length > _maxTextBytes;
+      String text;
+      if (byteTruncated) {
+        final raf = await file.open();
+        final bytes = await raf.read(_maxTextBytes);
+        await raf.close();
+        text = String.fromCharCodes(bytes);
+      } else {
+        text = await file.readAsString();
+      }
       const cap = _maxCsvRows + 1; // header + rows
       final rows = parseDelimited(text, isTsv ? '\t' : ',', cap + 1);
-      final truncated = rows.length > cap;
+      final rowTruncated = rows.length > cap;
       return _CsvLoad(
-        rows: truncated ? rows.sublist(0, cap) : rows,
-        truncated: truncated,
+        rows: rowTruncated ? rows.sublist(0, cap) : rows,
+        truncated: rowTruncated || byteTruncated,
       );
     } catch (e) {
       return _CsvLoad(

@@ -52,7 +52,9 @@ class _ManualOutputPasteDialogState
 
   final List<OutputAttachmentDraft> _attachments = [];
   List<LLMOutputAttachment> _existingAttachments = [];
-  final Set<String> _removedAttachmentIds = {};
+  // Retains the full rows (incl. local paths) so files can be deleted on save —
+  // querying the DB after the rows are gone would find nothing.
+  final List<LLMOutputAttachment> _removedAttachments = [];
   final AttachmentPickerService _attachmentPickerService =
       const AttachmentPickerService();
 
@@ -171,7 +173,7 @@ class _ManualOutputPasteDialogState
 
   void _removeExistingAttachment(LLMOutputAttachment att) {
     setState(() {
-      _removedAttachmentIds.add(att.id);
+      _removedAttachments.add(att);
       _existingAttachments =
           _existingAttachments.where((a) => a.id != att.id).toList();
     });
@@ -266,10 +268,15 @@ class _ManualOutputPasteDialogState
         ));
 
         // Reconcile attachments: drop removed (rows + files), add new drafts.
-        for (final id in _removedAttachmentIds) {
-          await attachmentDao.deleteAttachment(id);
+        for (final att in _removedAttachments) {
+          await attachmentDao.deleteAttachment(att.id);
+          try {
+            final f = File(att.localPath);
+            if (f.existsSync()) f.deleteSync();
+          } catch (_) {
+            // Best-effort local file cleanup; ignore failures.
+          }
         }
-        await _deleteRemovedFiles();
         await _copyDraftsInto(existing.id, now);
 
         if (mounted) {
@@ -330,25 +337,6 @@ class _ManualOutputPasteDialogState
             content: Text('Error saving output: $e'),
             backgroundColor: Theme.of(context).colorScheme.error));
       }
-    }
-  }
-
-  Future<void> _deleteRemovedFiles() async {
-    for (final id in _removedAttachmentIds) {
-      // Best-effort local file cleanup; ignore failures.
-      try {
-        final match = widget.existingOutput == null
-            ? null
-            : (await ref
-                    .read(lLMOutputAttachmentDaoProvider)
-                    .getAttachmentsForOutput(widget.existingOutput!.id))
-                .where((a) => a.id == id)
-                .firstOrNull;
-        if (match != null) {
-          final f = File(match.localPath);
-          if (f.existsSync()) f.deleteSync();
-        }
-      } catch (_) {}
     }
   }
 

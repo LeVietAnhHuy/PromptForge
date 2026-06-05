@@ -221,6 +221,7 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
             ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 20),
+            tooltip: 'More options',
             onSelected: (val) {
               if (val == 'edit') {
                 widget.onEdit?.call();

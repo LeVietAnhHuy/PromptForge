@@ -785,51 +785,61 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                     ],
                   ),
                   const SizedBox(height: AppDesign.spacingSm),
-                  Wrap(
-                    spacing: AppDesign.spacingMd,
-                    runSpacing: AppDesign.spacingMd,
-                    children: [
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: form.labelController,
-                          onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(
-                              labelText: 'Display Label',
-                              border: OutlineInputBorder()),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: form.descriptionController,
-                          onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(
-                              labelText: 'Description (Helper text)',
-                              border: OutlineInputBorder()),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: form.defaultController,
-                          onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(
-                              labelText: 'Default Value',
-                              border: OutlineInputBorder()),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: form.exampleController,
-                          onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(
-                              labelText: 'Example Value (Hint)',
-                              border: OutlineInputBorder()),
-                        ),
-                      ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, c) {
+                      // Two columns when there's room for them, otherwise a
+                      // single full-width column — never wider than available.
+                      final twoUp = c.maxWidth >= 620;
+                      final fieldWidth = twoUp
+                          ? (c.maxWidth - AppDesign.spacingMd) / 2
+                          : c.maxWidth;
+                      return Wrap(
+                        spacing: AppDesign.spacingMd,
+                        runSpacing: AppDesign.spacingMd,
+                        children: [
+                          SizedBox(
+                            width: fieldWidth,
+                            child: TextField(
+                              controller: form.labelController,
+                              onChanged: (_) => _markDirty(),
+                              decoration: const InputDecoration(
+                                  labelText: 'Display Label',
+                                  border: OutlineInputBorder()),
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: TextField(
+                              controller: form.descriptionController,
+                              onChanged: (_) => _markDirty(),
+                              decoration: const InputDecoration(
+                                  labelText: 'Description (Helper text)',
+                                  border: OutlineInputBorder()),
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: TextField(
+                              controller: form.defaultController,
+                              onChanged: (_) => _markDirty(),
+                              decoration: const InputDecoration(
+                                  labelText: 'Default Value',
+                                  border: OutlineInputBorder()),
+                            ),
+                          ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: TextField(
+                              controller: form.exampleController,
+                              onChanged: (_) => _markDirty(),
+                              decoration: const InputDecoration(
+                                  labelText: 'Example Value (Hint)',
+                                  border: OutlineInputBorder()),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
