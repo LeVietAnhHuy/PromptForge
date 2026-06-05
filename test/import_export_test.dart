@@ -36,7 +36,7 @@ void main() {
       final jsonStr = ImportExportCodec.encodeExport(testPrompts, {}, {}, {}, {}, {}, {}, testContextPacks, {}, []);
       final decoded = jsonDecode(jsonStr);
 
-      expect(decoded['schemaVersion'], 3);
+      expect(decoded['schemaVersion'], 4);
       expect(decoded['app'], 'PromptForge');
       expect((decoded['prompts'] as List).length, 1);
       expect((decoded['contextPacks'] as List).length, 1);

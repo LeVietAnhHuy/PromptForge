@@ -293,6 +293,29 @@ Standing rule this stage: push to `origin/master` after every commit.
   available is the `hotkey_manager` package (register a global `HotKey` for
   Ctrl/Cmd+Shift+N that routes to `QuickCaptureDialog.show`); the in-app shortcut
   ships now and works whenever the app window has focus.
+- Part E (1/2) — Markdown export + lossless round-trip. Most of import/export
+  already existed (versioned JSON bundle, `ImportPreview` dry-run, stable-ID
+  import with skip/duplicate/overwrite, zip wrapper, and — by construction — no
+  key fields anywhere). Added: (a) single-prompt **Markdown export** with YAML
+  front-matter (`ImportExportCodec.encodePromptMarkdown` →
+  `service.exportPromptMarkdown` → "Export as Markdown" button in the prompt
+  editor, saved via file_selector); (b) bundle bumped to **schemaVersion 4**,
+  exporting the Stage 25 output scalars (`inputTokens`/`outputTokens`/`latencyMs`/
+  `runParamsJson`) and writing `versionNumber` on import, so those survive a
+  round-trip (v3 files still import — fields default to null). **Bug fixed (found
+  by the new round-trip test):** `decodeImport` built each example with `id: ''`
+  while keying its outputs by the original id, so `importData`'s
+  `exampleOutputs[ex.id]` lookup always missed and *every imported output was
+  silently dropped*; examples now retain their original id for that mapping. The
+  existing tests only exercised the preview, never a full import, which is why it
+  was invisible. **Deliberate non-loss:** an output's `promptVersionId` is not
+  exported — import regenerates version row IDs so that cross-reference can't
+  survive; model/params/tokens do. Tests (`import_export_roundtrip_test.dart`):
+  full export→import-into-fresh-DB equality across every entity (the acceptance
+  gate); an explicit no-keys test that plants a secret in secure storage and
+  asserts neither the secret nor key-bearing field names appear in the export;
+  and a Markdown front-matter/body test. STILL TODO in Part E (2/2): attachment
+  **file bytes** in the bundle (today attachments export as metadata only).
 
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.

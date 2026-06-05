@@ -109,6 +109,19 @@ class ImportExportService {
     return jsonStr;
   }
 
+  /// Builds a shareable Markdown document (YAML front-matter + body) for one
+  /// prompt, pulling its tags and variables. Contains no key material.
+  Future<String> exportPromptMarkdown(String promptId) async {
+    final prompt = await promptDao.getPromptById(promptId);
+    final tags = await tagDao.getTagsForPrompt(promptId);
+    final vars = await pvDao.getVariablesForPrompt(promptId);
+    return ImportExportCodec.encodePromptMarkdown(
+      prompt,
+      tags.map((t) => t.name).toList(),
+      vars,
+    );
+  }
+
   Future<void> importData(ImportPreview preview, {MergeStrategy strategy = MergeStrategy.duplicate}) async {
     await db.transaction(() async {
       for (final imported in preview.validPrompts) {
@@ -187,6 +200,7 @@ class ImportExportService {
             tagsJson: v.tagsJson != null ? drift.Value(v.tagsJson) : const drift.Value.absent(),
             variableMetadataJson: v.variableMetadataJson != null ? drift.Value(v.variableMetadataJson) : const drift.Value.absent(),
             note: v.note != null ? drift.Value(v.note) : const drift.Value.absent(),
+            versionNumber: drift.Value(v.versionNumber),
             createdAt: v.createdAt,
           ));
         }
@@ -222,6 +236,10 @@ class ImportExportService {
               score: o.score != null ? drift.Value(o.score) : const drift.Value.absent(),
               notes: o.notes != null ? drift.Value(o.notes) : const drift.Value.absent(),
               isBest: drift.Value(o.isBest),
+              runParamsJson: o.runParamsJson != null ? drift.Value(o.runParamsJson) : const drift.Value.absent(),
+              inputTokens: o.inputTokens != null ? drift.Value(o.inputTokens) : const drift.Value.absent(),
+              outputTokens: o.outputTokens != null ? drift.Value(o.outputTokens) : const drift.Value.absent(),
+              latencyMs: o.latencyMs != null ? drift.Value(o.latencyMs) : const drift.Value.absent(),
               createdAt: o.createdAt,
               updatedAt: o.updatedAt,
             ));

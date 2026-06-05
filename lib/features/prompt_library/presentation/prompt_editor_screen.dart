@@ -8,6 +8,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:file_selector/file_selector.dart';
+
+import '../../import_export/application/import_export_service.dart';
 
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
@@ -540,6 +543,11 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
               tooltip: 'Use Prompt (Compile)',
               onPressed: () =>
                   context.push('/library/compile/${_existingPrompt!.id}'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.ios_share),
+              tooltip: 'Export as Markdown',
+              onPressed: _exportMarkdown,
             ),
             IconButton(
               icon: const Icon(Icons.copy),
@@ -1123,6 +1131,42 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         ),
       ],
     );
+  }
+
+  // Exports this prompt as a Markdown file (YAML front-matter + body) via the
+  // OS save dialog. No key material is ever written.
+  Future<void> _exportMarkdown() async {
+    final prompt = _existingPrompt;
+    if (prompt == null) return;
+    try {
+      final md =
+          await ref.read(importExportServiceProvider).exportPromptMarkdown(prompt.id);
+      final safeTitle = prompt.title.trim().isEmpty
+          ? 'prompt'
+          : prompt.title.trim().replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_');
+      final location = await getSaveLocation(
+        suggestedName: '$safeTitle.md',
+        acceptedTypeGroups: const [
+          XTypeGroup(label: 'Markdown', extensions: ['md']),
+        ],
+      );
+      if (location == null) return; // user cancelled
+      final file = XFile.fromData(
+        Uint8List.fromList(dart_convert.utf8.encode(md)),
+        mimeType: 'text/markdown',
+      );
+      await file.saveTo(location.path);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported to ${location.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
   }
 
   // --- Right column: saved outputs ---

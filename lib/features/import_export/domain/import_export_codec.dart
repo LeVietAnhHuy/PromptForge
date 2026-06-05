@@ -60,7 +60,11 @@ class ImportPreview {
 }
 
 class ImportExportCodec {
-  static const int currentSchemaVersion = 3;
+  // v4 adds Stage 25 output scalars (token usage, latency, run params) so a
+  // round-trip preserves them. Note: an output's `promptVersionId` is NOT
+  // exported — import regenerates version row IDs, so that cross-reference can't
+  // survive a round-trip; model/params/token usage still do.
+  static const int currentSchemaVersion = 4;
   static const String expectedAppId = 'PromptForge';
 
   static String encodeExport(
@@ -149,6 +153,10 @@ class ImportExportCodec {
                                     'score': o.score,
                                     'notes': o.notes,
                                     'isBest': o.isBest,
+                                    'runParamsJson': o.runParamsJson,
+                                    'inputTokens': o.inputTokens,
+                                    'outputTokens': o.outputTokens,
+                                    'latencyMs': o.latencyMs,
                                     'createdAt': o.createdAt.toIso8601String(),
                                     'updatedAt': o.updatedAt.toIso8601String(),
                                     'attachments': (attachments[o.id] ?? [])
@@ -282,7 +290,10 @@ class ImportExportCodec {
           if (e is Map<String, dynamic>) {
             final exampleId = e['id'] as String;
             examples.add(PromptExample(
-              id: '', // Generated during import
+              // Keep the original id so importData can map this example's
+              // outputs (which are keyed by it). A fresh id is assigned at
+              // insert time; this value is only used for that lookup.
+              id: exampleId,
               projectId: e['projectId'] as String?,
               promptId: id,
               title: e['title'] as String,
@@ -315,6 +326,10 @@ class ImportExportCodec {
                   score: o['score'] as int?,
                   notes: o['notes'] as String?,
                   isBest: o['isBest'] as bool? ?? false,
+                  runParamsJson: o['runParamsJson'] as String?,
+                  inputTokens: o['inputTokens'] as int?,
+                  outputTokens: o['outputTokens'] as int?,
+                  latencyMs: o['latencyMs'] as int?,
                   createdAt: DateTime.parse(o['createdAt'] as String),
                   updatedAt: DateTime.parse(o['updatedAt'] as String),
                 ));
@@ -474,6 +489,62 @@ class ImportExportCodec {
       validContextPacks: validContextPacks,
       validInboxItems: validInboxItems,
     );
+  }
+
+  /// Renders a single prompt as a human-readable Markdown document with a YAML
+  /// front-matter header (title, purpose, tags, timestamps, and variable
+  /// metadata) followed by the prompt body. This is a one-way, shareable export
+  /// — not part of the round-trippable bundle — and, like every export, contains
+  /// no API key material.
+  static String encodePromptMarkdown(
+    Prompt prompt,
+    List<String> tags,
+    List<PromptVariable> variables,
+  ) {
+    final buf = StringBuffer();
+    buf.writeln('---');
+    buf.writeln('id: ${_yaml(prompt.id)}');
+    buf.writeln('title: ${_yaml(prompt.title)}');
+    if (prompt.purpose != null && prompt.purpose!.isNotEmpty) {
+      buf.writeln('purpose: ${_yaml(prompt.purpose!)}');
+    }
+    if (tags.isNotEmpty) {
+      buf.writeln('tags:');
+      for (final t in tags) {
+        buf.writeln('  - ${_yaml(t)}');
+      }
+    }
+    buf.writeln('created: ${_yaml(prompt.createdAt.toIso8601String())}');
+    buf.writeln('updated: ${_yaml(prompt.updatedAt.toIso8601String())}');
+    if (variables.isNotEmpty) {
+      buf.writeln('variables:');
+      for (final v in variables) {
+        buf.writeln('  - name: ${_yaml(v.name)}');
+        buf.writeln('    required: ${v.isRequired}');
+        if (v.defaultValue != null && v.defaultValue!.isNotEmpty) {
+          buf.writeln('    default: ${_yaml(v.defaultValue!)}');
+        }
+        if (v.description != null && v.description!.isNotEmpty) {
+          buf.writeln('    description: ${_yaml(v.description!)}');
+        }
+      }
+    }
+    buf.writeln('---');
+    buf.writeln();
+    buf.write(prompt.body);
+    if (!prompt.body.endsWith('\n')) buf.writeln();
+    return buf.toString();
+  }
+
+  /// Double-quoted YAML scalar with the characters that would break a scalar
+  /// (backslash, quote, newline) escaped — keeps front-matter valid for any
+  /// title/tag/value.
+  static String _yaml(String value) {
+    final escaped = value
+        .replaceAll('\\', '\\\\')
+        .replaceAll('"', '\\"')
+        .replaceAll('\n', '\\n');
+    return '"$escaped"';
   }
 
   static List<int> encodeBackupBundle(String jsonString) {
