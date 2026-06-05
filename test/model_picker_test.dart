@@ -75,7 +75,8 @@ void main() {
   setUp(() => database = AppDatabase(e: NativeDatabase.memory()));
   tearDown(() async => database.close());
 
-  Future<void> pump(WidgetTester tester, {ValueChanged<String>? onSelected}) async {
+  Future<void> pump(WidgetTester tester,
+      {ValueChanged<String>? onSelected}) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(database)],
       child: MaterialApp(
