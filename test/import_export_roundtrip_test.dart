@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:drift/native.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -244,7 +245,7 @@ void main() {
         updatedAt: now));
 
     final fileBytes = List<int>.generate(256, (i) => i % 256);
-    final srcFile = File('${srcRoot.path}/report.bin');
+    final srcFile = File(p.join(srcRoot.path, 'report.bin'));
     await srcFile.writeAsBytes(fileBytes);
     await src.lLMOutputAttachmentDao.createAttachment(
         LLMOutputAttachmentsCompanion.insert(

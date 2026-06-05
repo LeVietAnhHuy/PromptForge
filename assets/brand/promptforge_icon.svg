@@ -1,0 +1,27 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ember" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E8833A"/>
+      <stop offset="1" stop-color="#F6A45E"/>
+    </linearGradient>
+  </defs>
+  <!-- Ember rounded-square field (the forge accent). -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="url(#ember)"/>
+  <!-- Flame mark, dark ember-on-primary to match the in-app brand glyph. -->
+  <path fill="#1F1206"
+        d="M512 832
+           C 360 832 300 720 300 600
+           C 300 470 384 404 432 474
+           C 432 384 470 286 470 196
+           C 542 258 602 360 602 462
+           C 642 430 692 472 702 542
+           C 722 664 660 832 512 832 Z"/>
+  <!-- Inner highlight tongue for depth. -->
+  <path fill="#FFD7B5"
+        d="M512 760
+           C 430 760 396 690 396 614
+           C 396 540 446 506 484 552
+           C 484 492 506 430 506 384
+           C 552 426 586 492 586 556
+           C 586 636 566 760 512 760 Z"/>
+</svg>

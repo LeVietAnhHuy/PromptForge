@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../theme/app_design.dart';
 import '../../features/search/presentation/command_palette.dart';
 import '../../features/inbox/presentation/quick_capture_dialog.dart';
+import '../../shared/shortcuts/keyboard_shortcuts.dart';
 
 class ResponsiveShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -24,18 +25,14 @@ class ResponsiveShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Global shortcuts when focus is anywhere in the shell subtree (text fields
-    // don't consume these chords): Ctrl/Cmd+K opens the command palette,
-    // Ctrl/Cmd+Shift+N opens Quick Capture (jot straight into the Inbox).
+    // don't consume these chords). Cmd⌘ on macOS, Ctrl elsewhere — via the one
+    // shortcut helper: Cmd/Ctrl+K opens the command palette, Cmd/Ctrl+Shift+N
+    // opens Quick Capture (jot straight into the Inbox).
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-            CommandPalette.show(context),
-        const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
-            CommandPalette.show(context),
-        const SingleActivator(LogicalKeyboardKey.keyN,
-            control: true, shift: true): () => QuickCaptureDialog.show(context),
-        const SingleActivator(LogicalKeyboardKey.keyN, meta: true, shift: true):
-            () => QuickCaptureDialog.show(context),
+        cmdOrCtrl(LogicalKeyboardKey.keyK): () => CommandPalette.show(context),
+        cmdOrCtrl(LogicalKeyboardKey.keyN, shift: true): () =>
+            QuickCaptureDialog.show(context),
       },
       child: Focus(
         autofocus: true,

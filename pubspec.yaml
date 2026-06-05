@@ -7,6 +7,7 @@ version: 1.0.0+1
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.44.0'
 
 dependencies:
   flutter:
@@ -37,6 +38,7 @@ dev_dependencies:
   flutter_lints: ^3.0.0
   build_runner: ^2.4.8
   drift_dev: ^2.16.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true

@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../../../app/theme/app_design.dart';
 import '../../../core/database/database.dart';
 import '../../../core/database/database_providers.dart';
+import '../../../shared/shortcuts/keyboard_shortcuts.dart';
 
 /// Fast "jot it down" capture into the Inbox, opened with Ctrl/Cmd+Shift+N from
 /// anywhere in the shell. Prefills the body from the clipboard so a copied
@@ -98,8 +99,7 @@ class _QuickCaptureDialogState extends ConsumerState<QuickCaptureDialog> {
     // Ctrl/Cmd+Enter saves without reaching for the mouse.
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, control: true): _save,
-        const SingleActivator(LogicalKeyboardKey.enter, meta: true): _save,
+        cmdOrCtrl(LogicalKeyboardKey.enter): _save,
       },
       child: AlertDialog(
         title: Row(

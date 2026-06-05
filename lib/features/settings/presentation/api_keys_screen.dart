@@ -21,12 +21,14 @@ class _ApiKeysScreenState extends ConsumerState<ApiKeysScreen> {
 
   Future<void> _loadKeys() async {
     final storage = ref.read(secureStorageProvider);
+    // getApiKey already returns null on a secure-store failure, so the screen
+    // still loads (empty) rather than breaking when the keychain is unavailable.
     final googleKey = await storage.getApiKey('google') ??
         await storage.getApiKey('gemini') ??
         '';
-    
+
     _controllers['google'] = TextEditingController(text: googleKey);
-    
+
     setState(() {
       _isLoading = false;
     });
@@ -35,13 +37,25 @@ class _ApiKeysScreenState extends ConsumerState<ApiKeysScreen> {
   Future<void> _saveKey(String providerId) async {
     final storage = ref.read(secureStorageProvider);
     final key = _controllers[providerId]!.text.trim();
-    
-    if (key.isEmpty) {
-      await storage.deleteApiKey(providerId);
-    } else {
-      await storage.saveApiKey(providerId, key);
+
+    try {
+      if (key.isEmpty) {
+        await storage.deleteApiKey(providerId);
+      } else {
+        await storage.saveApiKey(providerId, key);
+      }
+    } on SecureStorageException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${e.message} You can still paste outputs manually.'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return;
     }
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Saved API key for $providerId.')),

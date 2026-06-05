@@ -115,7 +115,11 @@ class AttachmentStorageService {
     }
   }
 
-  String _sanitize(String name) => name.replaceAll(RegExp(r'[/\\\x00]'), '_');
+  // Strip path separators, the null byte, control chars, and the characters
+  // Windows forbids in filenames (: ? * < > |) so the stored
+  // `<uuid>__<sanitized>` name is valid on every platform.
+  String _sanitize(String name) =>
+      name.replaceAll(RegExp(r'[/\\\x00-\x1f:?*<>|]'), '_');
 }
 
 final attachmentStorageServiceProvider =

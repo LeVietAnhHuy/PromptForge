@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/features/prompt_examples/application/attachment_picker_service.dart';
@@ -33,9 +34,9 @@ void main() {
           attachmentType: type);
 
   Future<List<OutputAttachmentDraft>> threeDrafts() async {
-    final pdf = File('${root.path}/doc.pdf')..writeAsStringSync('%PDF-1.4');
-    final png = File('${root.path}/img.png')..writeAsBytesSync([1, 2, 3]);
-    final jpg = File('${root.path}/img.jpg')..writeAsBytesSync([4, 5, 6]);
+    final pdf = File(p.join(root.path, 'doc.pdf'))..writeAsStringSync('%PDF-1.4');
+    final png = File(p.join(root.path, 'img.png'))..writeAsBytesSync([1, 2, 3]);
+    final jpg = File(p.join(root.path, 'img.jpg'))..writeAsBytesSync([4, 5, 6]);
     return [
       draftFor(pdf, 'pdf', 'application/pdf'),
       draftFor(png, 'image', 'image/png'),
@@ -62,14 +63,14 @@ void main() {
   test('adding a 3rd attachment to an existing output keeps all 3 (edit flow)',
       () async {
     // Existing output already has 2 attachments.
-    final pdf = File('${root.path}/a.pdf')..writeAsStringSync('%PDF');
-    final png = File('${root.path}/a.png')..writeAsBytesSync([1]);
+    final pdf = File(p.join(root.path, 'a.pdf'))..writeAsStringSync('%PDF');
+    final png = File(p.join(root.path, 'a.png'))..writeAsBytesSync([1]);
     await storage.persistDrafts('out-2', [
       draftFor(pdf, 'pdf', 'application/pdf'),
       draftFor(png, 'image', 'image/png'),
     ]);
     // Edit: add a 3rd.
-    final jpg = File('${root.path}/a.jpg')..writeAsBytesSync([2]);
+    final jpg = File(p.join(root.path, 'a.jpg'))..writeAsBytesSync([2]);
     final res = await storage
         .persistDrafts('out-2', [draftFor(jpg, 'image', 'image/jpeg')]);
     expect(res.saved, 1);
@@ -81,9 +82,9 @@ void main() {
 
   test('same base filename does not overwrite — both persist distinctly',
       () async {
-    final sub = Directory('${root.path}/sub')..createSync();
-    final a = File('${root.path}/photo.png')..writeAsBytesSync([1, 1, 1]);
-    final b = File('${sub.path}/photo.png')..writeAsBytesSync([9, 9, 9, 9]);
+    final sub = Directory(p.join(root.path, 'sub'))..createSync();
+    final a = File(p.join(root.path, 'photo.png'))..writeAsBytesSync([1, 1, 1]);
+    final b = File(p.join(sub.path, 'photo.png'))..writeAsBytesSync([9, 9, 9, 9]);
     final res = await storage.persistDrafts('out-3', [
       draftFor(a, 'image', 'image/png'),
       draftFor(b, 'image', 'image/png'),
@@ -102,10 +103,11 @@ void main() {
 
   test('cancel (no persist call) leaves no copies in app storage', () async {
     // The dialog only copies on save; cancelling never invokes persistDrafts.
-    final src = File('${root.path}/keep.txt')..writeAsStringSync('original');
+    final src = File(p.join(root.path, 'keep.txt'))..writeAsStringSync('original');
     // Simulate cancel: build a draft but do NOT persist it.
     draftFor(src, 'text', 'text/plain');
-    final outDir = Directory('${root.path}/promptforge/attachments/out-cancel');
+    final outDir =
+        Directory(p.join(root.path, 'promptforge', 'attachments', 'out-cancel'));
     expect(outDir.existsSync(), isFalse);
     // The user's source file is untouched.
     expect(src.readAsStringSync(), 'original');
@@ -113,7 +115,7 @@ void main() {
 
   test('a draft with no source path is counted as failed, not silently lost',
       () async {
-    final ok = File('${root.path}/ok.txt')..writeAsStringSync('hi');
+    final ok = File(p.join(root.path, 'ok.txt'))..writeAsStringSync('hi');
     final res = await storage.persistDrafts('out-4', [
       draftFor(ok, 'text', 'text/plain'),
       const OutputAttachmentDraft(

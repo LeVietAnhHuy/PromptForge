@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "promptforge" "\0"
+            VALUE "CompanyName", "Le Viet Anh Huy" "\0"
+            VALUE "FileDescription", "PromptForge" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "promptforge" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Le Viet Anh Huy. All rights reserved." "\0"
             VALUE "OriginalFilename", "promptforge.exe" "\0"
-            VALUE "ProductName", "promptforge" "\0"
+            VALUE "ProductName", "PromptForge" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -1,0 +1,19 @@
+# Generates per-platform app icons from the single brand master PNG
+# (rendered from assets/brand/promptforge_icon.svg).
+#   dart run flutter_launcher_icons -f flutter_launcher_icons.yaml
+# Linux has no Flutter launcher-icon target; its packaging icon is
+# assets/brand/promptforge_icon_512.png (used by the AppImage/.desktop in CI).
+flutter_launcher_icons:
+  image_path: "assets/brand/promptforge_icon_1024.png"
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: false
+  windows:
+    generate: true
+    image_path: "assets/brand/promptforge_icon_1024.png"
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: "assets/brand/promptforge_icon_1024.png"

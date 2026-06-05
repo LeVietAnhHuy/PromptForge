@@ -15,8 +15,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.promptforge"
+        // Published application id. (The Kotlin `namespace` above stays as the
+        // internal code namespace; aligning it + the MainActivity package is
+        // deferred to the mobile stage, which actually builds/verifies Android.)
+        applicationId = "io.github.levietanhhuy.promptforge"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
