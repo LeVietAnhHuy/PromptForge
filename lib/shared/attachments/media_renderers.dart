@@ -6,6 +6,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../app/theme/app_design.dart';
+import 'media_capability.dart';
 
 /// Shared in-viewer error panel used when a media backend fails to load a file.
 class MediaErrorPanel extends StatelessWidget {
@@ -184,38 +185,51 @@ class VideoRenderer extends StatefulWidget {
 }
 
 class _VideoRendererState extends State<VideoRenderer> {
-  late final Player _player;
-  late final VideoController _controller;
+  Player? _player;
+  VideoController? _controller;
   StreamSubscription<String>? _errorSub;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _player = Player();
-    _controller = VideoController(_player);
-    _errorSub = _player.stream.error.listen((e) {
-      if (mounted) setState(() => _error = e);
-    });
-    _player.open(Media(widget.path));
+    // Skip player creation entirely when the backend isn't available, and guard
+    // construction so a libmpv failure shows the error panel, never a crash.
+    if (!mediaBackendReady) {
+      _error = 'Video playback isn’t available on this system.';
+      return;
+    }
+    try {
+      final player = Player();
+      _player = player;
+      _controller = VideoController(player);
+      _errorSub = player.stream.error.listen((e) {
+        if (mounted) setState(() => _error = e);
+      });
+      player.open(Media(widget.path));
+    } catch (e) {
+      _error = 'Could not start video playback: $e';
+    }
   }
 
   @override
   void dispose() {
     _errorSub?.cancel();
-    _player.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) {
+    final controller = _controller;
+    if (_error != null || controller == null) {
       return MediaErrorPanel(
-          message: _error!, onOpenExternally: widget.onOpenExternally);
+          message: _error ?? 'Media unavailable',
+          onOpenExternally: widget.onOpenExternally);
     }
     return ColoredBox(
       color: Colors.black,
-      child: Video(controller: _controller),
+      child: Video(controller: controller),
     );
   }
 }
@@ -237,7 +251,7 @@ class AudioRenderer extends StatefulWidget {
 }
 
 class _AudioRendererState extends State<AudioRenderer> {
-  late final Player _player;
+  Player? _player;
   final _subs = <StreamSubscription>[];
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -248,25 +262,34 @@ class _AudioRendererState extends State<AudioRenderer> {
   @override
   void initState() {
     super.initState();
-    _player = Player();
-    _subs.addAll([
-      _player.stream.position.listen((p) {
-        if (mounted) setState(() => _position = p);
-      }),
-      _player.stream.duration.listen((d) {
-        if (mounted) setState(() => _duration = d);
-      }),
-      _player.stream.playing.listen((p) {
-        if (mounted) setState(() => _playing = p);
-      }),
-      _player.stream.volume.listen((v) {
-        if (mounted) setState(() => _volume = v);
-      }),
-      _player.stream.error.listen((e) {
-        if (mounted) setState(() => _error = e);
-      }),
-    ]);
-    _player.open(Media(widget.path));
+    if (!mediaBackendReady) {
+      _error = 'Audio playback isn’t available on this system.';
+      return;
+    }
+    try {
+      final player = Player();
+      _player = player;
+      _subs.addAll([
+        player.stream.position.listen((p) {
+          if (mounted) setState(() => _position = p);
+        }),
+        player.stream.duration.listen((d) {
+          if (mounted) setState(() => _duration = d);
+        }),
+        player.stream.playing.listen((p) {
+          if (mounted) setState(() => _playing = p);
+        }),
+        player.stream.volume.listen((v) {
+          if (mounted) setState(() => _volume = v);
+        }),
+        player.stream.error.listen((e) {
+          if (mounted) setState(() => _error = e);
+        }),
+      ]);
+      player.open(Media(widget.path));
+    } catch (e) {
+      _error = 'Could not start audio playback: $e';
+    }
   }
 
   @override
@@ -274,7 +297,7 @@ class _AudioRendererState extends State<AudioRenderer> {
     for (final s in _subs) {
       s.cancel();
     }
-    _player.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -287,9 +310,11 @@ class _AudioRendererState extends State<AudioRenderer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_error != null) {
+    final player = _player;
+    if (_error != null || player == null) {
       return MediaErrorPanel(
-          message: _error!, onOpenExternally: widget.onOpenExternally);
+          message: _error ?? 'Media unavailable',
+          onOpenExternally: widget.onOpenExternally);
     }
     final theme = Theme.of(context);
     final max = _duration.inMilliseconds.toDouble();
@@ -317,7 +342,7 @@ class _AudioRendererState extends State<AudioRenderer> {
                   IconButton.filled(
                     iconSize: 32,
                     icon: Icon(_playing ? Icons.pause : Icons.play_arrow),
-                    onPressed: () => _player.playOrPause(),
+                    onPressed: () => player.playOrPause(),
                   ),
                   const SizedBox(width: AppDesign.spacingSm),
                   Expanded(
@@ -327,7 +352,7 @@ class _AudioRendererState extends State<AudioRenderer> {
                       onChanged: max <= 0
                           ? null
                           : (v) =>
-                              _player.seek(Duration(milliseconds: v.round())),
+                              player.seek(Duration(milliseconds: v.round())),
                     ),
                   ),
                 ],
@@ -348,7 +373,7 @@ class _AudioRendererState extends State<AudioRenderer> {
                     child: Slider(
                       value: _volume.clamp(0, 100),
                       max: 100,
-                      onChanged: (v) => _player.setVolume(v),
+                      onChanged: (v) => player.setVolume(v),
                     ),
                   ),
                 ],
