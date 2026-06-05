@@ -1,5 +1,6 @@
 import '../../../core/database/database.dart';
 import 'target_tool_profile.dart';
+import 'variable_resolver.dart' as resolver;
 
 class PromptCompilerResult {
   final String compiledText;
@@ -18,27 +19,14 @@ class PromptCompilerResult {
 }
 
 class PromptCompilerService {
-  /// Regular expression to match variables in the format {variable_name}
-  /// Letters, numbers, underscore. Must start with letter or underscore. No spaces.
-  static final RegExp variableRegex = RegExp(r'\{([A-Za-z_][A-Za-z0-9_]*)\}');
+  /// Variable syntax `{variable_name}` — shared with the MCP sidecar via
+  /// `variable_resolver.dart` so the two never diverge.
+  static final RegExp variableRegex = resolver.kVariablePattern;
 
-  /// Extracts all unique variables from the given prompt body.
-  /// Preserves the order of their first appearance.
-  static List<String> extractVariables(String promptBody) {
-    final matches = variableRegex.allMatches(promptBody);
-    final variables = <String>{};
-
-    for (final match in matches) {
-      if (match.groupCount >= 1) {
-        final variableName = match.group(1);
-        if (variableName != null) {
-          variables.add(variableName);
-        }
-      }
-    }
-
-    return variables.toList();
-  }
+  /// Extracts all unique variables from the given prompt body, in
+  /// first-appearance order. Delegates to the shared resolver.
+  static List<String> extractVariables(String promptBody) =>
+      resolver.extractVariables(promptBody);
 
   static PromptCompilerResult compile({
     required String promptBody,
@@ -49,34 +37,20 @@ class PromptCompilerService {
     String? outputFormat,
     String? targetNotes,
   }) {
-    final missingRequiredVariables = <String>[];
-    
-    // 1. Process prompt body
-    final compiledPromptBody = promptBody.replaceAllMapped(variableRegex, (match) {
-      final varName = match.group(1)!;
+    // 1. Process prompt body via the shared resolver. The closure reproduces
+    // the original rule exactly: runtime value wins, else default, else (if
+    // required) report missing + keep the placeholder, else drop it.
+    final substitution = resolver.substituteVariables(promptBody, (varName) {
       final meta = variableMetadata[varName];
-      final isRequired = meta?.isRequired ?? true;
-      final defaultValue = meta?.defaultValue;
-      
       final runtimeVal = runtimeValues[varName] ?? '';
-      
-      String finalValue = '';
-      
-      if (runtimeVal.isNotEmpty) {
-        finalValue = runtimeVal;
-      } else if (defaultValue != null && defaultValue.isNotEmpty) {
-        finalValue = defaultValue;
-      } else {
-        if (isRequired) {
-          missingRequiredVariables.add(varName);
-          return match.group(0)!; // Keep {variable} placeholder if missing & required
-        } else {
-          return ''; // Remove if optional and missing
-        }
-      }
-      
-      return finalValue;
+      if (runtimeVal.isNotEmpty) return runtimeVal;
+      final defaultValue = meta?.defaultValue;
+      if (defaultValue != null && defaultValue.isNotEmpty) return defaultValue;
+      final isRequired = meta?.isRequired ?? true;
+      return isRequired ? null : ''; // null → missing + keep placeholder
     });
+    final compiledPromptBody = substitution.text;
+    final missingRequiredVariables = substitution.missing;
 
     final targetProfile = profile ?? const GenericProfile();
     final compilerContext = CompilerContext(

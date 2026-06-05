@@ -59,3 +59,20 @@ To add a logo for a new provider: drop a permissively licensed SVG into
 provider registry in `lib/shared/providers/provider_identity.dart`. (The Stage 24
 brief suggested `assets/provider_logos/`; the codebase already uses
 `assets/provider_icons/`, so that path is kept — deviation noted in HANDOFF.)
+
+## Dart packages — MCP server (Stage 27)
+
+The standalone MCP sidecar (`bin/promptforge_mcp.dart`) adds these pub packages,
+all under permissive licenses:
+
+- **dart_mcp** 0.5.1 — official Dart-team Model Context Protocol SDK
+  (server prompts + tools over stdio). BSD-3-Clause (Copyright the Dart project
+  authors). https://pub.dev/packages/dart_mcp
+- **json_rpc_2** — JSON-RPC 2.0 used by dart_mcp (we throw its `RpcException`
+  for protocol errors). BSD-3-Clause (Copyright the Dart project authors).
+- **sqlite3** 3.3.2 — read-only SQLite access for the sidecar; its build hook
+  bundles the native SQLite library into the compiled CLI. MIT License
+  (Copyright 2020 Simon Binder).
+
+Full license texts ship inside each package in the pub cache and in the source
+tarballs on pub.dev.
