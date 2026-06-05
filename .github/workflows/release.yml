@@ -46,12 +46,30 @@ jobs:
           cache: true
 
       - run: flutter pub get
+
+      # Stamp the sidecar version into its default (dart build cli has no
+      # --define). `-i.bak` is portable across GNU (Linux/Windows) and BSD
+      # (macOS) sed.
+      - name: Stamp MCP sidecar version
+        run: |
+          sed -i.bak "s/defaultValue: '1.0.0'/defaultValue: '${{ steps.ver.outputs.version }}'/" bin/promptforge_mcp.dart
+          rm -f bin/promptforge_mcp.dart.bak
+          grep -n "defaultValue:" bin/promptforge_mcp.dart
+
+      - name: Build MCP sidecar (dart build cli)
+        run: dart build cli bin/promptforge_mcp.dart
+
       - name: Build ${{ matrix.platform }} (release)
         run: flutter build ${{ matrix.platform }} --release
 
       - name: Package Linux (tar.gz + best-effort AppImage)
         if: runner.os == 'Linux'
-        run: bash scripts/package_linux.sh "${{ steps.ver.outputs.version }}"
+        run: |
+          set -euo pipefail
+          # Ship the sidecar bundle next to the app (mcp/bin + mcp/lib).
+          cp -r "$(find build/cli -type d -name bundle | head -1)" \
+            build/linux/x64/release/bundle/mcp
+          bash scripts/package_linux.sh "${{ steps.ver.outputs.version }}"
 
       - name: Package Windows (portable zip + unsigned MSIX)
         if: runner.os == 'Windows'
@@ -60,6 +78,7 @@ jobs:
           V="${{ steps.ver.outputs.version }}"
           mkdir -p dist
           REL="build/windows/x64/runner/Release"
+          cp -r "$(find build/cli -type d -name bundle | head -1)" "$REL/mcp"
           7z a -tzip "dist/promptforge-$V-windows-x64.zip" "./$REL/*"
           dart run msix:create --version "$V.0"
           mv "$REL/promptforge.msix" "dist/promptforge-$V-windows-x64.msix"
@@ -72,6 +91,8 @@ jobs:
           V="${{ steps.ver.outputs.version }}"
           mkdir -p dist
           APP="build/macos/Build/Products/Release/PromptForge.app"
+          cp -r "$(find build/cli -type d -name bundle | head -1)" \
+            "$APP/Contents/MacOS/mcp"
           ditto -c -k --keepParent "$APP" "dist/promptforge-$V-macos.zip"
           hdiutil create -volname PromptForge -srcfolder "$APP" -ov -format UDZO \
             "dist/promptforge-$V-macos.dmg"

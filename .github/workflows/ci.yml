@@ -80,3 +80,18 @@ jobs:
           if [ -z "$mpv" ]; then echo "::error::libmpv not found in build output"; exit 1; fi
           if [ -z "$pdfium" ]; then echo "::error::pdfium not found in build output"; exit 1; fi
           echo "OK: media + PDF native libraries are present."
+
+      - name: Build the MCP sidecar (dart build cli)
+        run: dart build cli bin/promptforge_mcp.dart
+
+      - name: Assert the MCP sidecar runs (--version)
+        run: |
+          set -euo pipefail
+          bin="$(find build/cli -type f \( -name promptforge_mcp -o -name promptforge_mcp.exe \) | head -1)"
+          echo "sidecar: $bin"
+          test -n "$bin" || { echo "::error::MCP sidecar binary not found"; exit 1; }
+          out="$("$bin" --version)"
+          echo "$out"
+          echo "$out" | grep -q "PromptForge MCP server" \
+            || { echo "::error::unexpected sidecar --version output"; exit 1; }
+          echo "OK: MCP sidecar builds and runs."
