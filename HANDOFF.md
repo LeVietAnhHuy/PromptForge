@@ -247,10 +247,37 @@ Standing rule this stage: push to `origin/master` after every commit.
   "—" when none — never an incomplete sum passed off as the whole. Tests:
   `output_rating_test.dart` (score set/clear, per-prompt best clearing, prompt
   isolation, unpin) and `summarizeCosts` cases (complete / partial / none / empty)
-  in `pricing_service_test.dart`. STILL TODO in Part C (2/2) commit 2: multi-model
-  concurrent run (isolated per-column failures + test), comparison view
-  per-column provider logos + sync-scroll toggle, comparison accessible from any
-  prompt with ≥2 outputs, and using `OutputRatingBar` on the comparison columns.
+  in `pricing_service_test.dart`.
+- Part C (2/2) commit 2 — multi-model concurrent run + comparison view overhaul.
+  Service: `executeAndSaveMany(targets)` runs each `ModelRunTarget` concurrently
+  via `Future.wait`; every target is wrapped so a provider error — or even an
+  unexpected throw — becomes an error `MultiRunOutcome` instead of cancelling the
+  batch, so one failure never aborts the siblings. The comparison screen now:
+  multi-selects up to 4 models (FilterChips) and runs them at once; renders
+  failures as their own red error columns (failed runs are never persisted, so
+  they live in transient `_runErrors` until the next run); shows a per-column
+  provider logo + brand accent (pinned-Best columns take the ember accent); has a
+  "Sync scroll" toggle that links the columns' vertical scroll via per-column
+  controllers; uses the shared `OutputRatingBar`; records provenance (latest
+  prompt version id of the linked prompt) on each run. It also gained a read-only
+  **prompt-scoped** mode (`ExampleComparisonScreen.forPrompt`) that aggregates
+  outputs across all of a prompt's examples, reachable from a new "Compare"
+  button in the library Saved Outputs (shown at ≥2 outputs). The run editor's
+  "Mark Best" was replaced with the shared `OutputRatingBar` too, so all three
+  surfaces share one control. **Layout fix logged:** the comparison body now uses
+  a fully scrollable Column on narrow widths (the taller run panel was starving
+  the outputs' `Expanded` to ~0 height, so the lazy list built no items); the
+  output stream is subscribed once (not per-build) so run-time setState no longer
+  flickers the columns back to a spinner. Tests: two service isolation tests
+  (one model errors / one model throws → others persist) in
+  `llm_execution_service_test.dart`, and a widget test
+  (`multi_model_comparison_test.dart`) that drives the real run UI and asserts
+  the healthy output saves while the failing model surfaces an error column.
+  Deviation: the comparison RUN panel runs models from a single selected
+  provider at a time (the per-target API supports cross-provider, but the picker
+  is provider-scoped to match the existing dropdown UX); multi-provider selection
+  is a later polish. Provenance params (temperature, etc.) stay null because no
+  run surface exposes tunable params yet — the provenance line shows "v# · model".
 
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.

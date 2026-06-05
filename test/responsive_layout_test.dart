@@ -61,7 +61,7 @@ void main() {
     await tester.pumpWidget(createTestApp(const ExampleComparisonScreen(exampleId: 'example-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Run LLM Output'), findsOneWidget);
+    expect(find.text('Run LLM Outputs'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Add Output'), findsOneWidget);
     expect(find.text('MANUAL'), findsWidgets);
     expect(tester.takeException(), isNull);

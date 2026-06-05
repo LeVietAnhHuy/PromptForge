@@ -28,6 +28,37 @@ class SavedLlmExecutionResult {
   bool get isSuccess => error == null && outputId != null;
 }
 
+/// One model to run in a multi-model comparison: the provider/model identity
+/// plus a stable UUID so the UI can key columns (including failed ones, which
+/// never become output rows) before any result returns.
+class ModelRunTarget {
+  final String runKey;
+  final String providerId;
+  final String modelId;
+  final String modelName;
+  final String targetProfileId;
+
+  ModelRunTarget({
+    required this.providerId,
+    required this.modelId,
+    required this.modelName,
+    this.targetProfileId = 'comparison',
+    String? runKey,
+  }) : runKey = runKey ?? const Uuid().v4();
+}
+
+/// A single target's outcome from a multi-model run, carrying the run key so the
+/// caller can map it back to its column.
+class MultiRunOutcome {
+  final ModelRunTarget target;
+  final SavedLlmExecutionResult result;
+  const MultiRunOutcome({required this.target, required this.result});
+
+  bool get isSuccess => result.isSuccess;
+  String? get error => result.error;
+  String? get outputId => result.outputId;
+}
+
 class LlmExecutionService {
   final PromptExampleOutputDao outputDao;
   final List<LlmExecutionProvider> providers;
@@ -195,6 +226,58 @@ class LlmExecutionService {
       response: response,
       outputId: outputId,
     );
+  }
+
+  /// Runs every [target] concurrently against the same prompt and saves each
+  /// success as its own output. Failures are fully isolated: one provider erroring
+  /// (or even throwing unexpectedly) never cancels or aborts the siblings — that
+  /// target's outcome simply carries the error and no output id, so the UI can
+  /// render a per-column error panel while the others complete normally. Results
+  /// come back in the same order as [targets].
+  Future<List<MultiRunOutcome>> executeAndSaveMany({
+    required String exampleId,
+    required String compiledPrompt,
+    required List<ModelRunTarget> targets,
+    String outputType = 'markdown',
+    String sourceType = 'api',
+    String? promptVersionId,
+    String? runParamsJson,
+  }) async {
+    final futures = targets.map((t) async {
+      try {
+        final result = await executeAndSaveOutput(
+          exampleId: exampleId,
+          compiledPrompt: compiledPrompt,
+          providerId: t.providerId,
+          modelId: t.modelId,
+          modelName: t.modelName,
+          targetProfileId: t.targetProfileId,
+          outputType: outputType,
+          sourceType: sourceType,
+          promptVersionId: promptVersionId,
+          runParamsJson: runParamsJson,
+        );
+        return MultiRunOutcome(target: t, result: result);
+      } catch (e) {
+        // Defensive: convert any unexpected throw into an error outcome so a
+        // single failure can never reject Future.wait and abort the others.
+        return MultiRunOutcome(
+          target: t,
+          result: SavedLlmExecutionResult(
+            response: LlmExecutionResponse(
+              outputText: '',
+              providerId: t.providerId,
+              modelId: t.modelId,
+              modelName: t.modelName,
+              createdAt: DateTime.now(),
+              error: '$e',
+            ),
+            error: '$e',
+          ),
+        );
+      }
+    }).toList();
+    return Future.wait(futures);
   }
 
   LlmExecutionProvider? _findProvider(String providerId) {

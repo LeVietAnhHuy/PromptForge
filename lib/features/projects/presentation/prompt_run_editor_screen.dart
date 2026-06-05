@@ -13,6 +13,7 @@ import '../../../core/database/database_providers.dart';
 import '../../execution/application/llm_execution_service.dart';
 import '../../execution/domain/llm_provider.dart';
 import '../../prompt_examples/presentation/output_editor_dialog.dart';
+import '../../prompt_examples/presentation/output_rating_bar.dart';
 import 'prompt_card_conversion_dialog.dart';
 
 class PromptRunEditorScreen extends ConsumerStatefulWidget {
@@ -348,17 +349,13 @@ class _PromptRunEditorScreenState extends ConsumerState<PromptRunEditorScreen> {
                               const SizedBox(height: 12),
                               MarkdownBody(data: output.outputText, selectable: true),
                               const Divider(),
-                              Row(
-                                children: [
-                                  TextButton.icon(
-                                    icon: const Icon(Icons.star_border),
-                                    label: const Text('Mark Best'),
-                                    onPressed: () {
-                                      ref.read(promptExampleOutputDaoProvider).markOutputAsBest(_run!.id, output.id);
-                                    },
-                                  ),
-                                ],
-                              )
+                              // Shared rating + Best control (same DAO/widget as
+                              // the library card and comparison columns).
+                              OutputRatingBar(
+                                output: output,
+                                promptId: _run!.promptId,
+                                compact: true,
+                              ),
                             ],
                           ),
                         ),

@@ -19,6 +19,7 @@ import '../../../shared/widgets/app_feedback.dart';
 import 'prompt_body_focus_editor.dart';
 import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../prompt_examples/presentation/prompt_output_card.dart';
+import '../../prompt_examples/presentation/example_comparison_screen.dart';
 import '../../execution/application/pricing_service.dart';
 
 class _VariableMetadataForm {
@@ -1088,6 +1089,20 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
         const Spacer(),
+        // Compare view is available once a prompt has 2+ outputs to line up.
+        if (_outputs.length >= 2 && _existingPrompt != null) ...[
+          TextButton.icon(
+            icon: const Icon(Icons.compare_arrows, size: 18),
+            label: const Text('Compare'),
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) =>
+                    ExampleComparisonScreen.forPrompt(_existingPrompt!.id),
+              ));
+            },
+          ),
+          const SizedBox(width: AppDesign.spacingSm),
+        ],
         Icon(Icons.sort,
             size: 16, color: theme.colorScheme.onSurfaceVariant),
         const SizedBox(width: AppDesign.spacingXs),
