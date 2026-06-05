@@ -45,27 +45,34 @@ void main() {
     await tester.pumpAndSettle();
 
     // 1. Enter title
-    await tester.enterText(find.widgetWithText(TextFormField, 'Title'), 'Test Prompt');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'), 'Test Prompt');
 
     // 2. Enter tags
-    await tester.enterText(find.widgetWithText(TextFormField, 'Tags (comma-separated)'), 'tag1, tag2');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Tags (comma-separated)'),
+        'tag1, tag2');
 
     // 3. Enter body with variables (via Focus Editor)
     await tester.tap(find.text('Open Focus Editor'));
     await tester.pumpAndSettle();
-    
+
     // Switch to Edit mode inside the modal
-    await tester.tap(find.text('Edit').last); // .last because there might be one hidden or whatever, actually just 'Edit' is fine
+    await tester.tap(find
+        .text('Edit')
+        .last); // .last because there might be one hidden or whatever, actually just 'Edit' is fine
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      find.widgetWithText(
+          TextFormField, 'Enter prompt body (Markdown supported)...'),
       'Hello {{name}}',
     );
     await tester.pump();
-    
+
     await tester.tap(find.text('Apply'));
-    await tester.pumpAndSettle(); // Wait for modal to close and variable extraction
+    await tester
+        .pumpAndSettle(); // Wait for modal to close and variable extraction
 
     // Verify metadata form appears (may need to scroll in the ListView)
     await tester.scrollUntilVisible(
@@ -78,8 +85,9 @@ void main() {
     expect(find.text('{{name}}'), findsOneWidget);
 
     // Enter metadata
-    await tester.enterText(find.widgetWithText(TextField, 'Display Label').first, 'Your Name');
-    
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Display Label').first, 'Your Name');
+
     // 4. Save
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
@@ -98,9 +106,16 @@ void main() {
     expect(vars.first.name, 'name');
     expect(vars.first.label, 'Your Name');
     expect(vars.first.isRequired, true);
+
+    // Save now stays in-place (so the "Saved ·" indicator can update) and holds
+    // a live outputs stream; unmount and flush Drift's stream cancel timer.
+    await tester.pumpWidget(Container());
+    await tester.pump(const Duration(seconds: 1));
   });
 
-  testWidgets('Prompt Focus Editor supports Preview/Edit toggle with rich markdown', (tester) async {
+  testWidgets(
+      'Prompt Focus Editor supports Preview/Edit toggle with rich markdown',
+      (tester) async {
     await tester.pumpWidget(createTestApp());
     await tester.pumpAndSettle();
 
@@ -108,20 +123,22 @@ void main() {
     await tester.tap(find.text('Open Focus Editor'));
     await tester.pumpAndSettle();
 
-    // Modal defaults to Preview mode but if it's empty, we might want to edit it. 
+    // Modal defaults to Preview mode but if it's empty, we might want to edit it.
     // Actually our modal implementation defaults to Preview, let's switch to Edit
     await tester.tap(find.text('Edit').last);
     await tester.pumpAndSettle();
 
     // Body field is a TextFormField in Edit mode
     expect(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      find.widgetWithText(
+          TextFormField, 'Enter prompt body (Markdown supported)...'),
       findsOneWidget,
     );
 
     // Enter markdown content
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      find.widgetWithText(
+          TextFormField, 'Enter prompt body (Markdown supported)...'),
       '# My Heading\nSome paragraph text.\n## Section 2',
     );
     await tester.pump();
@@ -135,7 +152,8 @@ void main() {
 
     // The raw TextFormField for body should be gone
     expect(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      find.widgetWithText(
+          TextFormField, 'Enter prompt body (Markdown supported)...'),
       findsNothing,
     );
 
@@ -148,10 +166,14 @@ void main() {
 
     // TextFormField should be back with the same content
     final bodyField = tester.widget<TextFormField>(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...').first,
+      find
+          .widgetWithText(
+              TextFormField, 'Enter prompt body (Markdown supported)...')
+          .first,
     );
-    expect(bodyField.controller?.text, '# My Heading\nSome paragraph text.\n## Section 2');
-    
+    expect(bodyField.controller?.text,
+        '# My Heading\nSome paragraph text.\n## Section 2');
+
     // Apply and close modal
     await tester.tap(find.text('Apply'));
     await tester.pumpAndSettle();
@@ -160,12 +182,12 @@ void main() {
   testWidgets('Prompt editor supports manual output capture', (tester) async {
     const promptId = 'test-prompt-id';
     await database.into(database.prompts).insert(PromptsCompanion.insert(
-      id: promptId,
-      title: 'Test Output Prompt',
-      body: 'Body text',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ));
+          id: promptId,
+          title: 'Test Output Prompt',
+          body: 'Body text',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
 
     await tester.pumpWidget(createTestApp(promptId: promptId));
     await tester.pumpAndSettle();
@@ -183,7 +205,7 @@ void main() {
     expect(pasteButton, findsOneWidget);
     await tester.ensureVisible(pasteButton);
     await tester.pumpAndSettle();
-    
+
     await tester.tap(pasteButton);
     await tester.pumpAndSettle();
 
@@ -192,7 +214,8 @@ void main() {
 
     // 3. Fill form
     // Provider and Model are DropdownButtonFormFields which default to the first available (OpenAI, GPT-3.5 Turbo)
-    await tester.enterText(find.widgetWithText(TextFormField, 'Pasted Output'), 'This is a mocked output from ChatGPT.');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Pasted Output'),
+        'This is a mocked output from ChatGPT.');
     await tester.pump();
 
     // Save Output
@@ -202,16 +225,18 @@ void main() {
     // Modal should close and card should appear
     expect(find.text('Paste External LLM Output'), findsNothing);
     expect(find.text('Output saved manually.'), findsOneWidget);
-    
+
     // Verify card is rendered
     expect(find.text('OpenAI'), findsWidgets); // chip (fallback provider used)
     // model name might be empty
-    expect(find.text('This is a mocked output from ChatGPT.'), findsOneWidget); // markdown body
+    expect(find.text('This is a mocked output from ChatGPT.'),
+        findsOneWidget); // markdown body
 
     // Wait for SnackBar to disappear
-    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first)).clearSnackBars();
+    ScaffoldMessenger.of(tester.element(find.byType(Scaffold).first))
+        .clearSnackBars();
     await tester.pumpAndSettle();
-    
+
     // Unmount to trigger dispose
     await tester.pumpWidget(Container());
     await tester.pumpAndSettle();

@@ -79,7 +79,8 @@ void main() {
     expect(find.text('New Prompt'), findsOneWidget);
 
     // Enter details
-    await tester.enterText(find.widgetWithText(TextFormField, 'Title'), 'My Awesome Prompt');
+    await tester.enterText(
+        find.widgetWithText(TextFormField, 'Title'), 'My Awesome Prompt');
     // Open Focus Editor modal
     await tester.tap(find.text('Open Focus Editor'));
     await tester.pumpAndSettle();
@@ -90,7 +91,8 @@ void main() {
 
     // Body field is inside the modal, find by hint text
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Enter prompt body (Markdown supported)...'),
+      find.widgetWithText(
+          TextFormField, 'Enter prompt body (Markdown supported)...'),
       'This is the body.',
     );
     await tester.pump();
@@ -103,7 +105,12 @@ void main() {
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
 
-    // Should be back on library screen
+    // Save now stays in place and transitions the editor into edit mode.
+    expect(find.text('Edit Prompt'), findsOneWidget);
+
+    // Navigate back to the library to verify the prompt was persisted.
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
     expect(find.text('Prompt Library'), findsOneWidget);
 
     // The new prompt should be listed

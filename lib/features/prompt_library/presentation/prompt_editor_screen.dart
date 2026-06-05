@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart' as drift;
 
@@ -17,9 +18,6 @@ import '../../../app/theme/app_design.dart';
 import 'prompt_body_focus_editor.dart';
 import '../../prompt_examples/presentation/manual_output_paste_dialog.dart';
 import '../../prompt_examples/presentation/prompt_output_card.dart';
-
-
-
 
 class _VariableMetadataForm {
   final String name;
@@ -64,42 +62,57 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   final _bodyController = TextEditingController();
   final _purposeController = TextEditingController();
   final _tagsController = TextEditingController();
-  
+
   Prompt? _existingPrompt;
   bool _isLoading = true;
 
   Map<String, _VariableMetadataForm> _variableForms = {};
   List<String> _detectedVariables = [];
-  
+
   List<PromptExampleOutput> _outputs = [];
   StreamSubscription<List<PromptExampleOutput>>? _outputsSubscription;
 
+  DateTime? _lastSavedAt;
+  bool _dirty = false;
 
-@override
+  @override
   void initState() {
     super.initState();
     _bodyController.addListener(_onBodyChanged);
     _loadPrompt();
   }
 
+  void _markDirty() {
+    if (!_dirty && mounted) setState(() => _dirty = true);
+  }
+
   void _onBodyChanged() {
-    final variables = PromptCompilerService.extractVariables(_bodyController.text);
-    if (listEquals(_detectedVariables, variables)) return;
-    
-      setState(() {
+    if (_isLoading) return;
+    final variables =
+        PromptCompilerService.extractVariables(_bodyController.text);
+    if (listEquals(_detectedVariables, variables)) {
+      // Body content changed but variable set is the same: still refresh the
+      // live counts / outline / dirty indicator in the footer.
+      if (mounted) setState(() => _dirty = true);
+      return;
+    }
+
+    setState(() {
+      _dirty = true;
       _detectedVariables = variables;
       final newForms = <String, _VariableMetadataForm>{};
       for (final v in variables) {
-        newForms[v] = _variableForms[v] ?? _VariableMetadataForm(name: v, isRequired: true);
+        newForms[v] = _variableForms[v] ??
+            _VariableMetadataForm(name: v, isRequired: true);
       }
-      
+
       // Dispose old forms that are no longer present
       for (final v in _variableForms.keys) {
         if (!variables.contains(v)) {
           _variableForms[v]?.dispose();
         }
       }
-      
+
       _variableForms = newForms;
     });
   }
@@ -114,18 +127,20 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       final promptDao = ref.read(promptDaoProvider);
       final tagDao = ref.read(tagDaoProvider);
       final pvDao = ref.read(promptVariableDaoProvider);
-      
+
       final prompt = await promptDao.getPromptById(widget.promptId!);
       final tags = await tagDao.getTagsForPrompt(widget.promptId!);
       final vars = await pvDao.getVariablesForPrompt(widget.promptId!);
-      
+
       setState(() {
         _existingPrompt = prompt;
+        _lastSavedAt = prompt.updatedAt;
+        _dirty = false;
         _titleController.text = prompt.title;
         _bodyController.text = prompt.body;
         _purposeController.text = prompt.purpose ?? '';
         _tagsController.text = tags.map((t) => t.name).join(', ');
-        
+
         final variables = PromptCompilerService.extractVariables(prompt.body);
         _detectedVariables = variables;
         _variableForms = {};
@@ -143,13 +158,15 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         }
         for (final v in variables) {
           if (!_variableForms.containsKey(v)) {
-            _variableForms[v] = _VariableMetadataForm(name: v, isRequired: true);
+            _variableForms[v] =
+                _VariableMetadataForm(name: v, isRequired: true);
           }
         }
 
         final outputDao = ref.read(promptExampleOutputDaoProvider);
         _outputsSubscription?.cancel();
-        _outputsSubscription = outputDao.watchOutputsForPrompt(prompt.id).listen((data) {
+        _outputsSubscription =
+            outputDao.watchOutputsForPrompt(prompt.id).listen((data) {
           if (mounted) {
             setState(() {
               _outputs = data;
@@ -169,7 +186,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     }
   }
 
-@override
+  @override
   void dispose() {
     _outputsSubscription?.cancel();
     _bodyController.removeListener(_onBodyChanged);
@@ -206,40 +223,49 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           id: currentPromptId,
           title: _titleController.text,
           body: _bodyController.text,
-          purpose: _purposeController.text.isNotEmpty ? drift.Value(_purposeController.text) : const drift.Value.absent(),
+          purpose: _purposeController.text.isNotEmpty
+              ? drift.Value(_purposeController.text)
+              : const drift.Value.absent(),
           createdAt: now,
           updatedAt: now,
         ));
       } else {
         // Update existing
         currentPromptId = _existingPrompt!.id;
-        
+
         // 1. Fetch current live tags and variables to check for changes and to snapshot
         final existingTags = await tagDao.getTagsForPrompt(currentPromptId);
         final pvDao = ref.read(promptVariableDaoProvider);
         final existingVars = await pvDao.getVariablesForPrompt(currentPromptId);
-        
+
         final currentTagNames = existingTags.map((t) => t.name).toList();
-        final newTagNames = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-        
+        final newTagNames = _tagsController.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+
         bool titleChanged = _existingPrompt!.title != _titleController.text;
         bool bodyChanged = _existingPrompt!.body != _bodyController.text;
         bool tagsChanged = currentTagNames.join(',') != newTagNames.join(',');
-        
+
         // For simplicity, consider variables changed if names don't match, or just rely on body changes since variables are tied to body.
-        bool varsChanged = existingVars.map((v) => v.name).join(',') != _detectedVariables.join(',');
+        bool varsChanged = existingVars.map((v) => v.name).join(',') !=
+            _detectedVariables.join(',');
 
         if (titleChanged || bodyChanged || tagsChanged || varsChanged) {
           // Create snapshot of the existing state before we overwrite it
           final tagsJson = dart_convert.jsonEncode(currentTagNames);
-          final varsJson = dart_convert.jsonEncode(existingVars.map((v) => {
-            'name': v.name,
-            'label': v.label,
-            'description': v.description,
-            'defaultValue': v.defaultValue,
-            'exampleValue': v.exampleValue,
-            'isRequired': v.isRequired,
-          }).toList());
+          final varsJson = dart_convert.jsonEncode(existingVars
+              .map((v) => {
+                    'name': v.name,
+                    'label': v.label,
+                    'description': v.description,
+                    'defaultValue': v.defaultValue,
+                    'exampleValue': v.exampleValue,
+                    'isRequired': v.isRequired,
+                  })
+              .toList());
 
           await promptDao.createPromptVersion(PromptVersionsCompanion.insert(
             id: const Uuid().v4(),
@@ -256,14 +282,20 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           id: currentPromptId,
           title: _titleController.text,
           body: _bodyController.text,
-          purpose: _purposeController.text.isNotEmpty ? drift.Value(_purposeController.text) : const drift.Value.absent(),
+          purpose: _purposeController.text.isNotEmpty
+              ? drift.Value(_purposeController.text)
+              : const drift.Value.absent(),
           createdAt: _existingPrompt!.createdAt,
           updatedAt: now,
         ));
       }
 
       // Save tags
-      final tagNames = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      final tagNames = _tagsController.text
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
       await tagDao.replaceTagsForPrompt(currentPromptId, tagNames);
 
       // Save variables
@@ -275,10 +307,18 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           id: const Uuid().v4(),
           promptId: currentPromptId,
           name: vName,
-          label: form.labelController.text.isNotEmpty ? drift.Value(form.labelController.text) : const drift.Value.absent(),
-          description: form.descriptionController.text.isNotEmpty ? drift.Value(form.descriptionController.text) : const drift.Value.absent(),
-          defaultValue: form.defaultController.text.isNotEmpty ? drift.Value(form.defaultController.text) : const drift.Value.absent(),
-          exampleValue: form.exampleController.text.isNotEmpty ? drift.Value(form.exampleController.text) : const drift.Value.absent(),
+          label: form.labelController.text.isNotEmpty
+              ? drift.Value(form.labelController.text)
+              : const drift.Value.absent(),
+          description: form.descriptionController.text.isNotEmpty
+              ? drift.Value(form.descriptionController.text)
+              : const drift.Value.absent(),
+          defaultValue: form.defaultController.text.isNotEmpty
+              ? drift.Value(form.defaultController.text)
+              : const drift.Value.absent(),
+          exampleValue: form.exampleController.text.isNotEmpty
+              ? drift.Value(form.exampleController.text)
+              : const drift.Value.absent(),
           isRequired: drift.Value(form.isRequired),
           sortOrder: drift.Value(order++),
           createdAt: now,
@@ -288,9 +328,28 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       }).toList();
       await pvDao.syncVariablesForPrompt(currentPromptId, varCompanions);
 
-      if (mounted) {
-        context.pop();
+      // Save in place: refresh the loaded prompt and the "Saved ·" indicator
+      // instead of leaving the editor, so the right-hand outputs panel stays
+      // available for continued work.
+      final wasNew = _existingPrompt == null;
+      final saved = await promptDao.getPromptById(currentPromptId);
+      if (!mounted) return;
+      setState(() {
+        _existingPrompt = saved;
+        _lastSavedAt = saved.updatedAt;
+        _dirty = false;
+      });
+      if (wasNew) {
+        final outputDao = ref.read(promptExampleOutputDaoProvider);
+        _outputsSubscription?.cancel();
+        _outputsSubscription =
+            outputDao.watchOutputsForPrompt(currentPromptId).listen((data) {
+          if (mounted) setState(() => _outputs = data);
+        });
       }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prompt saved')),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -313,7 +372,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         id: newPromptId,
         title: '${_existingPrompt!.title} (Copy)',
         body: _existingPrompt!.body,
-        purpose: _existingPrompt!.purpose != null ? drift.Value(_existingPrompt!.purpose!) : const drift.Value.absent(),
+        purpose: _existingPrompt!.purpose != null
+            ? drift.Value(_existingPrompt!.purpose!)
+            : const drift.Value.absent(),
         createdAt: now,
         updatedAt: now,
       ));
@@ -325,20 +386,31 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
       // Duplicate variable metadata
       final pvDao = ref.read(promptVariableDaoProvider);
-      final existingVars = await pvDao.getVariablesForPrompt(_existingPrompt!.id);
-      final newVarCompanions = existingVars.map((v) => PromptVariablesCompanion.insert(
-        id: const Uuid().v4(),
-        promptId: newPromptId,
-        name: v.name,
-        label: v.label != null ? drift.Value(v.label!) : const drift.Value.absent(),
-        description: v.description != null ? drift.Value(v.description!) : const drift.Value.absent(),
-        defaultValue: v.defaultValue != null ? drift.Value(v.defaultValue!) : const drift.Value.absent(),
-        exampleValue: v.exampleValue != null ? drift.Value(v.exampleValue!) : const drift.Value.absent(),
-        isRequired: drift.Value(v.isRequired),
-        sortOrder: drift.Value(v.sortOrder),
-        createdAt: now,
-        updatedAt: now,
-      )).toList();
+      final existingVars =
+          await pvDao.getVariablesForPrompt(_existingPrompt!.id);
+      final newVarCompanions = existingVars
+          .map((v) => PromptVariablesCompanion.insert(
+                id: const Uuid().v4(),
+                promptId: newPromptId,
+                name: v.name,
+                label: v.label != null
+                    ? drift.Value(v.label!)
+                    : const drift.Value.absent(),
+                description: v.description != null
+                    ? drift.Value(v.description!)
+                    : const drift.Value.absent(),
+                defaultValue: v.defaultValue != null
+                    ? drift.Value(v.defaultValue!)
+                    : const drift.Value.absent(),
+                exampleValue: v.exampleValue != null
+                    ? drift.Value(v.exampleValue!)
+                    : const drift.Value.absent(),
+                isRequired: drift.Value(v.isRequired),
+                sortOrder: drift.Value(v.sortOrder),
+                createdAt: now,
+                updatedAt: now,
+              ))
+          .toList();
       await pvDao.syncVariablesForPrompt(newPromptId, newVarCompanions);
 
       if (mounted) {
@@ -381,7 +453,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
     if (confirmed == true && mounted) {
       final promptDao = ref.read(promptDaoProvider);
       await promptDao.archivePrompt(_existingPrompt!.id);
-      
+
       if (mounted) {
         context.pop();
       }
@@ -406,17 +478,20 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
             IconButton(
               icon: const Icon(Icons.science),
               tooltip: 'Examples & Comparisons',
-              onPressed: () => context.push('/library/examples/${_existingPrompt!.id}'),
+              onPressed: () =>
+                  context.push('/library/examples/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.manage_history),
               tooltip: 'Version History',
-              onPressed: () => context.push('/library/versions/${_existingPrompt!.id}'),
+              onPressed: () =>
+                  context.push('/library/versions/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.play_arrow),
               tooltip: 'Use Prompt (Compile)',
-              onPressed: () => context.push('/library/compile/${_existingPrompt!.id}'),
+              onPressed: () =>
+                  context.push('/library/compile/${_existingPrompt!.id}'),
             ),
             IconButton(
               icon: const Icon(Icons.copy),
@@ -438,265 +513,559 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _purposeController,
-              decoration: const InputDecoration(
-                labelText: 'Purpose / Description (Optional)',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _tagsController,
-              decoration: const InputDecoration(
-                labelText: 'Tags (comma-separated)',
-                hintText: 'e.g. coding, article, translation',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: AppDesign.spacingMd),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final twoColumn = constraints.maxWidth >= AppDesign.splitBreakpoint;
+            if (!twoColumn) {
+              // Below the breakpoint: collapse to a single scroll view holding
+              // the header band, body editor, then saved outputs. Keeping the
+              // header inside this list (rather than as a fixed band) means the
+              // list stays the primary scrollable for the whole screen.
+              return ListView(
+                padding: const EdgeInsets.all(AppDesign.spacingLg),
+                children: [
+                  _buildHeaderBand(context, banded: false),
+                  const SizedBox(height: AppDesign.spacingLg),
+                  ..._bodyEditorChildren(context),
+                  const SizedBox(height: AppDesign.spacingXl),
+                  ..._outputsChildren(context),
+                ],
+              );
+            }
+            // Wide: a fixed full-width header band, then two independently
+            // scrolling columns — left = body editor (~57%), right = saved
+            // outputs (~43%).
+            return Column(
               children: [
-                Text('Prompt Body', style: Theme.of(context).textTheme.titleSmall),
-                FilledButton.tonalIcon(
-                  onPressed: () async {
-                    FocusScope.of(context).unfocus();
-                    final newText = await PromptBodyFocusEditor.show(
-                      context,
-                      _bodyController.text,
-                    );
-                    if (newText != null && newText != _bodyController.text) {
-                      _bodyController.text = newText;
-                      // Form listeners will pick this up to extract variables
-                    }
-                  },
-                  icon: const Icon(Icons.fullscreen),
-                  label: const Text('Open Focus Editor'),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDesign.spacingSm),
-            InkWell(
-              onTap: () async {
-                FocusScope.of(context).unfocus();
-                final newText = await PromptBodyFocusEditor.show(
-                  context,
-                  _bodyController.text,
-                );
-                if (newText != null && newText != _bodyController.text) {
-                  _bodyController.text = newText;
-                }
-              },
-              borderRadius: AppDesign.borderMd,
-              child: Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-                  borderRadius: AppDesign.borderMd,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: IgnorePointer(
-                  // IgnorePointer so clicks on the preview trigger the InkWell instead of inline edit
-                  child: Stack(
+                _buildHeaderBand(context, banded: true),
+                const Divider(height: 1),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      InlineMarkdownEditor(
-                        controller: _bodyController,
-                        readerStyle: MarkdownReaderStyle.promptForge,
+                      Expanded(
+                        flex: 57,
+                        child: ListView(
+                          padding: const EdgeInsets.all(AppDesign.spacingLg),
+                          children: _bodyEditorChildren(context),
+                        ),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: 60,
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        flex: 43,
                         child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.0),
-                                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.8),
-                              ],
-                            ),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerLow
+                              .withValues(alpha: 0.4),
+                          child: ListView(
+                            padding: const EdgeInsets.all(AppDesign.spacingLg),
+                            children: _outputsChildren(context),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            if (_detectedVariables.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text('Variable Metadata', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              ..._detectedVariables.map((vName) {
-                final form = _variableForms[vName]!;
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('{{$vName}}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Row(
-                              children: [
-                                const Text('Required: '),
-                                Switch(
-                                  value: form.isRequired,
-                                  onChanged: (val) {
-                                    setState(() => form.isRequired = val);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 16,
-                          runSpacing: 16,
-                          children: [
-                            SizedBox(
-                              width: 300,
-                              child: TextField(
-                                controller: form.labelController,
-                                decoration: const InputDecoration(labelText: 'Display Label', border: OutlineInputBorder()),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 300,
-                              child: TextField(
-                                controller: form.descriptionController,
-                                decoration: const InputDecoration(labelText: 'Description (Helper text)', border: OutlineInputBorder()),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 300,
-                              child: TextField(
-                                controller: form.defaultController,
-                                decoration: const InputDecoration(labelText: 'Default Value', border: OutlineInputBorder()),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 300,
-                              child: TextField(
-                                controller: form.exampleController,
-                                decoration: const InputDecoration(labelText: 'Example Value (Hint)', border: OutlineInputBorder()),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-            const SizedBox(height: 32),
-            _buildOutputsLab(),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildOutputsLab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // --- Header band (Title / Purpose / Tags), full width and compact ---
+  Widget _buildHeaderBand(BuildContext context, {required bool banded}) {
+    final titleField = TextFormField(
+      controller: _titleController,
+      onChanged: (_) => _markDirty(),
+      style: Theme.of(context).textTheme.titleMedium,
+      decoration: const InputDecoration(
+        labelText: 'Title',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      validator: (value) {
+        if (value == null || value.trim().isEmpty) {
+          return 'Please enter a title';
+        }
+        return null;
+      },
+    );
+    final purposeField = TextFormField(
+      controller: _purposeController,
+      onChanged: (_) => _markDirty(),
+      decoration: const InputDecoration(
+        labelText: 'Purpose / Description (Optional)',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      maxLines: 1,
+    );
+    final tagsField = TextFormField(
+      controller: _tagsController,
+      onChanged: (_) => _markDirty(),
+      decoration: const InputDecoration(
+        labelText: 'Tags (comma-separated)',
+        hintText: 'e.g. coding, article, translation',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+
+    final inner = LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < AppDesign.mobileBreakpoint) {
+          return Column(
+            children: [
+              titleField,
+              const SizedBox(height: AppDesign.spacingSm),
+              purposeField,
+              const SizedBox(height: AppDesign.spacingSm),
+              tagsField,
+            ],
+          );
+        }
+        return Column(
           children: [
-            Text('Saved Outputs', style: Theme.of(context).textTheme.titleLarge),
-            FilledButton.icon(
-              onPressed: _existingPrompt == null 
+            titleField,
+            const SizedBox(height: AppDesign.spacingSm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: purposeField),
+                const SizedBox(width: AppDesign.spacingMd),
+                Expanded(flex: 2, child: tagsField),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!banded) return inner;
+    return Container(
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppDesign.spacingLg,
+        vertical: AppDesign.spacingMd,
+      ),
+      child: inner,
+    );
+  }
+
+  // --- Left column: prompt body editor, footer, outline, variables ---
+  List<Widget> _bodyEditorChildren(BuildContext context) {
+    final theme = Theme.of(context);
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Prompt Body', style: theme.textTheme.titleLarge),
+          FilledButton.tonalIcon(
+            onPressed: () async {
+              FocusScope.of(context).unfocus();
+              final newText = await PromptBodyFocusEditor.show(
+                context,
+                _bodyController.text,
+              );
+              if (newText != null && newText != _bodyController.text) {
+                _bodyController.text = newText;
+                // Body listener picks this up to extract variables + counts.
+              }
+            },
+            icon: const Icon(Icons.fullscreen),
+            label: const Text('Open Focus Editor'),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppDesign.spacingSm),
+      InkWell(
+        onTap: () async {
+          FocusScope.of(context).unfocus();
+          final newText = await PromptBodyFocusEditor.show(
+            context,
+            _bodyController.text,
+          );
+          if (newText != null && newText != _bodyController.text) {
+            _bodyController.text = newText;
+          }
+        },
+        borderRadius: AppDesign.borderMd,
+        child: Container(
+          height: 250,
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: AppDesign.borderMd,
+            color: theme.colorScheme.surfaceContainerLow,
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: IgnorePointer(
+            // IgnorePointer so clicks on the preview trigger the InkWell
+            // instead of inline edit.
+            child: Stack(
+              children: [
+                _bodyController.text.trim().isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(AppDesign.spacingMd),
+                        child: Text(
+                          'Tap to open the focus editor and write your prompt…',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    : InlineMarkdownEditor(
+                        controller: _bodyController,
+                        readerStyle: MarkdownReaderStyle.promptForge,
+                      ),
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 60,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          theme.colorScheme.surfaceContainerLow
+                              .withValues(alpha: 0.0),
+                          theme.colorScheme.surfaceContainerLow,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(height: AppDesign.spacingSm),
+      _buildBodyFooter(context),
+      const SizedBox(height: AppDesign.spacingLg),
+      _buildOutline(context),
+      if (_detectedVariables.isNotEmpty) ...[
+        const SizedBox(height: AppDesign.spacingLg),
+        Text('Variable Metadata', style: theme.textTheme.titleLarge),
+        const SizedBox(height: AppDesign.spacingSm),
+        ..._detectedVariables.map((vName) {
+          final form = _variableForms[vName]!;
+          return Card(
+            margin: const EdgeInsets.only(bottom: AppDesign.spacingMd),
+            child: Padding(
+              padding: const EdgeInsets.all(AppDesign.spacingMd),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('{{$vName}}',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontFamily: AppDesign.fontMono)),
+                      Row(
+                        children: [
+                          const Text('Required: '),
+                          Switch(
+                            value: form.isRequired,
+                            onChanged: (val) {
+                              setState(() {
+                                form.isRequired = val;
+                                _dirty = true;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDesign.spacingSm),
+                  Wrap(
+                    spacing: AppDesign.spacingMd,
+                    runSpacing: AppDesign.spacingMd,
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: TextField(
+                          controller: form.labelController,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(
+                              labelText: 'Display Label',
+                              border: OutlineInputBorder()),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 300,
+                        child: TextField(
+                          controller: form.descriptionController,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(
+                              labelText: 'Description (Helper text)',
+                              border: OutlineInputBorder()),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 300,
+                        child: TextField(
+                          controller: form.defaultController,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(
+                              labelText: 'Default Value',
+                              border: OutlineInputBorder()),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 300,
+                        child: TextField(
+                          controller: form.exampleController,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(
+                              labelText: 'Example Value (Hint)',
+                              border: OutlineInputBorder()),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    ];
+  }
+
+  // Live character + estimated token count, plus a "Saved ·" indicator.
+  Widget _buildBodyFooter(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final text = _bodyController.text;
+    final chars = text.characters.length;
+    // Rough heuristic: ~4 characters per token (English prose / prompts).
+    final tokens = text.trim().isEmpty ? 0 : (chars / 4).ceil();
+
+    String savedLabel;
+    Color savedColor;
+    if (_dirty) {
+      savedLabel = 'Unsaved changes';
+      savedColor = context.forge.warning;
+    } else if (_lastSavedAt != null) {
+      savedLabel = 'Saved · ${DateFormat.jm().format(_lastSavedAt!.toLocal())}';
+      savedColor = context.forge.success;
+    } else {
+      savedLabel = 'Not saved yet';
+      savedColor = muted;
+    }
+
+    return Row(
+      children: [
+        Icon(Icons.tag, size: 14, color: muted),
+        const SizedBox(width: AppDesign.spacingXs),
+        Text(
+          '$chars chars · ~$tokens tokens',
+          style: theme.textTheme.labelMedium
+              ?.copyWith(color: muted, fontFamily: AppDesign.fontMono),
+        ),
+        const Spacer(),
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: savedColor, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: AppDesign.spacingSm),
+        Text(savedLabel,
+            style: theme.textTheme.labelMedium?.copyWith(color: savedColor)),
+      ],
+    );
+  }
+
+  // Contents outline derived from Markdown headings in the body.
+  Widget _buildOutline(BuildContext context) {
+    final theme = Theme.of(context);
+    final headings = _extractHeadings(_bodyController.text);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppDesign.spacingMd),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.5),
+        borderRadius: AppDesign.borderMd,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.list_alt, size: 16, color: theme.colorScheme.primary),
+              const SizedBox(width: AppDesign.spacingSm),
+              Text('Contents', style: theme.textTheme.titleSmall),
+            ],
+          ),
+          const SizedBox(height: AppDesign.spacingSm),
+          if (headings.isEmpty)
+            Text(
+              'No headings yet — add Markdown headings (#, ##) to outline your prompt.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+            )
+          else
+            ...headings.map((h) => Padding(
+                  padding: EdgeInsets.only(
+                    left: (h.level - 1) * AppDesign.spacingMd,
+                    bottom: AppDesign.spacingXs,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Icon(Icons.chevron_right,
+                            size: 14,
+                            color: theme.colorScheme.onSurfaceVariant),
+                      ),
+                      const SizedBox(width: AppDesign.spacingXs),
+                      Expanded(
+                        child: Text(
+                          h.text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: h.level == 1
+                              ? theme.textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600)
+                              : theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+        ],
+      ),
+    );
+  }
+
+  // --- Right column: saved outputs ---
+  List<Widget> _outputsChildren(BuildContext context) {
+    final theme = Theme.of(context);
+    return [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text('Saved Outputs',
+                style: theme.textTheme.titleLarge,
+                overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: AppDesign.spacingSm),
+          FilledButton.icon(
+            onPressed: _existingPrompt == null
                 ? () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please save the prompt first.')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Please save the prompt first.')));
                   }
                 : () async {
                     FocusScope.of(context).unfocus();
-                    final result = await showDialog<bool>(
+                    await showDialog<bool>(
                       context: context,
                       builder: (context) => ManualOutputPasteDialog(
                         promptId: _existingPrompt!.id,
                         compiledPromptSnapshot: _bodyController.text,
                       ),
                     );
-                    if (result == true) {
-                      // Output saved, stream will auto-update
-                    }
+                    // Output saved (if any), the stream auto-updates the list.
                   },
-              icon: const Icon(Icons.add),
-              label: const Text('Paste LLM Output'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (_outputs.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, style: BorderStyle.solid),
-              borderRadius: AppDesign.borderLg,
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.chat_bubble_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
-                const SizedBox(height: 16),
-                Text('No manual outputs saved yet.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                const SizedBox(height: 8),
-                Text('Run the prompt externally and paste the result here.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-              ],
-            ),
-          )
-        else
-          ..._outputs.map((output) => PromptOutputCard(
-            output: output,
-            onDelete: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete output?'),
-                  content: const Text('Are you sure you want to delete this output?'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.of(context).pop(true), style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error), child: const Text('Delete')),
-                  ],
-                ),
-              );
-              if (confirm == true && mounted) {
-                await ref.read(promptExampleOutputDaoProvider).deleteOutput(output.id);
-              }
-            },
-          )),
-      ],
-    );
+            icon: const Icon(Icons.add),
+            label: const Text('Paste LLM Output'),
+          ),
+        ],
+      ),
+      const SizedBox(height: AppDesign.spacingMd),
+      if (_outputs.isEmpty)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppDesign.spacingXl),
+          decoration: BoxDecoration(
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            borderRadius: AppDesign.borderLg,
+            color: theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.4),
+          ),
+          child: Column(
+            children: [
+              Icon(Icons.chat_bubble_outline,
+                  size: 48,
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5)),
+              const SizedBox(height: AppDesign.spacingMd),
+              Text('No outputs saved yet.',
+                  style: theme.textTheme.bodyLarge
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              const SizedBox(height: AppDesign.spacingSm),
+              Text('Run the prompt externally and paste the result here.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
+        )
+      else
+        ..._outputs.map((output) => PromptOutputCard(
+              output: output,
+              onDelete: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete output?'),
+                    content: const Text(
+                        'Are you sure you want to delete this output?'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel')),
+                      TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          style: TextButton.styleFrom(
+                              foregroundColor: theme.colorScheme.error),
+                          child: const Text('Delete')),
+                    ],
+                  ),
+                );
+                if (confirm == true && mounted) {
+                  await ref
+                      .read(promptExampleOutputDaoProvider)
+                      .deleteOutput(output.id);
+                }
+              },
+            )),
+    ];
   }
+}
+
+class _Heading {
+  final int level;
+  final String text;
+  const _Heading(this.level, this.text);
+}
+
+List<_Heading> _extractHeadings(String body) {
+  final result = <_Heading>[];
+  final headingRe = RegExp(r'^(#{1,6})\s+(.*\S)\s*$');
+  var inFence = false;
+  for (final raw in body.split('\n')) {
+    final line = raw.trimRight();
+    final trimmed = line.trimLeft();
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    final m = headingRe.firstMatch(line);
+    if (m != null) {
+      result.add(_Heading(m.group(1)!.length, m.group(2)!.trim()));
+    }
+  }
+  return result;
 }
