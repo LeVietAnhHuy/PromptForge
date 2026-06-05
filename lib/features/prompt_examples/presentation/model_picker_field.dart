@@ -7,13 +7,16 @@ import '../application/llm_model_catalog.dart';
 import '../application/recent_models_service.dart';
 
 /// A combobox-style model picker. The closed field shows the current selection;
-/// opening it reveals a single dropdown grouped by family (sticky headers,
-/// newest family/version first), with legacy models tucked into a collapsed
-/// "Legacy (N)" expander per group and a pinned "Recent" group on top.
+/// opening it reveals a single dropdown with a "Recent" group, chat/text model
+/// families (newest first, expanded by default, each with a collapsed
+/// "Legacy (N)" sub-row), then specialized capabilities (Image/Audio/Video/
+/// Embedding/Other) as collapsed groups, plus a capability filter-chip row.
 ///
-/// While open it behaves as a combobox: typing filters the list live (the
-/// buffer shows as an inline chip — there is no visible text field), arrows
-/// move the highlight, Enter selects, and Escape clears the buffer then closes.
+/// Group headers scroll naturally and are expand/collapse buttons (mouse +
+/// keyboard). Typing filters live (buffer shown as an inline chip; matches in a
+/// collapsed group auto-expand it). Arrows move focus across headers/models,
+/// Enter selects/toggles, Left/Right collapse/expand a focused header, Escape
+/// clears the buffer then closes.
 class ModelPickerField extends ConsumerStatefulWidget {
   final String? providerId;
   final List<LlmModelOption> models;
@@ -34,6 +37,45 @@ class ModelPickerField extends ConsumerStatefulWidget {
   ConsumerState<ModelPickerField> createState() => _ModelPickerFieldState();
 }
 
+// --- internal view model ---
+
+class _Group {
+  final String id; // 'recent' | 'fam:<family>' | 'cap:<capability>'
+  final String title;
+  final IconData? icon;
+  final List<LlmModelOption> current; // non-legacy (chat) / all (capability)
+  final List<LlmModelOption> legacy; // split-out legacy (chat families only)
+  final bool supportsLegacySplit;
+  final bool collapsedByDefault;
+
+  const _Group({
+    required this.id,
+    required this.title,
+    this.icon,
+    required this.current,
+    this.legacy = const [],
+    this.supportsLegacySplit = false,
+    this.collapsedByDefault = false,
+  });
+}
+
+enum _RowKind { header, model, legacyToggle, custom }
+
+class _Row {
+  final _RowKind kind;
+  final _Group? group;
+  final LlmModelOption? model;
+  final bool legacy;
+  const _Row(this.kind, {this.group, this.model, this.legacy = false});
+
+  String get focusKey => switch (kind) {
+        _RowKind.header => 'h:${group!.id}',
+        _RowKind.legacyToggle => 'lt:${group!.id}',
+        _RowKind.model => 'm:${model!.id}:${legacy ? 'l' : 'c'}',
+        _RowKind.custom => 'custom',
+      };
+}
+
 class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
   final LayerLink _link = LayerLink();
   final OverlayPortalController _overlay = OverlayPortalController();
@@ -41,14 +83,15 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
   final ScrollController _scrollController = ScrollController();
 
   String _buffer = '';
-  int _highlight = 0;
+  int _focusIndex = 0;
   double _fieldWidth = 320;
   List<String> _recent = const [];
-  final Set<String> _expandedLegacy = {};
+  ModelCapability? _capabilityFilter; // null = All
+  final Set<String> _collapsed = {}; // group ids currently collapsed
+  final Set<String> _legacyExpanded = {}; // family group ids w/ legacy shown
   final Map<String, GlobalKey> _rowKeys = {};
 
-  // Flat list of selectable model ids in display order (for arrow nav).
-  List<String> _selectableIds = const [];
+  List<_Row> _rows = const [];
 
   @override
   void dispose() {
@@ -64,8 +107,10 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     return null;
   }
 
-  GlobalKey _keyFor(String rowId) =>
-      _rowKeys.putIfAbsent(rowId, () => GlobalKey());
+  GlobalKey _keyFor(String focusKey) =>
+      _rowKeys.putIfAbsent(focusKey, () => GlobalKey());
+
+  bool get _filtering => _buffer.trim().isNotEmpty;
 
   Future<void> _open() async {
     final providerId = widget.providerId;
@@ -75,26 +120,36 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     if (!mounted) return;
     setState(() {
       _buffer = '';
+      _capabilityFilter = null;
       _recent = recent;
-      _expandedLegacy.clear();
-      _highlight = _initialHighlight();
+      _legacyExpanded.clear();
+      // Collapse capability groups by default; chat families stay open.
+      _collapsed
+        ..clear()
+        ..addAll(
+            _buildGroups().where((g) => g.collapsedByDefault).map((g) => g.id));
+      _rows = _buildRows();
+      _focusIndex = _initialFocusIndex();
     });
     _overlay.show();
-    // Focus the overlay so keystrokes are captured immediately.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
-      _scrollHighlightIntoView();
+      _scrollFocusedIntoView();
     });
   }
 
-  int _initialHighlight() {
-    final idx = _selectableIds.indexOf(widget.selectedModelId ?? '');
-    return idx >= 0 ? idx : 0;
+  int _initialFocusIndex() {
+    final sel = widget.selectedModelId;
+    if (sel != null) {
+      final idx = _rows
+          .indexWhere((r) => r.kind == _RowKind.model && r.model!.id == sel);
+      if (idx >= 0) return idx;
+    }
+    return _rows.indexWhere(
+        (r) => r.kind == _RowKind.model || r.kind == _RowKind.custom);
   }
 
-  void _close() {
-    _overlay.hide();
-  }
+  void _close() => _overlay.hide();
 
   void _select(String modelId) {
     final providerId = widget.providerId;
@@ -105,19 +160,30 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     _close();
   }
 
-  void _move(int delta) {
-    if (_selectableIds.isEmpty) return;
+  void _rebuild({int? focus}) {
     setState(() {
-      _highlight = (_highlight + delta).clamp(0, _selectableIds.length - 1);
+      _rows = _buildRows();
+      if (focus != null) {
+        _focusIndex = focus.clamp(0, _rows.isEmpty ? 0 : _rows.length - 1);
+      } else if (_focusIndex >= _rows.length) {
+        _focusIndex = _rows.isEmpty ? 0 : _rows.length - 1;
+      }
     });
-    _scrollHighlightIntoView();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _scrollFocusedIntoView());
   }
 
-  void _scrollHighlightIntoView() {
-    if (_highlight < 0 || _highlight >= _selectableIds.length) return;
-    final id = _selectableIds[_highlight];
-    final key = _rowKeys['model:$id'];
-    final ctx = key?.currentContext;
+  void _move(int delta) {
+    if (_rows.isEmpty) return;
+    setState(() {
+      _focusIndex = (_focusIndex + delta).clamp(0, _rows.length - 1);
+    });
+    _scrollFocusedIntoView();
+  }
+
+  void _scrollFocusedIntoView() {
+    if (_focusIndex < 0 || _focusIndex >= _rows.length) return;
+    final ctx = _rowKeys[_rows[_focusIndex].focusKey]?.currentContext;
     if (ctx != null) {
       Scrollable.ensureVisible(ctx,
           alignment: 0.5,
@@ -125,11 +191,54 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     }
   }
 
-  void _onBufferChanged() {
-    // Reset highlight to the first match whenever the filter changes.
-    setState(() => _highlight = 0);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _scrollHighlightIntoView());
+  void _toggleGroup(_Group g) {
+    setState(() {
+      if (_collapsed.contains(g.id)) {
+        _collapsed.remove(g.id);
+      } else {
+        _collapsed.add(g.id);
+      }
+    });
+    _rebuild();
+  }
+
+  void _setGroupCollapsed(_Group g, bool collapsed) {
+    if (_filtering) return; // collapse state ignored while filtering
+    if (collapsed == _collapsed.contains(g.id)) return;
+    setState(() {
+      if (collapsed) {
+        _collapsed.add(g.id);
+      } else {
+        _collapsed.remove(g.id);
+      }
+    });
+    _rebuild();
+  }
+
+  void _toggleLegacy(_Group g) {
+    setState(() {
+      if (_legacyExpanded.contains(g.id)) {
+        _legacyExpanded.remove(g.id);
+      } else {
+        _legacyExpanded.add(g.id);
+      }
+    });
+    _rebuild();
+  }
+
+  void _activateFocused() {
+    if (_focusIndex < 0 || _focusIndex >= _rows.length) return;
+    final row = _rows[_focusIndex];
+    switch (row.kind) {
+      case _RowKind.header:
+        _toggleGroup(row.group!);
+      case _RowKind.legacyToggle:
+        _toggleLegacy(row.group!);
+      case _RowKind.model:
+        _select(row.model!.id);
+      case _RowKind.custom:
+        _select('custom');
+    }
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -140,7 +249,7 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     if (key == LogicalKeyboardKey.escape) {
       if (_buffer.isNotEmpty) {
         setState(() => _buffer = '');
-        _onBufferChanged();
+        _rebuild(focus: 0);
       } else {
         _close();
       }
@@ -154,19 +263,30 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
       _move(-1);
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter) {
-      if (_selectableIds.isNotEmpty &&
-          _highlight >= 0 &&
-          _highlight < _selectableIds.length) {
-        _select(_selectableIds[_highlight]);
+    if (key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.arrowLeft) {
+      final expand = key == LogicalKeyboardKey.arrowRight;
+      if (_focusIndex >= 0 && _focusIndex < _rows.length) {
+        final row = _rows[_focusIndex];
+        if (row.kind == _RowKind.header) {
+          _setGroupCollapsed(row.group!, !expand);
+        } else if (row.kind == _RowKind.legacyToggle) {
+          final on = _legacyExpanded.contains(row.group!.id);
+          if (expand != on) _toggleLegacy(row.group!);
+        }
       }
+      return KeyEventResult.handled;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      _activateFocused();
       return KeyEventResult.handled;
     }
     if (key == LogicalKeyboardKey.backspace) {
       if (_buffer.isNotEmpty) {
         setState(() => _buffer = _buffer.substring(0, _buffer.length - 1));
-        _onBufferChanged();
+        _rebuild(focus: 0);
       }
       return KeyEventResult.handled;
     }
@@ -176,7 +296,7 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
         ch.codeUnitAt(0) >= 0x20 &&
         ch.codeUnitAt(0) != 0x7f) {
       setState(() => _buffer += ch);
-      _onBufferChanged();
+      _rebuild(focus: 0);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -189,6 +309,133 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
         m.family.toLowerCase().contains(q) ||
         m.id.toLowerCase().contains(q);
   }
+
+  // --- grouping ---
+
+  List<_Group> _buildGroups() {
+    final catalog = widget.models.where((m) => m.id != 'custom').toList();
+    final groups = <_Group>[];
+
+    // Recent (only at "All", no text filter).
+    if (!_filtering && _capabilityFilter == null && _recent.isNotEmpty) {
+      final recentModels = <LlmModelOption>[];
+      for (final id in _recent) {
+        final m = _optionById(id);
+        if (m != null && m.id != 'custom') recentModels.add(m);
+      }
+      if (recentModels.isNotEmpty) {
+        groups.add(_Group(
+          id: 'recent',
+          title: 'Recent',
+          icon: Icons.history,
+          current: recentModels,
+        ));
+      }
+    }
+
+    // Chat families, newest first.
+    if (_capabilityFilter == null ||
+        _capabilityFilter == ModelCapability.chat) {
+      final chat =
+          catalog.where((m) => capabilityOf(m) == ModelCapability.chat);
+      final families = <String, List<LlmModelOption>>{};
+      for (final m in chat) {
+        families.putIfAbsent(m.family, () => []).add(m);
+      }
+      final ordered = families.keys.toList()
+        ..sort((a, b) {
+          int maxOrder(String f) => families[f]!
+              .map((m) => m.approximateReleaseOrder)
+              .fold<int>(0, (p, e) => e > p ? e : p);
+          return maxOrder(b).compareTo(maxOrder(a));
+        });
+      for (final fam in ordered) {
+        final all = families[fam]!
+          ..sort((a, b) =>
+              b.approximateReleaseOrder.compareTo(a.approximateReleaseOrder));
+        groups.add(_Group(
+          id: 'fam:$fam',
+          title: fam,
+          current: all.where((m) => !m.isLegacy).toList(),
+          legacy: all.where((m) => m.isLegacy).toList(),
+          supportsLegacySplit: true,
+        ));
+      }
+    }
+
+    // Capability buckets, collapsed by default, at the bottom.
+    const capOrder = [
+      ModelCapability.image,
+      ModelCapability.audio,
+      ModelCapability.video,
+      ModelCapability.embedding,
+      ModelCapability.other,
+    ];
+    const capIcons = {
+      ModelCapability.image: Icons.image_outlined,
+      ModelCapability.audio: Icons.audiotrack_outlined,
+      ModelCapability.video: Icons.movie_outlined,
+      ModelCapability.embedding: Icons.scatter_plot_outlined,
+      ModelCapability.other: Icons.category_outlined,
+    };
+    for (final cap in capOrder) {
+      if (_capabilityFilter != null && _capabilityFilter != cap) continue;
+      final models = catalog.where((m) => capabilityOf(m) == cap).toList()
+        ..sort((a, b) =>
+            b.approximateReleaseOrder.compareTo(a.approximateReleaseOrder));
+      if (models.isEmpty) continue;
+      groups.add(_Group(
+        id: 'cap:${cap.name}',
+        title: cap.label,
+        icon: capIcons[cap],
+        current: models,
+        collapsedByDefault: true,
+      ));
+    }
+
+    return groups;
+  }
+
+  bool _expanded(_Group g) =>
+      _filtering || _capabilityFilter != null || !_collapsed.contains(g.id);
+
+  List<_Row> _buildRows() {
+    final rows = <_Row>[];
+    for (final g in _buildGroups()) {
+      final current = g.current.where(_matches).toList();
+      final legacyMatches = g.legacy.where(_matches).toList();
+      // While filtering, drop groups with no matches entirely.
+      if (_filtering && current.isEmpty && legacyMatches.isEmpty) continue;
+
+      rows.add(_Row(_RowKind.header, group: g));
+      if (!_expanded(g)) continue;
+
+      for (final m in current) {
+        rows.add(_Row(_RowKind.model, group: g, model: m));
+      }
+      if (g.supportsLegacySplit && g.legacy.isNotEmpty) {
+        if (_filtering) {
+          for (final m in legacyMatches) {
+            rows.add(_Row(_RowKind.model, group: g, model: m, legacy: true));
+          }
+        } else {
+          rows.add(_Row(_RowKind.legacyToggle, group: g));
+          if (_legacyExpanded.contains(g.id)) {
+            for (final m in g.legacy) {
+              rows.add(_Row(_RowKind.model, group: g, model: m, legacy: true));
+            }
+          }
+        }
+      }
+    }
+
+    if (widget.models.any((m) => m.id == 'custom')) {
+      rows.add(const _Row(_RowKind.custom));
+    }
+    return rows;
+  }
+
+  // --- build ---
 
   @override
   Widget build(BuildContext context) {
@@ -245,9 +492,7 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Flexible(
-          child: Text(m.displayName, overflow: TextOverflow.ellipsis),
-        ),
+        Flexible(child: Text(m.displayName, overflow: TextOverflow.ellipsis)),
         if (m.isLegacy) _miniBadge(theme, 'LEGACY'),
         if (m.isPreview) _miniBadge(theme, 'PREVIEW'),
       ],
@@ -274,11 +519,10 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
 
   Widget _buildOverlay(BuildContext context) {
     final theme = Theme.of(context);
-    final slivers = _buildSlivers(theme);
+    final maxHeight = MediaQuery.of(context).size.height * 0.6;
 
     return Stack(
       children: [
-        // Outside-tap barrier.
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -303,8 +547,8 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
                 color: theme.colorScheme.surfaceContainerHigh,
                 surfaceTintColor: Colors.transparent,
                 child: Container(
-                  width: _fieldWidth < 280 ? 280 : _fieldWidth,
-                  constraints: const BoxConstraints(maxHeight: 380),
+                  width: _fieldWidth < 300 ? 300 : _fieldWidth,
+                  constraints: BoxConstraints(maxHeight: maxHeight),
                   decoration: BoxDecoration(
                     borderRadius: AppDesign.borderMd,
                     border: Border.all(color: theme.colorScheme.outlineVariant),
@@ -312,13 +556,21 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _buildChips(theme),
                       _buildBufferBar(theme),
                       Flexible(
-                        child: _selectableIds.isEmpty && _buffer.isNotEmpty
+                        child: _rows.isEmpty
                             ? _emptyState(theme)
-                            : CustomScrollView(
+                            : Scrollbar(
                                 controller: _scrollController,
-                                slivers: slivers,
+                                thumbVisibility: true,
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  padding: EdgeInsets.zero,
+                                  itemCount: _rows.length,
+                                  itemBuilder: (context, i) =>
+                                      _buildRow(theme, _rows[i], i),
+                                ),
                               ),
                       ),
                     ],
@@ -332,10 +584,61 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     );
   }
 
+  Widget _buildChips(ThemeData theme) {
+    final present = <ModelCapability>{
+      for (final m in widget.models.where((m) => m.id != 'custom'))
+        capabilityOf(m)
+    };
+    final caps = [
+      ModelCapability.chat,
+      ModelCapability.image,
+      ModelCapability.audio,
+      ModelCapability.video,
+      ModelCapability.embedding,
+      ModelCapability.other,
+    ].where(present.contains).toList();
+
+    Widget chip(String label, ModelCapability? cap) {
+      final selected = _capabilityFilter == cap;
+      return Padding(
+        padding: const EdgeInsets.only(right: AppDesign.spacingSm),
+        child: ChoiceChip(
+          label: Text(label),
+          selected: selected,
+          onSelected: (_) {
+            setState(() => _capabilityFilter = cap);
+            _rebuild(focus: 0);
+          },
+          visualDensity: VisualDensity.compact,
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDesign.spacingSm, vertical: AppDesign.spacingSm),
+      decoration: BoxDecoration(
+        border:
+            Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            chip('All', null),
+            for (final c in caps) chip(c.label, c),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _emptyState(ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.all(AppDesign.spacingLg),
-      child: Text('No models match “$_buffer”.',
+      child: Text(
+          _filtering ? 'No models match “$_buffer”.' : 'No models available.',
           style: theme.textTheme.bodySmall
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
     );
@@ -357,7 +660,10 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
           const SizedBox(width: AppDesign.spacingSm),
           if (_buffer.isEmpty)
             Expanded(
-              child: Text('Type to filter · ↑↓ to move · Enter to select',
+              child: Text(
+                  'Type to filter · ↑↓ move · ←→ collapse · Enter select',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             )
@@ -388,114 +694,58 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     );
   }
 
-  // Build the grouped slivers and, as a side effect, the flat selectable order.
-  List<Widget> _buildSlivers(ThemeData theme) {
-    final slivers = <Widget>[];
-    final selectable = <String>[];
-
-    final catalog = widget.models.where((m) => m.id != 'custom').toList();
-    final hasCustom = widget.models.any((m) => m.id == 'custom');
-    final filtering = _buffer.trim().isNotEmpty;
-
-    // Recent group (only when not filtering).
-    if (!filtering && _recent.isNotEmpty) {
-      final recentModels = <LlmModelOption>[];
-      for (final id in _recent) {
-        final m = _optionById(id);
-        if (m != null && m.id != 'custom') recentModels.add(m);
-      }
-      if (recentModels.isNotEmpty) {
-        slivers.add(
-            _header(theme, 'Recent', recentModels.length, icon: Icons.history));
-        slivers.add(_modelSliver(theme, recentModels, selectable));
-      }
+  Widget _buildRow(ThemeData theme, _Row row, int index) {
+    final focused = index == _focusIndex;
+    final key = _keyFor(row.focusKey);
+    switch (row.kind) {
+      case _RowKind.header:
+        return _headerRow(theme, row.group!, focused, key);
+      case _RowKind.legacyToggle:
+        return _legacyToggleRow(theme, row.group!, focused, key);
+      case _RowKind.model:
+        return _modelRow(theme, row.model!, focused, row.legacy, key);
+      case _RowKind.custom:
+        return _customRow(theme, focused, key);
     }
-
-    // Families, newest first by max release order.
-    final families = <String, List<LlmModelOption>>{};
-    for (final m in catalog) {
-      families.putIfAbsent(m.family, () => []).add(m);
-    }
-    final orderedFamilies = families.keys.toList()
-      ..sort((a, b) {
-        int maxOrder(String f) => families[f]!
-            .map((m) => m.approximateReleaseOrder)
-            .fold<int>(0, (p, e) => e > p ? e : p);
-        return maxOrder(b).compareTo(maxOrder(a));
-      });
-
-    for (final family in orderedFamilies) {
-      final all = families[family]!
-        ..sort((a, b) =>
-            b.approximateReleaseOrder.compareTo(a.approximateReleaseOrder));
-      final current = all.where((m) => !m.isLegacy).where(_matches).toList();
-      final legacyAll = all.where((m) => m.isLegacy).toList();
-      final legacyMatches = legacyAll.where(_matches).toList();
-
-      if (filtering && current.isEmpty && legacyMatches.isEmpty) continue;
-
-      slivers
-          .add(_header(theme, family, current.length + legacyMatches.length));
-      if (current.isNotEmpty) {
-        slivers.add(_modelSliver(theme, current, selectable));
-      }
-
-      if (legacyAll.isNotEmpty) {
-        if (filtering) {
-          // While filtering, legacy matches are shown inline (auto-expanded).
-          if (legacyMatches.isNotEmpty) {
-            slivers.add(
-                _modelSliver(theme, legacyMatches, selectable, legacy: true));
-          }
-        } else {
-          final expanded = _expandedLegacy.contains(family);
-          slivers.add(SliverToBoxAdapter(
-            child: _legacyToggle(theme, family, legacyAll.length, expanded),
-          ));
-          if (expanded) {
-            slivers
-                .add(_modelSliver(theme, legacyAll, selectable, legacy: true));
-          }
-        }
-      }
-    }
-
-    // Custom option pinned at the very bottom.
-    if (hasCustom) {
-      slivers.add(SliverToBoxAdapter(
-        child: _customRow(theme, selectable),
-      ));
-    }
-
-    _selectableIds = selectable;
-    if (_highlight >= _selectableIds.length) {
-      _highlight = _selectableIds.isEmpty ? 0 : _selectableIds.length - 1;
-    }
-    return slivers;
   }
 
-  Widget _header(ThemeData theme, String title, int count, {IconData? icon}) {
-    return SliverPersistentHeader(
-      pinned: true,
-      delegate: _HeaderDelegate(
-        height: 30,
-        child: Container(
-          color: theme.colorScheme.surfaceContainerHighest,
+  Widget _headerRow(ThemeData theme, _Group g, bool focused, Key key) {
+    final expanded = _expanded(g);
+    final count = g.current.length + g.legacy.length;
+    final lockedOpen = _filtering || _capabilityFilter != null;
+    return Container(
+      key: key,
+      color: focused
+          ? theme.colorScheme.primary.withValues(alpha: 0.12)
+          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      child: InkWell(
+        onTap: lockedOpen ? null : () => _toggleGroup(g),
+        child: Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingXs),
-          alignment: Alignment.centerLeft,
+              horizontal: AppDesign.spacingSm, vertical: AppDesign.spacingSm),
           child: Row(
             children: [
-              if (icon != null) ...[
-                Icon(icon, size: 13, color: theme.colorScheme.primary),
-                const SizedBox(width: 6),
+              Icon(
+                lockedOpen
+                    ? Icons.remove
+                    : (expanded ? Icons.expand_more : Icons.chevron_right),
+                size: 18,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: AppDesign.spacingXs),
+              if (g.icon != null) ...[
+                Icon(g.icon, size: 14, color: theme.colorScheme.primary),
+                const SizedBox(width: AppDesign.spacingSm),
               ],
-              Text(title.toUpperCase(),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      letterSpacing: 0.6,
-                      fontWeight: FontWeight.w700)),
-              const SizedBox(width: 6),
+              Expanded(
+                child: Text(g.title.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w700)),
+              ),
               Text('$count',
                   style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant
@@ -507,46 +757,65 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     );
   }
 
-  Widget _modelSliver(
-      ThemeData theme, List<LlmModelOption> models, List<String> selectable,
-      {bool legacy = false}) {
-    // Capture the start index so highlight maps to the right entries.
-    final rows = <Widget>[];
-    for (final m in models) {
-      final indexInSelectable = selectable.length;
-      selectable.add(m.id);
-      rows.add(_modelRow(theme, m, indexInSelectable, legacy: legacy));
-    }
-    return SliverList(delegate: SliverChildListDelegate(rows));
+  Widget _legacyToggleRow(ThemeData theme, _Group g, bool focused, Key key) {
+    final expanded = _legacyExpanded.contains(g.id);
+    return Container(
+      key: key,
+      color: focused
+          ? theme.colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: () => _toggleLegacy(g),
+        child: Padding(
+          padding: const EdgeInsets.only(
+              left: AppDesign.spacingLg,
+              right: AppDesign.spacingMd,
+              top: AppDesign.spacingSm,
+              bottom: AppDesign.spacingSm),
+          child: Row(
+            children: [
+              Icon(expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 16, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: AppDesign.spacingSm),
+              Text('Legacy (${g.legacy.length})',
+                  style: theme.textTheme.labelMedium
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _modelRow(ThemeData theme, LlmModelOption m, int selectableIndex,
-      {bool legacy = false}) {
-    final highlighted = selectableIndex == _highlight;
+  Widget _modelRow(
+      ThemeData theme, LlmModelOption m, bool focused, bool legacy, Key key) {
     final isSelected = m.id == widget.selectedModelId;
     return Container(
-      key: _keyFor('model:${m.id}'),
-      color: highlighted
+      key: key,
+      color: focused
           ? theme.colorScheme.primary.withValues(alpha: 0.14)
           : Colors.transparent,
       child: InkWell(
         onTap: () => _select(m.id),
         onHover: (h) {
-          if (h && _highlight != selectableIndex) {
-            setState(() => _highlight = selectableIndex);
+          if (h) {
+            final idx = _rows.indexWhere((r) =>
+                r.kind == _RowKind.model &&
+                r.model?.id == m.id &&
+                r.legacy == legacy);
+            if (idx >= 0 && idx != _focusIndex) {
+              setState(() => _focusIndex = idx);
+            }
           }
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingSm),
+          padding: EdgeInsets.only(
+              left: legacy ? AppDesign.spacingXl : AppDesign.spacingLg,
+              right: AppDesign.spacingMd,
+              top: AppDesign.spacingSm,
+              bottom: AppDesign.spacingSm),
           child: Row(
             children: [
-              if (legacy)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppDesign.spacingSm),
-                  child: Icon(Icons.subdirectory_arrow_right,
-                      size: 14, color: theme.colorScheme.onSurfaceVariant),
-                ),
               Expanded(
                 child: Text(
                   m.displayName,
@@ -574,44 +843,12 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
     );
   }
 
-  Widget _legacyToggle(
-      ThemeData theme, String family, int count, bool expanded) {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          if (expanded) {
-            _expandedLegacy.remove(family);
-          } else {
-            _expandedLegacy.add(family);
-          }
-        });
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingSm),
-        child: Row(
-          children: [
-            Icon(expanded ? Icons.expand_less : Icons.expand_more,
-                size: 16, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(width: AppDesign.spacingSm),
-            Text('Legacy ($count)',
-                style: theme.textTheme.labelMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _customRow(ThemeData theme, List<String> selectable) {
-    final indexInSelectable = selectable.length;
-    selectable.add('custom');
-    final highlighted = indexInSelectable == _highlight;
+  Widget _customRow(ThemeData theme, bool focused, Key key) {
     final isSelected = widget.selectedModelId == 'custom';
     return Container(
-      key: _keyFor('model:custom'),
+      key: key,
       decoration: BoxDecoration(
-        color: highlighted
+        color: focused
             ? theme.colorScheme.primary.withValues(alpha: 0.14)
             : Colors.transparent,
         border:
@@ -619,11 +856,6 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
       ),
       child: InkWell(
         onTap: () => _select('custom'),
-        onHover: (h) {
-          if (h && _highlight != indexInSelectable) {
-            setState(() => _highlight = indexInSelectable);
-          }
-        },
         child: Padding(
           padding: const EdgeInsets.symmetric(
               horizontal: AppDesign.spacingMd, vertical: AppDesign.spacingSm),
@@ -640,28 +872,5 @@ class _ModelPickerFieldState extends ConsumerState<ModelPickerField> {
         ),
       ),
     );
-  }
-}
-
-class _HeaderDelegate extends SliverPersistentHeaderDelegate {
-  final double height;
-  final Widget child;
-
-  _HeaderDelegate({required this.height, required this.child});
-
-  @override
-  double get minExtent => height;
-  @override
-  double get maxExtent => height;
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox.expand(child: child);
-  }
-
-  @override
-  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) {
-    return oldDelegate.height != height || oldDelegate.child != child;
   }
 }

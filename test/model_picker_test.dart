@@ -33,6 +33,11 @@ const _models = [
       approximateReleaseOrder: 10,
       isLegacy: true),
   LlmModelOption(
+      id: 'img-1',
+      displayName: 'Imagen Test',
+      family: 'Image',
+      approximateReleaseOrder: 15),
+  LlmModelOption(
       id: 'custom',
       displayName: 'Custom model…',
       family: '',
@@ -40,8 +45,9 @@ const _models = [
 ];
 
 class _Host extends StatefulWidget {
+  final List<LlmModelOption> models;
   final ValueChanged<String>? onSelected;
-  const _Host({this.onSelected});
+  const _Host({required this.models, this.onSelected});
   @override
   State<_Host> createState() => _HostState();
 }
@@ -57,7 +63,7 @@ class _HostState extends State<_Host> {
           width: 360,
           child: ModelPickerField(
             providerId: 'openai',
-            models: _models,
+            models: widget.models,
             selectedModelId: _selected,
             onSelected: (id) {
               setState(() => _selected = id);
@@ -71,52 +77,116 @@ class _HostState extends State<_Host> {
 }
 
 void main() {
+  group('capabilityOfFamily', () {
+    test('classifies chat vs capability families', () {
+      expect(capabilityOfFamily('GPT-5'), ModelCapability.chat);
+      expect(capabilityOfFamily('Claude 4'), ModelCapability.chat);
+      expect(capabilityOfFamily('Image'), ModelCapability.image);
+      expect(capabilityOfFamily('Imagen'), ModelCapability.image);
+      expect(capabilityOfFamily('Audio'), ModelCapability.audio);
+      expect(capabilityOfFamily('Video'), ModelCapability.video);
+      expect(capabilityOfFamily('Veo'), ModelCapability.video);
+      expect(capabilityOfFamily('Embedding'), ModelCapability.embedding);
+      expect(capabilityOfFamily('Moderation'), ModelCapability.other);
+      expect(capabilityOfFamily('OSS'), ModelCapability.other);
+    });
+  });
+
   late AppDatabase database;
   setUp(() => database = AppDatabase(e: NativeDatabase.memory()));
   tearDown(() async => database.close());
 
   Future<void> pump(WidgetTester tester,
-      {ValueChanged<String>? onSelected}) async {
+      {ValueChanged<String>? onSelected,
+      List<LlmModelOption> models = _models}) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [databaseProvider.overrideWithValue(database)],
       child: MaterialApp(
         theme: AppTheme.darkTheme,
-        home: _Host(onSelected: onSelected),
+        home: _Host(models: models, onSelected: onSelected),
       ),
     ));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('groups by family, newest first, with legacy collapsed',
+  testWidgets('chat families first, capability groups collapsed',
       (tester) async {
     await pump(tester);
-    // Closed field shows the current selection.
-    expect(find.text('GPT-5'), findsOneWidget);
-
     await tester.tap(find.byType(ModelPickerField));
     await tester.pumpAndSettle();
 
-    // Family headers (uppercased) present.
-    expect(find.text('GPT-5'), findsWidgets);
-    expect(find.text('GPT-4.X'), findsOneWidget);
-    // Non-legacy models shown.
-    expect(find.text('GPT-4o'), findsOneWidget);
+    // Chat families expanded by default.
     expect(find.text('GPT-5 mini'), findsOneWidget);
-    // Legacy hidden behind an expander.
+    expect(find.text('GPT-4o'), findsOneWidget);
+    // Legacy collapsed within its family.
     expect(find.text('GPT-4 classic'), findsNothing);
     expect(find.text('Legacy (1)'), findsOneWidget);
-    // Custom always available.
+    // Capability group present but collapsed.
+    expect(find.text('IMAGE'), findsOneWidget);
+    expect(find.text('Imagen Test'), findsNothing);
+    // Custom available.
     expect(find.text('Custom model…'), findsOneWidget);
+  });
 
-    // Expand legacy.
-    await tester.tap(find.text('Legacy (1)'));
+  testWidgets('collapsed capability group expands by click', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byType(ModelPickerField));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Imagen Test'), findsNothing);
+    await tester.tap(find.text('IMAGE'));
+    await tester.pumpAndSettle();
+    expect(find.text('Imagen Test'), findsOneWidget);
+  });
+
+  testWidgets('header collapses/expands by keyboard (←/→)', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byType(ModelPickerField));
+    await tester.pumpAndSettle();
+
+    // Focus starts on the selected model (gpt-5); move up onto the GPT-5 header.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    // Collapse the focused header.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('GPT-5 mini'), findsNothing);
+    // Expand it again.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.text('GPT-5 mini'), findsOneWidget);
+  });
+
+  testWidgets('legacy sub-row expands by keyboard Enter', (tester) async {
+    await pump(tester);
+    await tester.tap(find.byType(ModelPickerField));
+    await tester.pumpAndSettle();
+
+    // Walk down to the "Legacy (1)" toggle and activate it.
+    for (var i = 0; i < 4; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pumpAndSettle();
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.text('GPT-4 classic'), findsOneWidget);
   });
 
-  testWidgets('type-to-filter narrows the list with an inline buffer chip',
-      (tester) async {
+  testWidgets('capability chip filters the list', (tester) async {
     await pump(tester);
+    await tester.tap(find.byType(ModelPickerField));
+    await tester.pumpAndSettle();
+
+    // Select the Image chip → only the image group remains (auto-expanded).
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Image'));
+    await tester.pumpAndSettle();
+    expect(find.text('Imagen Test'), findsOneWidget);
+    expect(find.text('GPT-5 mini'), findsNothing);
+  });
+
+  testWidgets('typeahead filters and selecting works', (tester) async {
+    String? selected;
+    await pump(tester, onSelected: (id) => selected = id);
     await tester.tap(find.byType(ModelPickerField));
     await tester.pumpAndSettle();
 
@@ -126,26 +196,46 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.keyI);
     await tester.pumpAndSettle();
 
-    // Only the matching model remains; the inline buffer chip shows the query.
     expect(find.text('GPT-5 mini'), findsOneWidget);
     expect(find.text('GPT-4o'), findsNothing);
-    expect(find.text('mini'), findsOneWidget);
+    expect(find.text('mini'), findsOneWidget); // inline buffer chip
+
+    await tester.tap(find.text('GPT-5 mini'));
+    await tester.pumpAndSettle();
+    expect(selected, 'gpt-5-mini');
   });
 
-  testWidgets('keyboard arrows + Enter select a model', (tester) async {
+  testWidgets('bottom of a long list is reachable and selectable',
+      (tester) async {
+    // 40 chat models in one family — taller than the dropdown.
+    final big = <LlmModelOption>[
+      for (var i = 40; i >= 1; i--)
+        LlmModelOption(
+            id: 'big-$i',
+            displayName: 'Big Model ${i.toString().padLeft(2, '0')}',
+            family: 'Big',
+            approximateReleaseOrder: i),
+      const LlmModelOption(
+          id: 'custom',
+          displayName: 'Custom model…',
+          family: '',
+          approximateReleaseOrder: 9999),
+    ];
     String? selected;
-    await pump(tester, onSelected: (id) => selected = id);
+    await pump(tester, models: big, onSelected: (id) => selected = id);
+    // Default selection 'gpt-5' isn't in this list; field shows placeholder.
     await tester.tap(find.byType(ModelPickerField));
     await tester.pumpAndSettle();
 
-    // Highlight starts on the current selection (gpt-5); move down to gpt-5-mini.
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    final listScrollable = find.descendant(
+        of: find.byType(Scrollbar), matching: find.byType(Scrollable));
+    await tester.scrollUntilVisible(find.text('Big Model 01'), 120,
+        scrollable: listScrollable);
     await tester.pumpAndSettle();
-    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-    await tester.pumpAndSettle();
+    expect(find.text('Big Model 01'), findsOneWidget);
 
-    expect(selected, 'gpt-5-mini');
-    // Overlay closed, field reflects the new selection.
-    expect(find.text('GPT-5 mini'), findsOneWidget);
+    await tester.tap(find.text('Big Model 01'));
+    await tester.pumpAndSettle();
+    expect(selected, 'big-1');
   });
 }
