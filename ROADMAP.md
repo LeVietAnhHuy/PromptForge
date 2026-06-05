@@ -6,11 +6,11 @@ Done:
   attachment viewer, command palette
 - Stage 24 — Picker/logo/media fixes, inline PDF+AV, pre-save preview,
   attachment persistence bug, app-wide polish
-
-## Phase 1 — Workbench foundation
 - Stage 25 — Workbench core: card-refresh fix, version history + provenance,
   template variables, multi-model comparison + ratings + token/cost, quick
-  capture, import/export (CURRENT)
+  capture, import/export (versioned bundle + attachments, Markdown export)
+
+## Phase 1 — Workbench foundation
 - Stage 26 — Cross-platform desktop: Windows + macOS builds, conditional
   media backends, packaging (MSIX/DMG/AppImage), CI build matrix
 

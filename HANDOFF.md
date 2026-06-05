@@ -161,7 +161,7 @@ started. All parts:
   — deferred to avoid breaking that contract. Remaining polish (per-screen
   header audit, stagger-fade list entrances) is iterative.
 
-## Stage 25 (Claude Code) — in progress
+## Stage 25 (Claude Code) — COMPLETE
 
 Standing rule this stage: push to `origin/master` after every commit.
 
@@ -333,11 +333,47 @@ Standing rule this stage: push to `origin/master` after every commit.
   lossless including attachment files (still excluding `promptVersionId`, by
   design). Both import flows are exercised end-to-end.
 
-## Test status
-- `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
-- `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.
+### Stage 25 — completion summary
+
+Delivered: Part 0 (card-refresh fix) · ROADMAP.md · A (version history, line
+diff, retention cap, provenance) · B (template-variable highlight + edge-case
+tests) · C (real token usage + cost from a community pricing data file; ratings
++ Best pin; per-prompt cost total with "partial"; concurrent 2-4 model run with
+isolated per-column failures; comparison view with provider logos, sync-scroll,
+prompt-scoped mode) · D (in-app Quick Capture, Ctrl/Cmd+Shift+N) · E (single-
+prompt Markdown export; versioned bundle + attachment bytes; lossless import
+round-trip). Schema v6→v8. **Verification:** `flutter analyze` clean;
+`flutter test` 177/177; `flutter build linux --release` succeeds.
+
+Root causes found & fixed this stage:
+1. **Saved-output card stale after edit (P0).** The card one-shot-loaded
+   attachments and only reloaded on `output.updatedAt`; the outputs-stream event
+   from `updateOutput()` arrives *before* `persistDrafts()` inserts the new
+   attachment rows, so the reload read a stale set. Fix: the card *watches*
+   `watchAttachmentsForOutput` so it reflects writes the moment they land.
+2. **Comparison columns blank under the taller run panel.** A non-scrolling
+   `Column` gave the outputs an `Expanded` that collapsed to ~0 height on narrow
+   widths, so the lazy list built nothing. Fix: fully scrollable column on narrow;
+   stream subscribed once so run-time setState no longer flickers it to a spinner.
+3. **Import dropped every output (latent).** `decodeImport` built examples with
+   `id: ''` while keying outputs by the original id, so `importData`'s
+   `exampleOutputs[ex.id]` always missed. Fix: examples keep their original id for
+   that mapping. (Only the preview was previously tested, never a full import.)
+4. **Imported attachments orphaned (latent).** Attachments were inserted against
+   the decoded output id while the output row used a freshly-generated id. Fix:
+   hoist the new output id and use it for both. Both surfaced only once the
+   round-trip test exercised a real import.
+
+Known deviations (intended): OS-global hotkey deferred to `hotkey_manager` once a
+real display is available (in-app shortcut ships); version storage keeps full
+snapshots (no deltas/compression); comparison run is single-provider-at-a-time;
+run params (temperature, etc.) aren't captured because no run surface exposes
+them yet; output `promptVersionId` isn't exported (import regenerates version
+IDs, so the cross-reference can't survive a round-trip).
+
+## Test status (as of Stage 25 completion)
 - `flutter analyze`: passed, no issues found.
-- `flutter test`: passed, 110/110 tests.
-- `flutter build linux`: passed and produced `build/linux/x64/release/bundle/promptforge`.
-- `flutter run -d linux`: debug build launched on Linux; command returned exit code 0 after startup with `Lost connection to device`.
-- Android/iOS validation: not run in this handoff session; no mobile validation command was executed.
+- `flutter test`: passed, 177/177 tests.
+- `flutter build linux --release`: passed and produced `build/linux/x64/release/bundle/promptforge`.
+- `dart run build_runner build`: not needed in Stage 25 — no table/column changes were made beyond Part C (1/2)'s already-generated v8 schema; the new DAO methods live in the hand-written DAO classes.
+- `flutter run -d linux` / Android / iOS: not run this stage (headless environment).
