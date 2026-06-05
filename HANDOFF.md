@@ -161,6 +161,29 @@ started. All parts:
   — deferred to avoid breaking that contract. Remaining polish (per-screen
   header audit, stagger-fade list entrances) is iterative.
 
+## Stage 25 (Claude Code) — in progress
+
+Standing rule this stage: push to `origin/master` after every commit.
+
+- Part 0 — P0 stale card after edit. **Root cause:** `PromptOutputCard`
+  one-shot loaded attachments and only reloaded when `widget.output.updatedAt`
+  changed. On edit-save the order is `await updateOutput()` (fires the outputs
+  Drift stream) then `await persistDrafts()` (which `await`s `File.copy` *before*
+  inserting attachment rows). The `File.copy` await yields the microtask queue,
+  so the outputs-stream event is delivered *while persistDrafts is still
+  copying* — the card reloads attachments before the new rows exist, reads the
+  stale set, and never reloads again (attachment-table writes don't notify the
+  outputs stream). **Fix:** the card now reactively watches
+  `watchAttachmentsForOutput(outputId)`, so any attachment add/remove updates it
+  immediately, race-free. Regression test: add a 3rd attachment row with the
+  card mounted → it renders 3 chips and the 3rd opens in the viewer, no reopen.
+  **Stale-state audit:** searched all presentation widgets for one-shot loads of
+  mutable records. The card was the only reactive gap. Remaining
+  `getAttachmentsForOutput` callers are correct point-in-time reads: the export
+  service (snapshot) and the edit dialog (loads once on open, then mutates its
+  own list). The editor watches outputs, the library watches prompts — both
+  already reactive.
+
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.
 - `dart run build_runner build --delete-conflicting-outputs`: passed. Current build_runner reports that `--delete-conflicting-outputs` is ignored, then completes successfully.

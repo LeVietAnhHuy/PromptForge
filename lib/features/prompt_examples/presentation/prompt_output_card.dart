@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -32,32 +33,43 @@ class _PromptOutputCardState extends ConsumerState<PromptOutputCard> {
   bool _hovering = false;
   List<LLMOutputAttachment> _attachments = [];
   bool _loadingAttachments = true;
+  StreamSubscription<List<LLMOutputAttachment>>? _attachmentsSub;
 
   @override
   void initState() {
     super.initState();
-    _loadAttachments();
+    _subscribeAttachments();
   }
 
   @override
   void didUpdateWidget(covariant PromptOutputCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload attachments if the underlying output changed (e.g. after an edit).
-    if (oldWidget.output.id != widget.output.id ||
-        oldWidget.output.updatedAt != widget.output.updatedAt) {
-      _loadAttachments();
+    if (oldWidget.output.id != widget.output.id) {
+      _subscribeAttachments();
     }
   }
 
-  Future<void> _loadAttachments() async {
+  @override
+  void dispose() {
+    _attachmentsSub?.cancel();
+    super.dispose();
+  }
+
+  // Watch (don't one-shot load) so the card reflects attachment changes the
+  // moment they're written — fixes the stale-after-edit refresh bug where the
+  // owning output's stream event arrived before persistDrafts inserted the rows.
+  void _subscribeAttachments() {
+    _attachmentsSub?.cancel();
     final dao = ref.read(lLMOutputAttachmentDaoProvider);
-    final attachments = await dao.getAttachmentsForOutput(widget.output.id);
-    if (mounted) {
-      setState(() {
-        _attachments = attachments;
-        _loadingAttachments = false;
-      });
-    }
+    _attachmentsSub =
+        dao.watchAttachmentsForOutput(widget.output.id).listen((attachments) {
+      if (mounted) {
+        setState(() {
+          _attachments = attachments;
+          _loadingAttachments = false;
+        });
+      }
+    });
   }
 
   void _copyToClipboard() {

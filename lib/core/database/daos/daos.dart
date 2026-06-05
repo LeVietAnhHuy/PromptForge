@@ -449,6 +449,14 @@ class LLMOutputAttachmentDao extends DatabaseAccessor<AppDatabase>
   Future<List<LLMOutputAttachment>> getAttachmentsForOutput(String outputId) =>
       (select(lLMOutputAttachments)..where((t) => t.outputId.equals(outputId)))
           .get();
+  // Reactive variant so cards reflect attachment add/remove immediately,
+  // regardless of when the owning output row's updatedAt changes.
+  Stream<List<LLMOutputAttachment>> watchAttachmentsForOutput(
+          String outputId) =>
+      (select(lLMOutputAttachments)
+            ..where((t) => t.outputId.equals(outputId))
+            ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
+          .watch();
   Future<int> deleteAttachment(String id) =>
       (delete(lLMOutputAttachments)..where((t) => t.id.equals(id))).go();
 }
