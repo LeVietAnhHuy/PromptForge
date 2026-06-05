@@ -24,6 +24,10 @@ machine. No cloud sync, no account, no telemetry.
   audio, and video.
 - **Import / export** — single-prompt Markdown export plus a lossless, versioned
   workspace bundle (with attachment files). **API keys are never exported.**
+- **MCP server** — an optional, **read-only, local, off-by-default** Model
+  Context Protocol sidecar exposes your prompt library (list / fetch with
+  variables / search) to MCP clients like Claude Code, Claude Desktop, and
+  Cursor. Enable it in Settings → MCP Server; see [`docs/MCP.md`](docs/MCP.md).
 
 Your BYOK API keys are stored only in the OS secure store (Keychain / DPAPI /
 Secret Service) — never in the database, exports, or logs.

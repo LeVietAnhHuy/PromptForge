@@ -482,3 +482,61 @@ can't build/run Windows or macOS); final visual sign-off is the owner's
   so no explicit `media_kit_libs_{windows,macos}_video` deps were added.
 - pdfrx logs a cosmetic macOS warning (pdfium framework naming across arches);
   build succeeds and pdfium ships.
+
+## Stage 27 (Claude Code) — MCP server (CI-green; owner verification pending)
+
+Pulled forward from old Stage 36 by owner decision. PromptForge is now an MCP
+server: a standalone **stdio sidecar** (`bin/promptforge_mcp.dart`) that MCP
+clients (Claude Code, Claude Desktop, Cursor) spawn to read the prompt library.
+Read-only, local, off by default.
+
+- **Part A** — architecture + SDK. Standalone pure-Dart CLI sharing the data
+  layer; `prompt_read_store.dart` opens SQLite **read-only** (package:sqlite3),
+  validates schema (refuses newer-than-v8), brief busy wait. SDK = **dart_mcp**
+  (official; mixin server API), pinned; raised Dart floor to >=3.7.0. Extracted
+  the pure `variable_resolver.dart` so the sidecar and the in-app compiler share
+  one resolution path; refactored `PromptCompilerService` to delegate.
+- **Part B** — protocol: prompts/list (name=id, title, purpose desc, args from
+  {variables}, required = no default), prompts/get (resolve over defaults;
+  missing-required → invalid_params), tools search_prompts(query,tags AND) and
+  get_prompt(id,variables). Read-only; no write tools.
+- **Part C** — security: off by default (mcp_enabled flag), stdio-only,
+  read-only, bounded inputs, clean errors (no stack traces). No-keys test scans
+  ALL wire output + asserts the sidecar links no secure-storage API.
+- **Part D** — Settings → MCP Server screen (toggle writes the flag; shows
+  sidecar + DB paths; copy-able Claude Code / Desktop / Cursor snippets). docs/MCP.md.
+- **Part E** — CI builds the sidecar (`dart build cli`) + asserts --version on
+  all three OSes; release ships it inside every artifact under `mcp/` (version-
+  stamped via sed since dart build cli has no --define).
+- **Part F** — in-process + spawned-compiled-binary protocol tests (11); dogfood.
+- **Part G** — README/CLAUDE/this summary; ROADMAP renumbered.
+
+**Verification (real):** CI matrix green on ubuntu/windows/macos (analyze +
+tests + app release build + media-lib assertion + sidecar build + sidecar
+--version). 11 MCP tests incl. a spawned-compiled-binary run proving bundled
+sqlite3 loads. **Dogfood:** Claude Code 2.1.165 `claude mcp add` → `✓ Connected`
+to the compiled sidecar over stdio (against a COPY of the dev DB; dev DB
+untouched); flipping the flag off → `✗ Failed to connect`. NOT verified
+headlessly: a full model-driven client conversation (owner checklist,
+docs/VERIFICATION-STAGE27.md).
+
+**Root causes fixed this stage:**
+1. **Windows `flutter test` failed deleting the fixture temp dir** ("file in use
+   by another process"): the in-process server kept its read-only SQLite handle
+   open, and Windows can't delete an open file. Fixed by overriding
+   `MCPServer.shutdown()` to close the store, having the test harness shut the
+   server down before teardown, and making temp-dir cleanup best-effort. (Caught
+   by CI on Windows — exactly the cross-OS bug CI is meant to catch.)
+2. **`dart compile exe` rejected the sidecar** because sqlite3 / pdfium_dart
+   ship native build hooks. Switched to `dart build cli` (relocatable bundle/bin
+   + bundle/lib; self-contained native sqlite3, incl. Windows).
+
+**Deviations (intended, logged):**
+- `dart build cli` (bundle dir) instead of the brief's `dart compile exe`.
+- Dart SDK floor raised to >=3.7.0 (dart_mcp requirement).
+- App variable syntax is single-brace `{var}` (codebase reality), not the
+  brief's `{{var}}`; `{{var}}` still resolves via the inner match.
+- MCP argument `required` = "no default value" (per brief), which differs from
+  the prompt's stored `isRequired` flag — the sidecar uses the no-default rule
+  consistently for both advertising and resolution.
+- ROADMAP renumbered: MCP = Stage 27; old 27–35 → 28–36; 37–38 unchanged.
