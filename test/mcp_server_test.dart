@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:stream_channel/stream_channel.dart';
 
 import 'package:dart_mcp/client.dart';
+import 'package:dart_mcp/stdio.dart';
 import 'package:promptforge/core/database/daos/daos.dart';
 import 'package:promptforge/core/database/database.dart';
 import 'package:promptforge/core/security/secure_storage_service.dart';
@@ -69,7 +70,8 @@ class Harness {
   final ServerConnection connection;
   final MCPClient client;
   final List<String> serverOutput;
-  Harness(this.connection, this.client, this.serverOutput);
+  final InitializeResult initResult;
+  Harness(this.connection, this.client, this.serverOutput, this.initResult);
 
   Future<void> close() => client.shutdown();
 }
@@ -88,13 +90,13 @@ Future<Harness> connect(String dbPath) async {
   PromptForgeMcpServer(serverChannel, dbPath: dbPath, appVersion: 'test');
   final client = MCPClient(Implementation(name: 'test-client', version: '1.0.0'));
   final connection = client.connectServer(clientChannel);
-  await connection.initialize(InitializeRequest(
+  final initResult = await connection.initialize(InitializeRequest(
     protocolVersion: ProtocolVersion.latestSupported,
     capabilities: client.capabilities,
     clientInfo: client.implementation,
   ));
   connection.notifyInitialized();
-  return Harness(connection, client, recorded);
+  return Harness(connection, client, recorded, initResult);
 }
 
 class _RecordingSink implements StreamSink<String> {
@@ -178,4 +180,149 @@ void main() {
       expect(files.contains('getApiKey'), isFalse);
     });
   });
+
+  group('Part F — protocol', () {
+    Future<String> getText(
+        Harness h, String name, Map<String, Object?> args) async {
+      final r = await h.connection
+          .getPrompt(GetPromptRequest(name: name, arguments: args));
+      return r.messages.map((m) => (m.content as TextContent).text).join();
+    }
+
+    Future<CallToolResult> call(
+            Harness h, String tool, Map<String, Object?> args) =>
+        h.connection.callTool(CallToolRequest(name: tool, arguments: args));
+    String toolText(CallToolResult r) =>
+        r.content.map((c) => (c as TextContent).text).join('\n');
+
+    test('initialize advertises prompts + tools and the server name', () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      expect(h.initResult.capabilities.prompts, isNotNull);
+      expect(h.initResult.capabilities.tools, isNotNull);
+      expect(h.initResult.serverInfo.name, 'PromptForge');
+      expect(h.initResult.protocolVersion, isNotNull);
+    });
+
+    test('prompts/list maps variables to arguments (required = no default)',
+        () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      final list = await h.connection.listPrompts();
+      expect(list.prompts.length, 2);
+      final p1 = list.prompts.firstWhere((p) => p.name == 'p1');
+      expect(p1.title, 'Greeting');
+      expect(p1.description, contains('Say hi'));
+      final args = {for (final a in p1.arguments!) a.name: a};
+      expect(args['name']!.required, isTrue); // no default → required
+      expect(args['place']!.required, isFalse); // default 'Earth'
+      expect(args['place']!.description, 'Where to welcome them');
+      final p2 = list.prompts.firstWhere((p) => p.name == 'p2');
+      expect({for (final a in p2.arguments!) a.name: a}['text']!.required, isTrue);
+    });
+
+    test('prompts/get uses defaults and applies overrides', () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      expect(await getText(h, 'p1', {'name': 'Ada'}),
+          'Hello Ada, welcome to Earth.');
+      expect(await getText(h, 'p1', {'name': 'Ada', 'place': 'Mars'}),
+          'Hello Ada, welcome to Mars.');
+    });
+
+    test('prompts/get errors on missing required argument', () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      await expectLater(
+        h.connection.getPrompt(GetPromptRequest(name: 'p1', arguments: {})),
+        throwsA(predicate((e) =>
+            '$e'.contains('Missing required') && '$e'.contains('name'))),
+      );
+    });
+
+    test('search_prompts matches and respects the tags filter (AND)', () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      expect(toolText(await call(h, 'search_prompts', {'query': 'welcome'})),
+          contains('p1'));
+      expect(
+          toolText(await call(
+              h, 'search_prompts', {'query': 'welcome', 'tags': 'demo'})),
+          contains('Greeting'));
+      expect(
+          toolText(await call(
+              h, 'search_prompts', {'query': 'welcome', 'tags': 'nope'})),
+          contains('No prompts matched'));
+      expect((await call(h, 'search_prompts', {'query': ''})).isError, isTrue);
+    });
+
+    test('get_prompt tool resolves and reports missing required', () async {
+      final h = await connect(await buildFixtureDb());
+      addTearDown(h.close);
+      expect(
+          toolText(await call(h, 'get_prompt',
+              {'id': 'p1', 'variables': {'name': 'Bo'}})),
+          'Hello Bo, welcome to Earth.');
+      final miss = await call(h, 'get_prompt', {'id': 'p1'});
+      expect(miss.isError, isTrue);
+      expect(toolText(miss), contains('name'));
+    });
+
+    test('disabled flag blocks initialize with a clear error', () async {
+      final db = await buildFixtureDb(enabled: false);
+      await expectLater(connect(db),
+          throwsA(predicate((e) => '$e'.toLowerCase().contains('disabled'))));
+    });
+
+    test('a newer schema is refused with an update message', () async {
+      final db = await buildFixtureDb(overrideUserVersion: 99);
+      await expectLater(connect(db),
+          throwsA(predicate((e) => '$e'.toLowerCase().contains('newer'))));
+    });
+
+    test('the COMPILED sidecar serves prompts over real stdio (bundled sqlite3)',
+        () async {
+      final bin = _findSidecarBinary();
+      if (bin == null) {
+        markTestSkipped(
+            'sidecar not built — run: dart build cli bin/promptforge_mcp.dart');
+        return;
+      }
+      final db = await buildFixtureDb();
+      final proc = await Process.start(bin, ['--db', db]);
+      final client =
+          MCPClient(Implementation(name: 'spawn-test', version: '1.0.0'));
+      final conn = client
+          .connectServer(stdioChannel(input: proc.stdout, output: proc.stdin));
+      await conn.initialize(InitializeRequest(
+        protocolVersion: ProtocolVersion.latestSupported,
+        capabilities: client.capabilities,
+        clientInfo: client.implementation,
+      ));
+      conn.notifyInitialized();
+      final list = await conn.listPrompts();
+      expect(list.prompts.length, 2);
+      final got = await conn
+          .getPrompt(GetPromptRequest(name: 'p1', arguments: {'name': 'Zed'}));
+      expect(got.messages.map((m) => (m.content as TextContent).text).join(),
+          'Hello Zed, welcome to Earth.');
+      await client.shutdown();
+      proc.kill();
+    });
+  });
+}
+
+/// Finds the compiled sidecar under build/cli (any OS target), or null.
+String? _findSidecarBinary() {
+  final root = Directory('build/cli');
+  if (!root.existsSync()) return null;
+  for (final e in root.listSync(recursive: true)) {
+    if (e is File) {
+      final name = p.basename(e.path);
+      if (name == 'promptforge_mcp' || name == 'promptforge_mcp.exe') {
+        return e.path;
+      }
+    }
+  }
+  return null;
 }
