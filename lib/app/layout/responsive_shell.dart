@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_design.dart';
 import '../../features/search/presentation/command_palette.dart';
+import '../../features/inbox/presentation/quick_capture_dialog.dart';
 
 class ResponsiveShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -22,14 +23,19 @@ class ResponsiveShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Global command palette on Ctrl/Cmd+K. CallbackShortcuts catches the chord
-    // when focus is anywhere in the shell subtree (text fields don't consume it).
+    // Global shortcuts when focus is anywhere in the shell subtree (text fields
+    // don't consume these chords): Ctrl/Cmd+K opens the command palette,
+    // Ctrl/Cmd+Shift+N opens Quick Capture (jot straight into the Inbox).
     return CallbackShortcuts(
       bindings: {
         const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
             CommandPalette.show(context),
         const SingleActivator(LogicalKeyboardKey.keyK, meta: true): () =>
             CommandPalette.show(context),
+        const SingleActivator(LogicalKeyboardKey.keyN,
+            control: true, shift: true): () => QuickCaptureDialog.show(context),
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true, shift: true):
+            () => QuickCaptureDialog.show(context),
       },
       child: Focus(
         autofocus: true,

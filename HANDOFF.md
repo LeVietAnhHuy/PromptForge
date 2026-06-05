@@ -278,6 +278,21 @@ Standing rule this stage: push to `origin/master` after every commit.
   is provider-scoped to match the existing dropdown UX); multi-provider selection
   is a later polish. Provenance params (temperature, etc.) stay null because no
   run surface exposes tunable params yet — the provenance line shows "v# · model".
+- Part D — quick capture. In-app `QuickCaptureDialog` opens on **Ctrl/Cmd+Shift+N**
+  from anywhere in the shell (added to the existing `CallbackShortcuts` in
+  `responsive_shell.dart`, alongside Ctrl/Cmd+K). It prefills its body from the
+  clipboard, takes an optional title, and saves an open `InboxItem`
+  (`source: 'quick-capture'`); Ctrl/Cmd+Enter saves. A touch/discoverable entry
+  point (bolt icon, tooltip shows the chord) was added to the Inbox app bar since
+  the chord alone doesn't help mobile. Tests (`quick_capture_test.dart`): clipboard
+  prefill + save writes one inbox item with the right source/status; empty
+  clipboard leaves the body blank, refuses an empty save, then saves typed text.
+  **Deviation (approved): OS-level GLOBAL hotkey is deferred.** A system-wide
+  hotkey cannot be verified in this headless environment, and per the no-unverified-
+  features rule it was not added. The intended path when a real display is
+  available is the `hotkey_manager` package (register a global `HotKey` for
+  Ctrl/Cmd+Shift+N that routes to `QuickCaptureDialog.show`); the in-app shortcut
+  ships now and works whenever the app window has focus.
 
 ## Test status
 - `flutter pub get`: passed. The first sandboxed attempt failed because Flutter tried to write SDK cache files outside the workspace; rerun with approved Flutter SDK-cache access passed.

@@ -7,6 +7,7 @@ import '../../../core/database/database_providers.dart';
 import '../../../shared/widgets/empty_state.dart';
 import 'inbox_to_prompt_card_dialog.dart';
 import 'inbox_to_workspace_run_dialog.dart';
+import 'quick_capture_dialog.dart';
 
 class InboxScreen extends ConsumerWidget {
   const InboxScreen({super.key});
@@ -18,6 +19,13 @@ class InboxScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Prompt Inbox'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.bolt),
+            tooltip: 'Quick Capture (Ctrl/Cmd+Shift+N)',
+            onPressed: () => QuickCaptureDialog.show(context),
+          ),
+        ],
       ),
       body: inboxItemsAsync.when(
         data: (items) {
