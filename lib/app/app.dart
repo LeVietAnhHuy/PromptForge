@@ -12,9 +12,10 @@ class PromptForgeApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'PromptForge',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      // Forge is a dark-first design system; pin dark as the primary theme.
+      themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
