@@ -39,6 +39,7 @@ dev_dependencies:
   build_runner: ^2.4.8
   drift_dev: ^2.16.0
   flutter_launcher_icons: ^0.14.4
+  msix: ^3.16.13
 
 flutter:
   uses-material-design: true
@@ -62,3 +63,18 @@ flutter:
     - family: JetBrainsMono
       fonts:
         - asset: assets/fonts/JetBrainsMono-Variable.ttf
+
+# Windows MSIX packaging (dart run msix:create). Produced UNSIGNED for now
+# (sign_msix: false) — no certificate/signtool needed in CI. To distribute,
+# sign with a real certificate; see docs/RELEASING.md. The release CI overrides
+# msix_version from the pubspec app version (e.g. --version 1.0.0.0).
+msix_config:
+  display_name: PromptForge
+  publisher_display_name: Le Viet Anh Huy
+  identity_name: io.github.levietanhhuy.promptforge
+  publisher: CN=Le Viet Anh Huy
+  msix_version: 1.0.0.0
+  logo_path: assets/brand/promptforge_icon_1024.png
+  capabilities: internetClient
+  sign_msix: false
+  output_name: promptforge
