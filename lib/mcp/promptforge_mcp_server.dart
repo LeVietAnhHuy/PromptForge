@@ -71,6 +71,16 @@ base class PromptForgeMcpServer extends MCPServer
     return super.initialize(request);
   }
 
+  @override
+  Future<void> shutdown() async {
+    // Release the read-only DB handle so the file isn't held open after the
+    // session ends (notably so Windows can delete it; the process would release
+    // it on exit regardless).
+    _store?.close();
+    _store = null;
+    await super.shutdown();
+  }
+
   // ---- prompts/list + prompts/get -----------------------------------------
 
   void _registerPrompts() {

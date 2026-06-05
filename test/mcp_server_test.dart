@@ -60,7 +60,12 @@ Future<String> buildFixtureDb({bool enabled = true, int? overrideUserVersion}) a
     await db.customStatement('PRAGMA user_version = $overrideUserVersion;');
   }
   await db.close();
-  addTearDown(() => dir.delete(recursive: true));
+  addTearDown(() async {
+    // Best-effort: a lingering OS handle shouldn't fail the suite.
+    try {
+      await dir.delete(recursive: true);
+    } catch (_) {}
+  });
   return path;
 }
 
@@ -71,9 +76,16 @@ class Harness {
   final MCPClient client;
   final List<String> serverOutput;
   final InitializeResult initResult;
-  Harness(this.connection, this.client, this.serverOutput, this.initResult);
+  final PromptForgeMcpServer server;
+  Harness(this.connection, this.client, this.serverOutput, this.initResult,
+      this.server);
 
-  Future<void> close() => client.shutdown();
+  Future<void> close() async {
+    await client.shutdown();
+    // Close the server's read-only DB handle so the fixture file is released
+    // before the temp-dir teardown deletes it (required on Windows).
+    await server.shutdown();
+  }
 }
 
 Future<Harness> connect(String dbPath) async {
@@ -87,7 +99,8 @@ Future<Harness> connect(String dbPath) async {
   );
   final clientChannel = StreamChannel<String>(fromServer.stream, toServer.sink);
 
-  PromptForgeMcpServer(serverChannel, dbPath: dbPath, appVersion: 'test');
+  final server =
+      PromptForgeMcpServer(serverChannel, dbPath: dbPath, appVersion: 'test');
   final client = MCPClient(Implementation(name: 'test-client', version: '1.0.0'));
   final connection = client.connectServer(clientChannel);
   final initResult = await connection.initialize(InitializeRequest(
@@ -96,7 +109,7 @@ Future<Harness> connect(String dbPath) async {
     clientInfo: client.implementation,
   ));
   connection.notifyInitialized();
-  return Harness(connection, client, recorded, initResult);
+  return Harness(connection, client, recorded, initResult, server);
 }
 
 class _RecordingSink implements StreamSink<String> {
@@ -308,6 +321,7 @@ void main() {
           'Hello Zed, welcome to Earth.');
       await client.shutdown();
       proc.kill();
+      await proc.exitCode; // ensure the handle is released before teardown
     });
   });
 }
