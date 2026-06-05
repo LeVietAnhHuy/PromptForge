@@ -9,10 +9,13 @@ Done:
 - Stage 25 — Workbench core: card-refresh fix, version history + provenance,
   template variables, multi-model comparison + ratings + token/cost, quick
   capture, import/export (versioned bundle + attachments, Markdown export)
+- Stage 26 — Cross-platform desktop: Windows + macOS targets, media backends
+  per platform, packaging (MSIX/zip, DMG/zip, AppImage/tar.gz), GitHub Actions
+  CI matrix + release workflow. **CI-green on all three OSes** (build + test +
+  release artifacts); owner hands-on verification on real Windows/macOS hardware
+  is pending (`docs/VERIFICATION-STAGE26.md`).
 
-## Phase 1 — Workbench foundation
-- Stage 26 — Cross-platform desktop: Windows + macOS builds, conditional
-  media backends, packaging (MSIX/DMG/AppImage), CI build matrix
+## Phase 1 — Workbench foundation — COMPLETE (Stages 25–26)
 
 ## Phase 2 — Reach
 - Stage 27 — Web app: Flutter web build, browser storage adapter, viewer

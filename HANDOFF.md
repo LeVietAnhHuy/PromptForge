@@ -378,7 +378,7 @@ IDs, so the cross-reference can't survive a round-trip).
 - `dart run build_runner build`: not needed in Stage 25 — no table/column changes were made beyond Part C (1/2)'s already-generated v8 schema; the new DAO methods live in the hand-written DAO classes.
 - `flutter run -d linux` / Android / iOS: not run this stage (headless environment).
 
-## Stage 26 (Claude Code) — in progress
+## Stage 26 (Claude Code) — CI-GREEN (owner hands-on verification pending)
 
 Goal: add Windows + macOS desktop targets and a CI build/test matrix so all
 three desktops are platform-ready and CI-verified. Linux remains the only host
@@ -414,3 +414,71 @@ Standing rule continues: push after every commit.
 - **Decisions locked in:** bundle/application id = `io.github.levietanhhuy.promptforge`
   across all platforms (owner's choice). Repo goes public → full 3-OS matrix on
   free runners.
+
+### Stage 26 — completion summary (CI-verified)
+
+Added Windows + macOS desktop targets and a GitHub Actions matrix. The repo was
+made public first (free runners). Verification mechanism = CI (this Linux box
+can't build/run Windows or macOS); final visual sign-off is the owner's
+`docs/VERIFICATION-STAGE26.md` checklist, which stays pending until run.
+
+- **Part A** — macOS target scaffolded (`flutter create`); deployment target
+  11.0 + a committed reproducible Podfile (post_install pins pods to 11.0);
+  entitlements (network client + user-selected files, App Sandbox on). Bundle id
+  `io.github.levietanhhuy.promptforge` on macOS/Linux/Windows/iOS + Android
+  applicationId; titles → "PromptForge". App icons for Android/iOS/Windows/macOS
+  via `flutter_launcher_icons` from a new brand SVG (`assets/brand/`). One
+  shortcut helper `cmdOrCtrl` (Cmd/Ctrl) replacing scattered bindings. Secure
+  storage: explicit per-OS options + error handling (reads→null, writes throw)
+  + screen guards. Min window 800×600 (Linux/Windows-DPI/macOS). Filename
+  sanitizer covers Windows-reserved chars. Flutter pinned `>=3.44.0`.
+- **Part B** — guarded media init (`mediaBackendReady`) + per-renderer fallback
+  to the error panel (no crash) when libmpv is unavailable.
+  `scripts/bundle_linux_libmpv.sh` makes Linux bundles ship libmpv.
+- **Part C** — unsigned MSIX (`msix_config`, `sign_msix:false`), Linux tar.gz +
+  AppImage (`scripts/package_linux.sh`, FUSE-less), macOS dmg/zip in CI;
+  `docs/RELEASING.md` with honest maintainer signing/notarization steps.
+- **Part D** — `.github/workflows/ci.yml` (push/PR matrix: analyze + test +
+  release build + native-lib assertion) and `release.yml` (v* tags → all
+  artifacts → draft Release).
+- **Part E** — `docs/VERIFICATION-STAGE26.md`, README (per-platform build +
+  honest status + badges), CLAUDE.md platform decisions, this summary, ROADMAP.
+
+**Verification (real):**
+- `ci.yml` run #27019289418 — **green on ubuntu + windows + macos** (~8 min):
+  analyze + full test suite + `flutter build <platform> --release` each, and the
+  assertion confirmed real native libs: Linux `libmpv.so.2`+`libpdfium.so`,
+  Windows `libmpv-2.dll`+pdfium, macOS `Mpv.framework`+`pdfium.framework`.
+- `release.yml` run #27019824775 (throwaway tag `v0.0.0-citest`, since deleted
+  with its draft release) — **green**, produced version-stamped artifacts:
+  `promptforge-1.0.0-linux-x64.tar.gz`, `PromptForge-1.0.0-x86_64.AppImage`
+  (119 MB, full dep tree), `promptforge-1.0.0-windows-x64.{msix,zip}`,
+  `promptforge-1.0.0-macos.{dmg,zip}`.
+- Linux local gate stayed green throughout (analyze, 181 tests, release build).
+
+**Root causes found & fixed this stage (pre-empted before CI, all confirmed green):**
+1. **Windows `flutter test` had no sqlite3.** drift's `NativeDatabase` needs a
+   system sqlite3; Linux/macOS have one, Windows doesn't → CI step downloads a
+   pinned `sqlite3.dll` into the test CWD.
+2. **Tests used hardcoded `/` path joins** (`attachment_storage_test`,
+   `import_export_roundtrip_test`) that would fail on Windows → switched to
+   `p.join`.
+3. **macOS plugin deployment target** — bumped project + Podfile to 11.0 so
+   media_kit/pdfrx/secure_storage pods build.
+4. **`bundle_linux_libmpv.sh` SIGPIPE** — `awk ...exit` under `pipefail` aborted
+   the script; switched to read the full stream (`| tail`). Caught locally.
+5. **release.yml YAML** — an unquoted `run:` scalar containing `version: ` broke
+   parsing; moved to a block scalar. Caught by a local YAML lint.
+
+**Deviations (intended, logged):**
+- Android `namespace`/Kotlin package and iOS/Android *builds* are not in this
+  stage's CI (desktop-only); only the published `applicationId`/bundle id was
+  aligned. Mobile builds are Stage 29.
+- MSIX and macOS `.app`/dmg ship **unsigned**; signing/notarization are
+  maintainer actions (RELEASING.md). CI never fakes a signature.
+- Windows/macOS are **CI-green, not yet owner-verified on real hardware** — that
+  gate is `docs/VERIFICATION-STAGE26.md`.
+- `media_kit_libs_video` already pulls the per-OS libmpv packages transitively,
+  so no explicit `media_kit_libs_{windows,macos}_video` deps were added.
+- pdfrx logs a cosmetic macOS warning (pdfium framework naming across arches);
+  build succeeds and pdfium ships.

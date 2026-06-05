@@ -35,12 +35,12 @@ PromptForge is built to run on Linux, Windows, and macOS desktops.
 | Platform | Status |
 | --- | --- |
 | Linux   | Built, tested, and released; actively developed on |
-| Windows | Target added; CI build matrix being brought up |
-| macOS   | Target added; CI build matrix being brought up |
+| Windows | Built, analyzed & tested in CI |
+| macOS   | Built, analyzed & tested in CI |
 
-Once green, CI proves each platform **builds, analyzes, and passes tests** (the
-badge above reflects the live status). Hands-on visual verification on real
-Windows/macOS machines is tracked in
+CI proves each platform **builds, analyzes, and passes tests** (the badge above
+reflects the live status). Hands-on visual verification on real Windows/macOS
+machines is tracked in
 [`docs/VERIFICATION-STAGE26.md`](docs/VERIFICATION-STAGE26.md) and is the final
 acceptance gate — we don't claim a platform "works" beyond what CI demonstrates
 until that checklist is run.
